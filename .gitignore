@@ -1,0 +1,16 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# data (regenerable via src/s*.py scripts)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# OS / editor
+.DS_Store
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

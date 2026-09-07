@@ -1,0 +1,128 @@
+{
+  "accuracy": 0.21763085399449036,
+  "macro_f1": 0.2114206795914113,
+  "per_class_f1": {
+    "-2": 0.25,
+    "-1": 0.17094017094017094,
+    "0": 0.2073170731707317,
+    "1": 0.15384615384615385,
+    "2": 0.275
+  },
+  "confusion_matrix": {
+    "labels": [
+      -2,
+      -1,
+      0,
+      1,
+      2
+    ],
+    "matrix": [
+      [
+        21,
+        18,
+        31,
+        20,
+        22
+      ],
+      [
+        10,
+        10,
+        16,
+        8,
+        7
+      ],
+      [
+        7,
+        9,
+        17,
+        12,
+        10
+      ],
+      [
+        5,
+        13,
+        19,
+        9,
+        8
+      ],
+      [
+        13,
+        16,
+        26,
+        14,
+        22
+      ]
+    ],
+    "note": "row = actual class, column = predicted class, ลำดับตาม labels ข้างบน"
+  },
+  "n_test": 363,
+  "n_train": 4008,
+  "feature_names": [
+    "sector_XLK",
+    "sector_XLF",
+    "sector_XLV",
+    "sector_XLE",
+    "sector_XLY",
+    "sector_XLP",
+    "sector_XLI",
+    "sector_XLB",
+    "sector_XLU",
+    "sector_XLRE",
+    "sector_XLC",
+    "VIX",
+    "US10Y",
+    "sent_XLK",
+    "sent_XLF",
+    "sent_XLV",
+    "sent_XLE",
+    "sent_XLY",
+    "sent_XLP",
+    "sent_XLI",
+    "sent_XLB",
+    "sent_XLU",
+    "sent_XLRE",
+    "sent_XLC"
+  ],
+  "feature_importance_top10": [
+    {
+      "feature": "sector_XLU",
+      "gain": 2.8260369300842285
+    },
+    {
+      "feature": "sector_XLE",
+      "gain": 2.3921992778778076
+    },
+    {
+      "feature": "sent_XLI",
+      "gain": 2.1405210494995117
+    },
+    {
+      "feature": "US10Y",
+      "gain": 2.120269536972046
+    },
+    {
+      "feature": "VIX",
+      "gain": 2.068751573562622
+    },
+    {
+      "feature": "sector_XLRE",
+      "gain": 1.9931955337524414
+    },
+    {
+      "feature": "sent_XLRE",
+      "gain": 1.967718243598938
+    },
+    {
+      "feature": "sent_XLY",
+      "gain": 1.9571335315704346
+    },
+    {
+      "feature": "sent_XLC",
+      "gain": 1.954192876815796
+    },
+    {
+      "feature": "sent_XLB",
+      "gain": 1.945054054260254
+    }
+  ]
+}
