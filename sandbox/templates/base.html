@@ -9,18 +9,19 @@
 </head>
 <body>
 
-  {% if stub_mode %}
-  <div class="stub-badge">STUB MODE — placeholder predictions only</div>
-  {% endif %}
-
   <nav class="topnav">
-    <div class="nav-brand">SP Ensemble Sandbox</div>
-    <div class="nav-links">
-      <a href="/dashboard" class="{{ 'active' if request.path in ('/', '/dashboard') else '' }}">Dashboard</a>
-      <a href="/events" class="{{ 'active' if request.path == '/events' else '' }}">Events</a>
-      <a href="/rules" class="{{ 'active' if request.path == '/rules' else '' }}">Rules</a>
-      <a href="/experiments" class="{{ 'active' if request.path == '/experiments' else '' }}">Experiments</a>
+    <div class="nav-left">
+      <div class="nav-brand">SP Ensemble Sandbox</div>
+      <div class="nav-links">
+        <a href="/dashboard" class="{{ 'active' if request.path in ('/', '/dashboard') else '' }}">Dashboard</a>
+        <a href="/events" class="{{ 'active' if request.path == '/events' else '' }}">Events</a>
+        <a href="/rules" class="{{ 'active' if request.path == '/rules' else '' }}">Rules</a>
+        <a href="/experiments" class="{{ 'active' if request.path == '/experiments' else '' }}">Experiments</a>
+      </div>
     </div>
+    {% if stub_mode %}
+    <div class="stub-badge">STUB MODE — placeholder predictions only</div>
+    {% endif %}
   </nav>
 
   <main class="page">

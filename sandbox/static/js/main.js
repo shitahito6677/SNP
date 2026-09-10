@@ -33,11 +33,15 @@ function initDashboard() {
   });
 
   function showPopup(e, mouseEvent) {
-    const stubBadge = e.is_stub ? '<span class="stub-tag">STUB</span>' : "";
+    const sourceBadge = e.is_stub
+      ? '<span class="stub-tag">STUB</span>'
+      : '<span class="real-tag">REAL</span>';
+    const sourceLabel = e.source === "real_historical" ? "real historical data" : (e.source || "manual");
     popupBody.innerHTML = `
       <div><strong>Date:</strong> ${e.date}</div>
-      <div><strong>Class:</strong> ${e.class} ${stubBadge}</div>
+      <div><strong>Class:</strong> ${e.class} ${sourceBadge}</div>
       <div><strong>Score:</strong> ${e.score}</div>
+      <div><strong>Source:</strong> ${sourceLabel}</div>
       <div><strong>Headline:</strong> ${e.headline || "-"}</div>
     `;
     popup.hidden = false;
@@ -59,7 +63,7 @@ function initDashboard() {
     try {
       const [priceRes, eventsRes] = await Promise.all([
         fetch("/api/prices/" + ticker + "?" + params.toString()),
-        fetch("/api/events?ticker=" + ticker),
+        fetch("/api/events?ticker=" + ticker + "&" + params.toString()),
       ]);
       price = await priceRes.json();
       events = await eventsRes.json();

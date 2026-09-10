@@ -24,12 +24,10 @@ html, body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-/* STUB badge — fixed, top-right, every page */
+/* STUB badge — lives inside the nav bar itself now (was `position: fixed` before, which
+   sat on top of and hid/blocked the right-hand nav links — see experiments/log.md) */
 .stub-badge {
-  position: fixed;
-  top: 12px;
-  right: 16px;
-  z-index: 100;
+  flex-shrink: 0;
   background: var(--stub-yellow);
   color: #1a1300;
   font-weight: 700;
@@ -38,6 +36,7 @@ a:hover { text-decoration: underline; }
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 /* top nav */
@@ -45,12 +44,15 @@ a:hover { text-decoration: underline; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   padding: 14px 24px;
   background: var(--panel-2);
   border-bottom: 1px solid var(--border);
 }
-.nav-brand { font-weight: 700; color: var(--text); }
-.nav-links { display: flex; gap: 20px; }
+.nav-left { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+.nav-brand { font-weight: 700; color: var(--text); white-space: nowrap; }
+.nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
 .nav-links a {
   color: var(--text-dim);
   font-size: 0.92rem;
@@ -287,3 +289,41 @@ tr.signal-sell { background: rgba(239, 83, 80, 0.08); }
   font-weight: 700;
   margin-left: 4px;
 }
+
+.real-tag {
+  display: inline-block;
+  background: var(--up);
+  color: #04140f;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.model-status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.82rem;
+}
+.model-status-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.model-status-list li:last-child { border-bottom: none; }
+.model-status-name { color: var(--text); font-weight: 600; }
+.model-status-badge {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: fit-content;
+}
+.model-status-badge.stub { background: var(--stub-yellow); color: #1a1300; }
+.model-status-badge.real { background: var(--up); color: #04140f; }
+.model-status-note { color: var(--text-dim); font-size: 0.76rem; }

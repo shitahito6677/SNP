@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
-from sandbox import config, events_store, experiments_db
+from sandbox import config, events_store, experiments_db, historical_data
 from sandbox.inference import model_a, model_b, model_c
 from sandbox.rules import versions as rule_versions
 
@@ -34,11 +34,43 @@ def _probe_stub_mode() -> bool:
     return any(getattr(m, "IS_STUB", True) for m in (model_a, model_b, model_c))
 
 
+def _model_status() -> list:
+    """สถานะแยกรายโมเดล (ไม่ใช่แค่ badge รวมทั้งหน้า) — Model C มี 2 มิติแยกกัน: live
+    inference (predict() สำหรับ headline ใหม่ ยังเป็น stub) กับ historical data (ข่าวจริง
+    477 ข่าวที่ผ่าน pipeline จริงแล้ว เชื่อมต่อ dashboard แล้วจริง ไม่ใช่ stub)"""
+    n_historical = historical_data.real_event_count()
+    return [
+        {
+            "key": "A",
+            "name": "Model A — Piotroski Fundamental",
+            "inference": "stub" if model_a.IS_STUB else "real",
+            "data_note": None,
+        },
+        {
+            "key": "B",
+            "name": "Model B — FinBERT Company News",
+            "inference": "stub" if model_b.IS_STUB else "real",
+            "data_note": None,
+        },
+        {
+            "key": "C",
+            "name": "Model C — Macro/Sector News",
+            "inference": "stub" if model_c.IS_STUB else "real",
+            "data_note": (
+                f"real historical data connected ({n_historical} FOMC/Beige Book news)"
+                if n_historical
+                else "historical data file not found"
+            ),
+        },
+    ]
+
+
 @app.context_processor
 def inject_globals():
     date_min, date_max = config.price_date_range()
     return {
         "stub_mode": _probe_stub_mode(),
+        "model_status": _model_status(),
         "tickers": config.TICKERS,
         "date_min": date_min,
         "date_max": date_max,
@@ -142,7 +174,26 @@ def api_events_get():
         return jsonify({"error": "ต้องระบุ ?ticker="}), 400
     if ticker not in config.TICKERS:
         return jsonify({"error": f"ticker ต้องเป็นหนึ่งใน {config.TICKERS}"}), 400
-    return jsonify(events_store.list_events_for_ticker(ticker))
+
+    # real historical macro news ครอบคลุม 1996-2026 (477 ข่าว) แต่ราคาที่มีมีแค่ 5 ปีล่าสุด —
+    # ต้อง bound ด้วย date range เสมอ (default = ทั้งช่วงราคา) ไม่งั้น Plotly จะขยาย x-axis
+    # ไปครอบคลุม event ที่อยู่นอกช่วงราคาจนกราฟแท่งเทียนเพี้ยน (มีแค่ 80/477 ข่าวที่อยู่ใน
+    # ช่วงราคา 5 ปีล่าสุด — ดู experiments/log.md)
+    date_min, date_max = config.price_date_range()
+    start = request.args.get("start") or date_min
+    end = request.args.get("end") or date_max
+
+    manual = events_store.list_events_for_ticker(ticker)
+    real_c = historical_data.load_real_macro_events_for_ticker(ticker)
+
+    # รวม macro (C) event จริง (477 ข่าว FOMC/Beige Book, source="real_historical") เข้ากับ
+    # manual C event (source="manual") เรียงตามวันที่ — ก่อนหน้านี้ endpoint นี้คืนแค่ manual
+    # อย่างเดียว ทำให้ ticker ที่ไม่เคย inject event เองเห็น C = 0 เสมอ (ดู experiments/log.md)
+    c_events = sorted(manual["c"] + real_c, key=lambda e: e["date"])
+    c_events = [e for e in c_events if start <= e["date"] <= end]
+    b_events = [e for e in manual["b"] if start <= e["date"] <= end]
+
+    return jsonify({"b": b_events, "c": c_events})
 
 
 @app.route("/api/events", methods=["POST"])

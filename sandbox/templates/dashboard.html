@@ -22,6 +22,17 @@
 
     <button id="reload-btn" type="button">Reload</button>
 
+    <h3>Model status</h3>
+    <ul class="model-status-list">
+      {% for m in model_status %}
+      <li>
+        <span class="model-status-name">{{ m.name }}</span>
+        <span class="model-status-badge {{ m.inference }}">{{ m.inference|upper }}{% if m.key == 'C' %} (live inference){% endif %}</span>
+        {% if m.data_note %}<span class="model-status-note">{{ m.data_note }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+
     <div class="legend">
       <h3>Legend</h3>
       <div class="legend-row"><span class="dot" style="background:#26a69a"></span> Macro / company — positive</div>

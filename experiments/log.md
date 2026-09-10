@@ -356,3 +356,65 @@ inference จริงแล้ว กลับมาทำ "Phase 1 จริ�
 sanity check เทียบ exp_02, สลับ `is_stub`/`IS_STUB` เป็น False) — ไม่ต้องแก้ dashboard/events/
 rules/experiments เลยเพราะ interface fix ไว้แล้วตั้งแต่ Phase 1
 ---
+
+## sandbox_dashboard_bugfixes_real_macro_data — 2026-09-11 09:10 (+07:00)
+
+**วิธีที่ใช้:** แก้ 3 ปัญหาที่ผู้ใช้เจอตอนเปิด dashboard จริงในเบราว์เซอร์ (checklist ข้อที่
+overnight ทำเองไม่ได้ — ตอนนี้มีคนเปิดดูจริงแล้ว):
+
+1. **Nav bar ถูก STUB badge บัง**: root cause คือ `.stub-badge` ใช้ `position: fixed; top:12px;
+   right:16px; z-index:100` ซึ่งวางทับตำแหน่งเดียวกับ `.nav-links` ฝั่งขวาของ `.topnav` พอดี
+   (topnav ก็อยู่บนสุดของหน้าเหมือนกัน) แก้โดยย้าย badge เข้าไปเป็น flex child ตัวที่ 3 ใน
+   `<nav>` เอง (brand+links อยู่ใน `.nav-left`, badge อยู่ฝั่งขวาสุดของ nav bar) เลิกใช้
+   `position: fixed` ไปเลย — อยู่ใน document flow ปกติ ไม่มีทางทับกันอีก
+2. **Macro (C) events = 0 สำหรับทุก ticker**: ยืนยันแล้วว่าเป็น **กรณีแรกที่ผู้ใช้สงสัย** —
+   ไม่ใช่บั๊ก query/filter วันที่ แต่เป็นเพราะ real historical macro news (477 ข่าวจาก
+   `data/raw/macro_news_raw.parquet` + `data/processed/sentiment.parquet`) ไม่เคยถูกเชื่อม
+   เข้า dashboard เลยตั้งแต่ Phase 2 — event บน dashboard มาจาก `manual_events.csv`
+   (Phase 3 manual injection) เท่านั้น ซึ่งว่างเปล่าถ้ายังไม่มีใคร inject เอง แก้โดยเขียน
+   `sandbox/historical_data.py` ใหม่ อ่าน 2 ไฟล์จริงนั้น join ด้วย url แปลง continuous score
+   (P(positive)-P(negative)) เป็น discrete class ด้วย threshold ±0.1 (เลือกจากดู distribution
+   จริงของ 11 sector ก่อน ไม่ใช่เดา — ส่วนใหญ่กระจุกใกล้ ±0.9 มีน้อยที่อยู่ใกล้ 0) merge เข้ากับ
+   `/api/events` — **บั๊กที่เจอเพิ่มระหว่างแก้**: real historical news คลุม 1996-2026 (477 ข่าว)
+   แต่ราคามีแค่ 5 ปีล่าสุด (2021-09-10..2026-09-10, มีข่าวแค่ 80/477 ที่อยู่ในช่วงนี้) ถ้าไม่
+   filter จะทำให้ Plotly ขยาย x-axis ครอบคลุม 30 ปีจนกราฟแท่งเทียนเพี้ยน — เพิ่ม
+   `start`/`end` query param ให้ `/api/events` (default = ช่วงราคาเต็ม) และแก้ `main.js` ให้
+   ส่ง param เดียวกับที่ส่งให้ `/api/prices` เสมอ
+3. **เพิ่ม per-model status**: `sandbox/app/server.py` เพิ่ม `_model_status()` (context
+   processor, ทุกหน้าใช้ได้) คืน status แยกราย model — Model A/B = "stub" เฉยๆ, Model C แยก
+   2 มิติ: `inference` (stub — live `predict()` สำหรับ headline ใหม่ยังเป็น stub) กับ
+   `data_note` (นับจำนวนข่าวจริงที่เชื่อมได้จริงจากไฟล์ ไม่ hardcode) แสดงเป็น panel ใน
+   Dashboard sidebar เพิ่ม `.real-tag` (สีเขียว) คู่กับ `.stub-tag` (เหลือง) ใน event popup
+   ด้วย เพื่อแยกภาพ event ที่มาจากข้อมูลจริง vs manual/stub ให้เห็นชัดต่อ event ไม่ใช่แค่ badge
+   รวมทั้งหน้า
+
+**ข้อมูลที่ใช้:** `data/raw/macro_news_raw.parquet` (477 แถว, ยืนยันอีกครั้ง — **ไม่ใช่ 452**
+ตามที่ผู้ใช้พูดถึงซ้ำหลายครั้งแล้ว ตัวเลขจริงจากไฟล์คือ 477 เท่ากันทุกครั้งที่เช็ค ตั้งแต่
+Phase 1), `data/processed/sentiment.parquet` (477 แถว, join กันได้ครบ 100% ไม่มีแถวตกหล่น)
+
+**ผลลัพธ์ (ตรวจจริงผ่าน curl หลังแก้):**
+- `GET /api/events?ticker=NVDA` (default range = ช่วงราคา) → b:0, c:80 (ตรงกับที่คำนวณ
+  ล่วงหน้าว่ามี 80/477 ข่าวอยู่ในช่วงราคา 5 ปี)
+- `GET /api/events?ticker=NVDA&start=1996-01-01&end=2026-12-31` → c:477 (ครบทุกข่าวจริงถ้าไม่
+  filter ยืนยันว่า merge ทำงานถูกต้อง ไม่ตกหล่น)
+- `GET /api/events?ticker=META` → c:80 เช่นกัน (คนละ sector, join ผ่าน `sent_XLC` แทน
+  `sent_XLK` — โค้ดใช้ `config.ticker_to_etf()` ต่อ ticker จริง ไม่ hardcode sector เดียว)
+- Dashboard sidebar render model status ครบ 3 โมเดล, Model C โชว์
+  "real historical data connected (477 FOMC/Beige Book news)" ถูกต้อง
+- `curl | grep nav-left / stub-badge` ยืนยัน badge อยู่ใน `<nav>` เดียวกับ nav-links แล้ว
+  (โครงสร้าง HTML เปลี่ยนจริง) — **ยังไม่ได้ยืนยันด้วยตาจริงในเบราว์เซอร์ว่า layout ไม่ชนกัน
+  อีก** ต้องให้ผู้ใช้ refresh แล้วดู
+- `python3 -m sandbox.scripts.smoke_test`, `python3 -m unittest sandbox.scripts.test_combine`,
+  `/rules` (27 แถว) — ผ่านหมด ไม่กระทบ
+
+**มุมมอง/การตีความ:** ปัญหาที่ 2 เป็นจุดสำคัญที่สุด — ก่อนหน้านี้ dashboard "ยังไม่ได้ทำหน้าที่
+หลักที่ตั้งใจไว้เลย" ตามที่ผู้ใช้กังวลจริง (แสดง bias ของ Qwen/FinBERT จาก exp_01/02) เพราะไม่มี
+ข้อมูลจริงให้ดูเลยถ้าไม่ inject เอง ตอนนี้เชื่อมแล้วจริง ผู้ใช้ควรเห็น pattern เอียงบวกของ
+FinBERT (ตามที่ exp_02 เคยพบ — XLP/XLV แทบไม่เคยติดลบ) ได้จากการดู marker สีเขียวเยอะกว่าแดง
+มากบนกราฟ — Model B ยังคง 0 เพราะไม่มี "ข้อมูลจริง" ให้เชื่อม (Model B ไม่มีโค้ด ไม่มี dataset
+เลยด้วยซ้ำ) ต่างจาก Model C ที่มี pipeline จริงรันสำเร็จแล้ว — นี่คือความแตกต่างที่ถูกต้องแล้ว
+ไม่ใช่บั๊ก
+
+**ขั้นต่อไปที่ควรลอง:** ผู้ใช้ refresh browser เช็คทั้ง 3 จุดด้วยตาจริง โดยเฉพาะจุดที่ 1
+(nav bar) ที่ยังไม่มีใครยืนยันด้วยตาว่าหายจริง
+---
