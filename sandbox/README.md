@@ -22,18 +22,21 @@ sandbox/
     model_a.py / model_b.py / model_c.py   # STUB predict() — ดู inference/README.md สำหรับ contract
     _stub_utils.py               # helper ที่ stub ใช้ร่วมกัน (ลบทิ้งได้เมื่อ swap ครบ)
     README.md                    # input/output contract ของแต่ละโมเดล + วิธี swap เป็นของจริง
+  engine/
+    combine.py                    # combine(a, b, c, rule_path) -> decision, lookup ตรง ห้าม fallback
   rules/
-    rule_table.json              # 27-row lookup table (A x B x C -> BUY/HOLD/SELL)
-    engine.py                    # combine(a_result, b_result, c_result) -> signal
+    rule_v1.json, rule_v2.json..  # versioned lookup table (27 แถวเสมอ) — ห้ามทับของเก่า มีแต่เพิ่ม version ใหม่
+    versions.py                   # list/load/save version (save = สร้างไฟล์ใหม่เสมอ)
   app/
     server.py                    # Flask entry point (รันด้วย python -m sandbox.app.server)
   templates/                     # base.html + dashboard/events/rules/experiments.html
   static/css/style.css           # dark trading-dashboard theme (#0e1117)
-  static/js/main.js              # Plotly.js candlestick + event marker + injection form
+  static/js/main.js              # Plotly.js candlestick + event marker + injection/rule-edit form
   scripts/
     phase0_validate_universe.py  # Phase 0 — validate universe (เสร็จแล้ว, ดู data/validation_report.md)
-    generate_rule_table.py       # generate sandbox/rules/rule_table.json จาก formula
-    smoke_test.py                # sanity check inference stub + rule engine แบบไม่ต้องเปิด server
+    generate_rule_v1.py          # generate sandbox/rules/rule_v1.json จาก formula ("A+B override C")
+    smoke_test.py                # sanity check inference stub + config แบบไม่ต้องเปิด server
+    test_combine.py              # unit test ของ sandbox/engine/combine.py (unittest, 8 case)
   data/
     prices/{TICKER}.csv          # Phase 0 output
     validation_report.md         # Phase 0 output
@@ -51,8 +54,11 @@ python3 -m pip install --user -r sandbox/requirements.txt
 # รันจาก project root เสมอ (import sandbox.* ต้องเจอ)
 cd /path/to/SNP-claude
 
-# sanity check inference stub + rule engine แบบไม่ต้องเปิด server
+# sanity check inference stub + config แบบไม่ต้องเปิด server
 python3 -m sandbox.scripts.smoke_test
+
+# unit test ของ rule engine (sandbox/engine/combine.py)
+python3 -m unittest sandbox.scripts.test_combine -v
 
 # เปิด dashboard
 python3 -m sandbox.app.server
@@ -70,7 +76,9 @@ python3 -m sandbox.app.server
   ที่มีข้อมูลราคาจริง) พิมพ์ headline แล้ว "รันผ่านโมเดล" — ปุ่ม B จะ disable อัตโนมัติถ้า
   ticker นั้นไม่อยู่ใน `config.TICKERS_WITH_COMPANY_NEWS` (เช็คทั้ง client-side และ server-side)
   มี disclaimer ชัดเจนว่าเป็นการทดสอบพฤติกรรม stub ไม่ใช่ backtest
-- **Rules** (`/rules`) — 27-row rule engine lookup table (Model A × B × C → BUY/HOLD/SELL)
+- **Rules** (`/rules`) — 27-row rule engine lookup table (Model A × B × C → buy/hold/sell)
+  editable ผ่าน UI (dropdown ต่อแถว) กด "Save as new version" สร้าง `rule_v{n+1}.json` ใหม่
+  เสมอ ห้ามทับไฟล์เดิม — ดู version เก่าได้ผ่าน `/rules?version=n`
 - **Experiments** (`/experiments`) — ประวัติ manual event ที่ inject ไปแล้วทั้งหมด
 
 STUB badge มุมขวาบนทุกหน้า คำนวณจาก module-level `IS_STUB` ของแต่ละ inference module (ไม่ได้

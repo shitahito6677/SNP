@@ -8,7 +8,6 @@ Sandbox dashboard (Phase 2) — Flask + Plotly.js (CDN), dark trading-dashboard 
 Rules (27-row rule table) / Experiments (ประวัติ event ที่ inject ไปแล้ว)
 """
 
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -16,14 +15,10 @@ from flask import Flask, jsonify, render_template, request
 
 from sandbox import config, events_store
 from sandbox.inference import model_a, model_b, model_c
+from sandbox.rules import versions as rule_versions
 
 SANDBOX_DIR = Path(__file__).resolve().parent.parent
 PRICES_DIR = SANDBOX_DIR / "data" / "prices"
-RULE_TABLE_PATH = SANDBOX_DIR / "rules" / "rule_table.json"
-
-
-def _load_rule_table() -> dict:
-    return json.loads(RULE_TABLE_PATH.read_text(encoding="utf-8"))
 
 app = Flask(
     __name__,
@@ -75,8 +70,19 @@ def events_page():
 
 @app.route("/rules")
 def rules_page():
-    payload = _load_rule_table()
-    return render_template("rules.html", meta=payload["meta"], rows=payload["rows"])
+    requested = request.args.get("version", type=int)
+    try:
+        n = requested if requested is not None else rule_versions.latest_version()
+        payload = rule_versions.load_version(n)
+    except FileNotFoundError as e:
+        return render_template("rules.html", error=str(e), payload=None, all_versions=[]), 404
+
+    all_versions = [
+        {"n": v, **rule_versions.load_version(v)} for v in rule_versions.list_versions()
+    ]
+    return render_template(
+        "rules.html", error=None, payload=payload, current_n=n, all_versions=all_versions
+    )
 
 
 @app.route("/experiments")
@@ -177,7 +183,29 @@ def api_experiments():
 
 @app.route("/api/rules")
 def api_rules():
-    return jsonify(_load_rule_table())
+    n = request.args.get("version", type=int)
+    try:
+        n = n if n is not None else rule_versions.latest_version()
+        return jsonify(rule_versions.load_version(n))
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.route("/api/rules/save", methods=["POST"])
+def api_rules_save():
+    payload = request.get_json(force=True, silent=True) or {}
+    table = payload.get("table")
+    description = (payload.get("description") or "").strip()
+
+    if not isinstance(table, list):
+        return jsonify({"error": "ต้องส่ง table เป็น list ของ {a,b,c,decision}"}), 400
+
+    try:
+        result = rule_versions.save_new_version(table, description=description)
+    except (ValueError, FileExistsError) as e:
+        return jsonify({"error": f"{type(e).__name__}: {e}"}), 400
+
+    return jsonify(result)
 
 
 if __name__ == "__main__":

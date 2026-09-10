@@ -1,18 +1,19 @@
 """
-Smoke test — ตรวจ sandbox skeleton ทั้งชุด (stub interfaces + rule engine) แบบไม่ต้องเปิด
-Flask server เพื่อยืนยันว่า reproducible จริง (input เดิม → output เดิมเสมอ) และ rule table
-ครอบคลุมครบทุก combo ก่อนเอาไปใช้ต่อใน dashboard
+Smoke test — ตรวจ inference stub (Phase 1) + config (Phase 0) แบบไม่ต้องเปิด Flask server
+เพื่อยืนยันว่า reproducible จริง (input เดิม → output เดิมเสมอ)
+
+ขอบเขต: เฉพาะ stub interface + config เท่านั้น — rule engine (Phase 4) มี unit test แยกที่
+`sandbox/scripts/test_combine.py` (เดิม smoke test นี้เคยรวม rule-engine check ด้วย แต่ engine
+ถูกออกแบบใหม่ทั้งหมดใน Phase 4 (`sandbox/engine/combine.py`) เลยแยก test ออกจากกันชัดเจน)
 
 รัน (จาก project root เพื่อให้ import `sandbox.*` เจอ): python3 -m sandbox.scripts.smoke_test
 exit code 0 = ผ่านทั้งหมด, ไม่ใช่ 0 = มี assertion ไหนพัง
 """
 
-import itertools
 import sys
 
 from sandbox import config
 from sandbox.inference import model_a, model_b, model_c
-from sandbox.rules import engine
 
 FAILURES = []
 
@@ -49,36 +50,17 @@ def main():
     check("model_a.is_stub is True (not yet swapped)", a1["is_stub"] is True)
     check("model_b.is_stub is True (not yet swapped)", b1["is_stub"] is True)
     check("model_c.is_stub is True (not yet swapped)", c1["is_stub"] is True)
+    check("model_a.IS_STUB module flag is True", model_a.IS_STUB is True)
+    check("model_b.IS_STUB module flag is True", model_b.IS_STUB is True)
+    check("model_c.IS_STUB module flag is True", model_c.IS_STUB is True)
 
-    # 3. rule engine covers all 27 combos with no crash, and is_stub propagates
-    combos_seen = set()
-    for a_cls, b_cls, c_cls in itertools.product(
-        ["buy", "hold", "sell"], ["positive", "neutral", "negative"], ["positive", "neutral", "negative"]
-    ):
-        result = engine.combine(
-            {"class": a_cls, "is_stub": True},
-            {"class": b_cls, "is_stub": True},
-            {"class": c_cls, "is_stub": True},
-        )
-        combos_seen.add((a_cls, b_cls, c_cls))
-        if result["signal"] not in {"BUY", "HOLD", "SELL"}:
-            FAILURES.append(f"combo {(a_cls, b_cls, c_cls)} produced invalid signal {result['signal']}")
-    check("rule engine handles all 27 combos without error", len(combos_seen) == 27)
-
-    combined_real = engine.combine(a1, b1, c1)
-    check("combine() propagates is_stub=True when any input is stub", combined_real["is_stub"] is True)
-
-    combined_no_stub = engine.combine(
-        {"class": "buy", "is_stub": False},
-        {"class": "positive", "is_stub": False},
-        {"class": "positive", "is_stub": False},
-    )
-    check("combine() reports is_stub=False when all inputs are non-stub", combined_no_stub["is_stub"] is False)
-
-    # 4. config sanity (universe from Phase 0)
+    # 3. config sanity (universe from Phase 0)
     check("config.TICKERS has exactly 5 tickers", len(config.TICKERS) == 5)
     for t in config.TICKERS:
         check(f"config.ticker_to_etf works for {t}", config.ticker_to_etf(t) is not None)
+
+    date_min, date_max = config.price_date_range()
+    check("config.price_date_range returns a valid (min, max)", date_min < date_max)
 
     print()
     if FAILURES:

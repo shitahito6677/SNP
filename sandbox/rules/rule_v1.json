@@ -1,0 +1,169 @@
+{
+  "version": "v1",
+  "created_at": "2026-09-11T06:18:03+07:00",
+  "description": "priority: A+B override C",
+  "table": [
+    {
+      "a": "buy",
+      "b": "positive",
+      "c": "positive",
+      "decision": "buy"
+    },
+    {
+      "a": "buy",
+      "b": "positive",
+      "c": "neutral",
+      "decision": "buy"
+    },
+    {
+      "a": "buy",
+      "b": "positive",
+      "c": "negative",
+      "decision": "buy"
+    },
+    {
+      "a": "buy",
+      "b": "neutral",
+      "c": "positive",
+      "decision": "buy"
+    },
+    {
+      "a": "buy",
+      "b": "neutral",
+      "c": "neutral",
+      "decision": "buy"
+    },
+    {
+      "a": "buy",
+      "b": "neutral",
+      "c": "negative",
+      "decision": "buy"
+    },
+    {
+      "a": "buy",
+      "b": "negative",
+      "c": "positive",
+      "decision": "buy"
+    },
+    {
+      "a": "buy",
+      "b": "negative",
+      "c": "neutral",
+      "decision": "hold"
+    },
+    {
+      "a": "buy",
+      "b": "negative",
+      "c": "negative",
+      "decision": "sell"
+    },
+    {
+      "a": "hold",
+      "b": "positive",
+      "c": "positive",
+      "decision": "buy"
+    },
+    {
+      "a": "hold",
+      "b": "positive",
+      "c": "neutral",
+      "decision": "buy"
+    },
+    {
+      "a": "hold",
+      "b": "positive",
+      "c": "negative",
+      "decision": "buy"
+    },
+    {
+      "a": "hold",
+      "b": "neutral",
+      "c": "positive",
+      "decision": "buy"
+    },
+    {
+      "a": "hold",
+      "b": "neutral",
+      "c": "neutral",
+      "decision": "hold"
+    },
+    {
+      "a": "hold",
+      "b": "neutral",
+      "c": "negative",
+      "decision": "sell"
+    },
+    {
+      "a": "hold",
+      "b": "negative",
+      "c": "positive",
+      "decision": "sell"
+    },
+    {
+      "a": "hold",
+      "b": "negative",
+      "c": "neutral",
+      "decision": "sell"
+    },
+    {
+      "a": "hold",
+      "b": "negative",
+      "c": "negative",
+      "decision": "sell"
+    },
+    {
+      "a": "sell",
+      "b": "positive",
+      "c": "positive",
+      "decision": "buy"
+    },
+    {
+      "a": "sell",
+      "b": "positive",
+      "c": "neutral",
+      "decision": "hold"
+    },
+    {
+      "a": "sell",
+      "b": "positive",
+      "c": "negative",
+      "decision": "sell"
+    },
+    {
+      "a": "sell",
+      "b": "neutral",
+      "c": "positive",
+      "decision": "sell"
+    },
+    {
+      "a": "sell",
+      "b": "neutral",
+      "c": "neutral",
+      "decision": "sell"
+    },
+    {
+      "a": "sell",
+      "b": "neutral",
+      "c": "negative",
+      "decision": "sell"
+    },
+    {
+      "a": "sell",
+      "b": "negative",
+      "c": "positive",
+      "decision": "sell"
+    },
+    {
+      "a": "sell",
+      "b": "negative",
+      "c": "neutral",
+      "decision": "sell"
+    },
+    {
+      "a": "sell",
+      "b": "negative",
+      "c": "negative",
+      "decision": "sell"
+    }
+  ]
+}

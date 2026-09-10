@@ -232,3 +232,63 @@ prompt เอง ("พี่ต้องเปิดดูหน้าจอจ�
 **ขั้นต่อไปที่ควรลอง:** Phase 4 — rule engine v1 + versioning (ต่อจากนี้ทันทีตาม instruction
 overnight)
 ---
+
+## sandbox_phase4_rule_engine_v1 — 2026-09-11 06:25 (+07:00) [overnight unattended]
+
+**วิธีที่ใช้:** Phase 4 ตาม spec — เขียน rule engine ใหม่ทั้งระบบ (retire ของเดิมจาก Phase 2):
+- `sandbox/rules/rule_table.json` + `sandbox/rules/engine.py` (weighted-sum design เดิม) **ลบทิ้ง**
+  แทนที่ด้วยระบบ versioned lookup table ตาม spec ใหม่เป๊ะ
+- `sandbox/rules/rule_v1.json` — 27 แถว generate จาก `sandbox/scripts/generate_rule_v1.py`
+  ด้วย logic "priority: A+B override C" (ตาม description ที่ผู้ใช้กำหนด): weight A
+  buy=+1/hold=0/sell=-1, B/C positive=+1/neutral=0/negative=-1, `combined_ab = A+B` — ถ้า ≠ 0
+  ตัดสินจาก A+B ตรงๆ (C ไม่มีผล = override จริง, 18/27 แถว) ถ้า `combined_ab == 0` (A,B หักล้าง
+  กันพอดี 3 คู่ × 3 ค่า C = 9 แถว) ให้ C เป็นคนตัดสิน — กระจาย: buy=12, hold=3, sell=12
+- `sandbox/engine/combine.py` — `combine(a, b, c, rule_path)` lookup ตรง raise `ValueError`
+  ถ้าไม่เจอ combination, raise `FileNotFoundError` ถ้า rule_path ไม่มีจริง ไม่มี fallback เดา
+  ตามที่กำหนดเป๊ะ
+- `sandbox/rules/versions.py` — `list_versions()`/`load_version()`/`save_new_version()` เขียน
+  ไฟล์ `rule_v{n+1}.json` ใหม่เสมอ (n = max version ที่มีอยู่จริง +1) มี `validate_table()`
+  เช็คครบ 27 combination ไม่ซ้ำ + enum values ถูกต้อง ก่อนยอม save กัน UI ส่งตารางพังมา
+- หน้า Rules เขียนใหม่เป็น editable table (dropdown ต่อแถวเลือก decision) + version picker
+  (`/rules?version=n`) + ปุ่ม "Save as new version"
+- `sandbox/scripts/test_combine.py` — unit test 8 case (unittest stdlib) เกิน 5 case ที่กำหนด
+  ขั้นต่ำ: override เคส A+B ชนะ buy/sell (2), tie-break โดย C ทั้ง 3 ทิศ (3), ครบ 27 combo
+  ไม่ error (1), missing combination ต้อง raise ไม่ fallback (1), missing file ต้อง raise (1)
+- `sandbox/scripts/smoke_test.py` ตัด rule-engine check ออก (engine เปลี่ยน design ทั้งหมด) เก็บ
+  เฉพาะ inference stub + config, เพิ่ม `config.price_date_range()` check
+
+**Decision ที่ไม่แน่ใจ (overnight, documented ใน `generate_rule_v1.py` ด้วย):** ตัวอย่าง JSON
+1 แถวที่ผู้ใช้แปะมา (`{"a":"buy","b":"buy","c":"sell","decision":"buy"}`) ใช้ค่า "buy"/"sell"
+สำหรับ b/c ซึ่ง**ขัดกับ contract จริงของ Model B/C** ที่ fix ไว้ตั้งแต่ Phase 1
+(`sandbox/inference/README.md`: b/c คืนค่า "positive"/"neutral"/"negative" เท่านั้น ไม่มีทาง
+เป็น "buy"/"sell") ตัดสินใจว่าเป็น typo/ตัวอย่าง format เท่านั้น ใช้ vocabulary จริงจาก Phase 1
+แทน (positive/neutral/negative) เพราะถ้าเปลี่ยนตาม literal example จะทำให้
+`sandbox/inference/model_b.py`/`model_c.py` ที่ import ตรงจาก Dashboard/Events ทั้งหมดพังทันที
+— นี่คือ decision ที่ risk ต่ำสุด (คง contract เดิมที่ทดสอบแล้วทั้งระบบ)
+
+**ข้อมูลที่ใช้:** ไม่มีข้อมูลจริงเกี่ยวข้อง (rule table เป็น business logic ที่ออกแบบเอง ไม่ใช่
+ผลลัพธ์ที่ validate จากข้อมูล — ต้อง revisit เมื่อมีโมเดลจริง)
+
+**ผลลัพธ์ (Checklist บังคับก่อน commit):**
+1. รัน server จริง (port 5050) — `/rules`, `/rules?version=1` → HTTP 200, table 27 แถวครบ
+   (`grep -c decision-select` = 27) — **ผ่าน** (ยังไม่ได้เปิด browser ด้วยตาเอง)
+2. `python3 -m unittest sandbox.scripts.test_combine -v` → **8/8 PASS** (เกิน 5 case ที่กำหนด)
+3. `python3 -m sandbox.scripts.smoke_test` → 20/20 PASS (ไม่กระทบจาก inference/config)
+4. Rule versioning ไม่ทับไฟล์เก่า — ทดสอบจริงด้วย `POST /api/rules/save` 2 ครั้งติดกัน:
+   MD5 ของ `rule_v1.json` **เหมือนเดิมทุกตัวอักษร** ก่อน/หลัง save (`1bd60cb0699c697e491bce6
+   60eec04bd`), save ครั้งแรกสร้าง `rule_v2.json` (มี `decision` ที่แก้จริงตามที่ส่งไป), save
+   ครั้งที่สองสร้าง `rule_v3.json` (ไม่ใช่ทับ v2) — `/rules?version=1` ยังโชว์ค่าดั้งเดิม,
+   `/rules?version=2` โชว์ค่าที่แก้ — **ผ่าน** — ลบ `rule_v2.json`/`rule_v3.json` (test
+   artifact) ทิ้งหลังทดสอบ เหลือแค่ `rule_v1.json` จริงใน repo
+5. `validate_table()` เช็คจริง: ลองส่งตารางที่ตัดแถวหนึ่งออก (`test_combine.py` test_07) →
+   raise `ValueError` แทนที่จะเดา — **ผ่าน**
+
+**มุมมอง/การตีความ:** Phase 4 ผ่าน DoD ครบทั้ง 3 ข้อ (rule_v1.json ครบ 27 แถว, unit test ≥5
+case ผ่าน [ได้ 8], save version ใหม่ได้จริงไม่ทับของเก่า — ยืนยันด้วย MD5 ไม่ใช่แค่ "ไฟล์ไม่
+error") จุดที่ต้อง revisit ทีหลัง: "A+B override C" logic เป็น design ที่เลือกเองตาม
+description ที่ผู้ใช้ให้มา ยังไม่ได้ validate ว่าเหมาะสมกับพฤติกรรมจริงของโมเดล — ต้องรอ
+Model A/B/C ตัวจริงมาทดสอบว่า priority นี้สมเหตุสมผลไหม (ตอนนี้ทดสอบได้แค่ logic ถูกต้องตาม
+ที่ตั้งใจเขียน ไม่ใช่ความถูกต้องเชิงการลงทุน)
+
+**ขั้นต่อไปที่ควรลอง:** Phase 5 — SQLite experiment persistence + diff (ต่อจากนี้ทันที)
+---

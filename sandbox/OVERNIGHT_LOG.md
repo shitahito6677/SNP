@@ -39,3 +39,26 @@ commit ทุกครั้ง
   เฉยๆ ไม่กระทบโค้ดอื่น)
 
 Commit: `sandbox: Phase 3 - manual event injection UI (B/C toggle, CSV, disclaimer)`
+
+---
+
+## Phase 4 — เสร็จ, commit แล้ว
+
+รายละเอียดเต็มใน `experiments/log.md` หัวข้อ `sandbox_phase4_rule_engine_v1` — สรุปสั้น:
+
+- ลบ rule engine เดิมจาก Phase 2 (`rule_table.json` + `engine.py`, weighted-sum design) แทนที่
+  ด้วย versioned lookup table ตาม spec ใหม่: `sandbox/rules/rule_v1.json` (27 แถว) +
+  `sandbox/engine/combine.py` (lookup ตรง, raise ถ้าไม่เจอ) + `sandbox/rules/versions.py`
+  (save = สร้างไฟล์ใหม่เสมอ)
+- unit test 8 case ผ่านหมด (เกิน 5 ที่กำหนด), versioning ทดสอบจริงด้วย MD5 ยืนยันว่า v1 ไม่ถูก
+  แก้เลยหลัง save v2/v3
+- **Decision ที่ต้อง flag ชัดเจน**: ตัวอย่าง JSON ที่ผู้ใช้แปะมาใน prompt ใช้ b/c="buy"/"sell"
+  ซึ่งขัดกับ contract จริงที่ fix ไว้ตั้งแต่ Phase 1 (b/c ต้องเป็น positive/neutral/negative
+  เท่านั้น) — ตัดสินใจว่าเป็น typo ในตัวอย่าง ใช้ vocabulary เดิมที่ระบบทั้งหมด (Dashboard,
+  Events, Model B/C stub) พึ่งพาอยู่แทน เพราะเปลี่ยนตามตัวอย่างจะทำให้ระบบที่ทดสอบผ่านแล้วพัง
+  ทันที — **ถ้าตื่นมาแล้วพบว่าตั้งใจจะให้ b/c เป็น "buy"/"sell" จริงๆ (เช่น mapping คนละแบบ)
+  ต้องแก้ `sandbox/scripts/generate_rule_v1.py` ใหม่และคิดว่าจะ map ยังไงให้ตรงกับที่ Model B/C
+  คืนค่าจริง** — เก็บ rule_v1.json ปัจจุบันไว้เป็น baseline เทียบได้
+- ยังไม่ได้เปิด browser ดู editable UI ด้วยตาเอง (เหตุผลเดียวกับ Phase 3)
+
+Commit: `sandbox: Phase 4 - rule engine v1 + versioning (combine(), rule_v1.json, unit tests)`

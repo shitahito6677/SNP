@@ -1,34 +1,69 @@
 {% extends "base.html" %}
 {% block title %}Rules — SP Ensemble Sandbox{% endblock %}
 {% block content %}
-<div class="panel">
-  <h1>Rule engine — 27-row lookup table</h1>
+<div class="panel wide">
+  <h1>Rule engine — editable lookup table</h1>
+
+  {% if error %}
+  <p class="error">{{ error }} — รัน <code>python3 sandbox/scripts/generate_rule_v1.py</code> ก่อน</p>
+  {% else %}
+
   <p class="note">
-    weights: A={{ meta.weights.model_a }}, B={{ meta.weights.model_b }}, C={{ meta.weights.model_c }}
-    &nbsp;|&nbsp; threshold: BUY ≥ {{ meta.thresholds.buy }}, SELL ≤ {{ meta.thresholds.sell }}
-    &nbsp;|&nbsp; distribution: {{ meta.signal_counts }}
+    กำลังดู <strong>{{ payload.version }}</strong> ({{ payload.created_at }}) —
+    {{ payload.description }}
     <br>
-    Default ที่ออกแบบไว้ล่วงหน้า (ดูที่มาใน <code>sandbox/scripts/generate_rule_table.py</code>)
-    ยังไม่ผ่าน validation ใดๆ — แก้ <code>sandbox/rules/rule_table.json</code> ได้ตรงๆ
+    lookup โดย <code>sandbox/engine/combine.py</code> ตรง (a,b,c) → decision ไม่มี fallback
+    เดา — ถ้าตารางไม่ครบ 27 combination การ lookup จะ raise error
   </p>
 
-  <div class="table-wrap">
-    <table class="data-table">
-      <thead>
-        <tr><th>Model A</th><th>Model B</th><th>Model C</th><th>Weighted score</th><th>Signal</th></tr>
-      </thead>
-      <tbody>
-        {% for r in rows %}
-        <tr class="signal-{{ r.signal|lower }}">
-          <td>{{ r.model_a_class }}</td>
-          <td>{{ r.model_b_class }}</td>
-          <td>{{ r.model_c_class }}</td>
-          <td>{{ r.weighted_score }}</td>
-          <td>{{ r.signal }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="version-picker">
+    <span class="hint">Versions:</span>
+    {% for v in all_versions %}
+      <a href="/rules?version={{ v.n }}" class="{{ 'active' if v.n == current_n else '' }}">
+        {{ v.version }}{% if v.n == current_n %} (current view){% endif %}
+      </a>
+    {% endfor %}
   </div>
+
+  <form id="rules-form">
+    <div class="table-wrap">
+      <table class="data-table" id="rules-table">
+        <thead>
+          <tr><th>Model A</th><th>Model B</th><th>Model C</th><th>Decision</th></tr>
+        </thead>
+        <tbody>
+          {% for r in payload.table %}
+          <tr class="signal-{{ r.decision }}">
+            <td>{{ r.a }}</td>
+            <td>{{ r.b }}</td>
+            <td>{{ r.c }}</td>
+            <td>
+              <select class="decision-select" data-a="{{ r.a }}" data-b="{{ r.b }}" data-c="{{ r.c }}">
+                <option value="buy" {{ "selected" if r.decision == "buy" }}>buy</option>
+                <option value="hold" {{ "selected" if r.decision == "hold" }}>hold</option>
+                <option value="sell" {{ "selected" if r.decision == "sell" }}>sell</option>
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <label>Description ของ version ใหม่ (optional)
+      <input type="text" id="rules-description" placeholder="เช่น 'ลด weight ของ C ลง'">
+    </label>
+
+    <button type="submit" id="save-version-btn">Save as new version</button>
+  </form>
+
+  <p id="rules-error" class="error" hidden></p>
+  <div id="rules-result" class="result-box" hidden></div>
+
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.__PAGE__ = "rules";</script>
 {% endblock %}

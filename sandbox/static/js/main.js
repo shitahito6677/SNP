@@ -266,10 +266,59 @@ function initEvents() {
 }
 
 // --------------------------------------------------------------------------
+// Rules (editable rule table + versioning) page
+// --------------------------------------------------------------------------
+
+function initRules() {
+  const form = document.getElementById("rules-form");
+  const errorEl = document.getElementById("rules-error");
+  const resultEl = document.getElementById("rules-result");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl.hidden = true;
+    resultEl.hidden = true;
+    const submitBtn = document.getElementById("save-version-btn");
+    submitBtn.disabled = true;
+
+    const table = Array.from(document.querySelectorAll(".decision-select")).map((sel) => ({
+      a: sel.dataset.a,
+      b: sel.dataset.b,
+      c: sel.dataset.c,
+      decision: sel.value,
+    }));
+    const description = document.getElementById("rules-description").value;
+
+    try {
+      const res = await fetch("/api/rules/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table, description }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorEl.textContent = data.error || "เกิดข้อผิดพลาด";
+        errorEl.hidden = false;
+        return;
+      }
+      resultEl.innerHTML = `Saved <strong>${data.version}</strong> → <code>${data.path}</code>.
+        <a href="/rules?version=${data.version.replace("v", "")}">เปิดดู version นี้</a>`;
+      resultEl.hidden = false;
+    } catch (err) {
+      errorEl.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
+      errorEl.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+}
+
+// --------------------------------------------------------------------------
 // Dispatch on page load
 // --------------------------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("candlestick-chart")) initDashboard();
   if (document.getElementById("event-form")) initEvents();
+  if (document.getElementById("rules-form")) initRules();
 });
