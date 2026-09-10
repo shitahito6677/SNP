@@ -16,6 +16,9 @@ Phase 2-5 (dashboard, rule engine, ฯลฯ) เขียนต่อได้�
    caller default เป็น False — แต่แนะนำให้คงไว้แล้วเซ็ต False จะชัดกว่า)
 4. ลบการ import จาก `sandbox/inference/_stub_utils.py` ออกจากไฟล์ที่ swap แล้ว (ไฟล์นั้นมีไว้
    ให้ stub ใช้ร่วมกันเท่านั้น ไม่ใช่ของ production)
+5. เปลี่ยน module-level constant `IS_STUB` (บนสุดของไฟล์ ก่อน `predict()`) จาก `True` เป็น
+   `False` — dashboard เช็คค่านี้ตัดสินใจว่าจะโชว์ STUB banner ไหมโดยไม่ต้องเรียก `predict()`
+   จริง (คนละกลไกกับ `is_stub` ใน return dict ของแต่ละ call ซึ่งยังต้องคงไว้เหมือนเดิม)
 
 ## Model A — Piotroski Fundamental Screening
 

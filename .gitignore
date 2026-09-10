@@ -9,6 +9,10 @@ data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 
+# sandbox dashboard event history (local UI test data, not a deliverable — regenerable
+# by using the tool; see sandbox/events_store.py)
+sandbox/data/events/*.jsonl
+
 # OS / editor
 .DS_Store
 __pycache__/

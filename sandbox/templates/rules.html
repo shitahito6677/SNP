@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Rules — SP Ensemble Sandbox{% endblock %}
+{% block content %}
+<div class="panel">
+  <h1>Rule engine — 27-row lookup table</h1>
+  <p class="note">
+    weights: A={{ meta.weights.model_a }}, B={{ meta.weights.model_b }}, C={{ meta.weights.model_c }}
+    &nbsp;|&nbsp; threshold: BUY ≥ {{ meta.thresholds.buy }}, SELL ≤ {{ meta.thresholds.sell }}
+    &nbsp;|&nbsp; distribution: {{ meta.signal_counts }}
+    <br>
+    Default ที่ออกแบบไว้ล่วงหน้า (ดูที่มาใน <code>sandbox/scripts/generate_rule_table.py</code>)
+    ยังไม่ผ่าน validation ใดๆ — แก้ <code>sandbox/rules/rule_table.json</code> ได้ตรงๆ
+  </p>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Model A</th><th>Model B</th><th>Model C</th><th>Weighted score</th><th>Signal</th></tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="signal-{{ r.signal|lower }}">
+          <td>{{ r.model_a_class }}</td>
+          <td>{{ r.model_b_class }}</td>
+          <td>{{ r.model_c_class }}</td>
+          <td>{{ r.weighted_score }}</td>
+          <td>{{ r.signal }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

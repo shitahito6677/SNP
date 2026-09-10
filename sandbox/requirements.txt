@@ -1,0 +1,5 @@
+# Dependencies เฉพาะของ sandbox/ (แยกจาก dependency ของ pipeline จริงใน src/)
+flask
+pandas
+yfinance
+lxml

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — SP Ensemble Sandbox{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <h2>Controls</h2>
+
+    <label>Ticker
+      <select id="ticker-select">
+        {% for t in tickers %}
+        <option value="{{ t }}">{{ t }} — {{ ticker_sector[t] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>From
+      <input type="date" id="date-start">
+    </label>
+    <label>To
+      <input type="date" id="date-end">
+    </label>
+
+    <button id="reload-btn" type="button">Reload</button>
+
+    <div class="legend">
+      <h3>Legend</h3>
+      <div class="legend-row"><span class="dot" style="background:#26a69a"></span> Macro / company — positive</div>
+      <div class="legend-row"><span class="dot" style="background:#ef5350"></span> Macro / company — negative</div>
+      <div class="legend-row"><span class="dot" style="background:#9aa0a6"></span> Macro / company — neutral</div>
+      <div class="legend-row"><span class="marker-sample triangle"></span> Macro event (dashed line, top marker)</div>
+      <div class="legend-row"><span class="marker-sample circle"></span> Company news event (on candle)</div>
+    </div>
+
+    <p class="hint">คลิก marker บนกราฟเพื่อดูรายละเอียด (วันที่, class, score, ที่มา)</p>
+  </aside>
+
+  <section class="chart-area">
+    <div id="chart-status" class="chart-status"></div>
+    <div id="candlestick-chart"></div>
+  </section>
+</div>
+
+<div id="event-popup" class="event-popup" hidden>
+  <button id="event-popup-close" class="popup-close" type="button">&times;</button>
+  <div id="event-popup-body"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.__PAGE__ = "dashboard";</script>
+{% endblock %}

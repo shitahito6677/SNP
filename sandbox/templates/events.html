@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Events — SP Ensemble Sandbox{% endblock %}
+{% block content %}
+<div class="panel narrow">
+  <h1>Manual event injection</h1>
+  <p class="note">
+    Inject ข่าวสมมติเอง (ไม่ต้องรอ news pipeline จริง) แล้วรันผ่าน Model C (macro — กระทบ
+    ทุก ticker แยกตาม sector) หรือ Model B (company — เฉพาะ ticker เดียว) event ที่ inject แล้ว
+    จะไปโผล่เป็น marker ในหน้า <a href="/dashboard">Dashboard</a> และ log ไว้ในหน้า
+    <a href="/experiments">Experiments</a>
+  </p>
+
+  <form id="event-form">
+    <label>Event type
+      <select id="event-kind">
+        <option value="macro">Macro / FOMC news (Model C — ทุก ticker, แยกตาม sector)</option>
+        <option value="company">Company news (Model B — ticker เดียว)</option>
+      </select>
+    </label>
+
+    <label id="ticker-field">
+      Ticker
+      <select id="event-ticker">
+        {% for t in tickers %}
+        <option value="{{ t }}">{{ t }} — {{ ticker_sector[t] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Date
+      <input type="date" id="event-date" required>
+    </label>
+
+    <label>Headline
+      <textarea id="event-headline" rows="4" required
+        placeholder="เช่น 'Fed signals rate cut amid cooling inflation data' หรือข่าวเฉพาะบริษัท"></textarea>
+    </label>
+
+    <button type="submit">Inject event</button>
+  </form>
+
+  <p id="event-error" class="error" hidden></p>
+  <div id="event-result" class="result-box" hidden></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.__PAGE__ = "events";</script>
+{% endblock %}

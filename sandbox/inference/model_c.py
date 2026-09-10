@@ -20,6 +20,10 @@ from sandbox.inference._stub_utils import deterministic_seed, pick_class, pick_s
 
 CLASSES = ["positive", "neutral", "negative"]
 
+# module-level flag ให้ caller เช็คได้ถูกๆ (ไม่ต้องเรียก predict() จริง) ว่ายังเป็น stub อยู่ไหม
+# — เปลี่ยนเป็น False ตอน swap เป็นโมเดลจริง (ดู sandbox/inference/README.md)
+IS_STUB = True
+
 
 def predict(headline: str, sector: str) -> dict:
     """
