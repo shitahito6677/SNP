@@ -2,8 +2,12 @@
 {% block title %}Experiments — SP Ensemble Sandbox{% endblock %}
 {% block content %}
 <div class="panel wide">
-  <h1>Experiments — ประวัติ event ที่ inject แล้ว</h1>
-  <p class="note">ล่าสุด {{ events|length }} รายการ (ใหม่สุดก่อน) — เก็บที่ <code>sandbox/data/events/events.jsonl</code></p>
+  <h1>Manual event log</h1>
+  <p class="note">
+    ล่าสุด {{ events|length }} แถว (ใหม่สุดก่อน) — จาก
+    <code>sandbox/data/manual_events.csv</code> (แยกจาก dataset ข่าวจริงของ Model C เสมอ,
+    ทุกแถวมี <code>source = "manual"</code>)
+  </p>
 
   {% if not events %}
   <p class="hint">ยังไม่มี event เลย — ไปที่หน้า <a href="/events">Events</a> เพื่อ inject อันแรก</p>
@@ -11,25 +15,19 @@
   <div class="table-wrap">
     <table class="data-table">
       <thead>
-        <tr><th>เวลา</th><th>Kind</th><th>Date</th><th>Headline</th><th>ผลลัพธ์</th></tr>
+        <tr><th>เวลา</th><th>Source</th><th>Kind</th><th>Ticker</th><th>Date</th><th>Headline</th><th>Class</th><th>Score</th></tr>
       </thead>
       <tbody>
         {% for e in events %}
         <tr>
           <td>{{ e.created_at }}</td>
-          <td>{{ e.kind }}</td>
+          <td>{{ e.source }}</td>
+          <td>{{ e.kind|upper }}</td>
+          <td>{{ e.ticker }}</td>
           <td>{{ e.date }}</td>
           <td class="headline-cell" title="{{ e.headline }}">{{ e.headline[:60] }}{% if e.headline|length > 60 %}…{% endif %}</td>
-          <td>
-            {% if e.kind == "company" %}
-              <strong>{{ e.ticker }}</strong>: {{ e['class'] }} ({{ e.score }})
-              {% if e.is_stub %}<span class="stub-tag">STUB</span>{% endif %}
-            {% else %}
-              {% for t, r in e.per_ticker.items() %}
-                <div><strong>{{ t }}</strong>: {{ r['class'] }} ({{ r.score }}){% if r.is_stub %} <span class="stub-tag">STUB</span>{% endif %}</div>
-              {% endfor %}
-            {% endif %}
-          </td>
+          <td>{{ e['class'] }}</td>
+          <td>{{ e.score }} {% if e.is_stub %}<span class="stub-tag">STUB</span>{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>

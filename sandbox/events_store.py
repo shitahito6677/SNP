@@ -1,19 +1,20 @@
 """
-Event store — Phase 2/3 "manual event injection": ผู้ใช้พิมพ์ headline เองในหน้า Events
-แล้วเรียก Model B/C (stub ตอนนี้) เพื่อได้ class/score ผูกกับวันที่ เก็บไว้เป็น "event" ที่
-หน้า Dashboard เอาไปวาดเป็น marker บนกราฟราคา และหน้า Experiments เอาไปแสดงเป็นประวัติ
+Manual event store (Phase 3) — ผู้ใช้พิมพ์ headline เองในหน้า Events แล้วเรียก Model B
+(ticker เดียว) หรือ Model C (ทุก ticker ใน universe, แยกตาม sector) เก็บผลเป็นแถวใน
+`sandbox/data/manual_events.csv` — CSV เดียว **แยกจาก dataset จริงของ Model C โดยเด็ดขาด**
+(ของจริงอยู่ที่ `data/raw/macro_news_raw.parquet` / `data/processed/*.parquet` ที่ root
+ของ repo คนละไฟล์ คนละ format คนละโฟลเดอร์ทั้งหมด — ดู sandbox/OVERNIGHT_LOG.md สำหรับ
+verification ว่าไม่ปนกัน)
 
-Event มี 2 แบบ:
-    - "macro"   : ข่าวมหภาค/FOMC ผ่าน Model C — กระทบทุก ticker แต่ "ยังไง" ขึ้นกับ sector
-                  ของแต่ละ ticker ดังนั้นเก็บผลแยกต่อ ticker ไว้ในนี้เลย (per_ticker)
-                  เวลาวาดบนกราฟ ticker ไหนก็ใช้ผลของ ticker นั้น (เส้นแนวตั้งจะโผล่ทุกกราฟ
-                  เหมือนกัน แต่สี/score อาจต่างกันเพราะคนละ sector)
-    - "company" : ข่าวรายบริษัท ผ่าน Model B — ผูกกับ ticker เดียว โผล่แค่กราฟของ ticker นั้น
+ทุกแถวมี `source` = "manual" เสมอ (บังคับตาม spec) เพื่อให้ใครก็ตามที่มาอ่านไฟล์นี้ทีหลัง
+รู้ทันทีว่าไม่ใช่ข้อมูลจริง แม้จะเผลอเอาไปรวมกับที่อื่น
 
-เก็บเป็น JSON Lines ที่ sandbox/data/events/events.jsonl (append-only, gitignored)
+Schema (1 แถว = 1 (event, ticker) pair — event แบบ "c" กระทบทุก ticker เลยมีหลายแถว/event
+แต่ event แบบ "b" มีแค่ 1 แถว):
+    id, created_at, source, kind (b|c), ticker, date, headline, class, score, is_stub
 """
 
-import json
+import csv
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,92 +22,116 @@ from pathlib import Path
 from sandbox import config
 from sandbox.inference import model_b, model_c
 
-EVENTS_PATH = Path(__file__).resolve().parent / "data" / "events" / "events.jsonl"
+MANUAL_EVENTS_PATH = Path(__file__).resolve().parent / "data" / "manual_events.csv"
 
-KINDS = ("macro", "company")
+FIELDNAMES = [
+    "id", "created_at", "source", "kind", "ticker", "date", "headline",
+    "class", "score", "is_stub",
+]
+
+KINDS = ("b", "c")  # b = company news (Model B, 1 ticker) / c = macro news (Model C, ทุก ticker)
 
 
-def _append(record: dict) -> None:
-    EVENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with EVENTS_PATH.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
 
 
-def add_macro_event(date: str, headline: str) -> dict:
-    """รัน Model C แยกต่อ sector ของทั้ง 5 ticker ใน universe แล้วเก็บเป็น 1 event เดียว
-    ที่มีผลต่อ ticker แยกกัน (per_ticker) — เพราะ Model C เทรนแยกตาม GICS sector จริงๆ
-    ไม่ใช่ค่าเดียวกันทุก sector"""
-    per_ticker = {}
-    for ticker in config.TICKERS:
-        etf = config.ticker_to_etf(ticker)
-        per_ticker[ticker] = model_c.predict(headline, etf)
+def _ensure_file() -> None:
+    MANUAL_EVENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not MANUAL_EVENTS_PATH.exists():
+        with MANUAL_EVENTS_PATH.open("w", newline="", encoding="utf-8") as f:
+            csv.DictWriter(f, fieldnames=FIELDNAMES).writeheader()
 
-    record = {
-        "id": str(uuid.uuid4()),
-        "created_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
-        "kind": "macro",
-        "date": date,
-        "headline": headline,
-        "per_ticker": per_ticker,
-    }
-    _append(record)
-    return record
+
+def _append_rows(rows: list) -> None:
+    _ensure_file()
+    with MANUAL_EVENTS_PATH.open("a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+        for r in rows:
+            writer.writerow(r)
 
 
 def add_company_event(date: str, headline: str, ticker: str) -> dict:
+    """kind = 'b' — Model B, โผล่แค่ ticker เดียว"""
     if ticker not in config.TICKERS:
         raise ValueError(f"ticker ต้องเป็นหนึ่งใน {config.TICKERS}")
+    if not config.has_company_news(ticker):
+        raise ValueError(
+            f"{ticker} ไม่มี company-level news ให้ inject event แบบ B ได้ (ปุ่ม B ควรถูก "
+            "disable ไปแล้วตั้งแต่ฝั่ง UI — เห็น error นี้แปลว่ามีคน bypass client-side check)"
+        )
 
     result = model_b.predict(headline, ticker)
-    record = {
+    row = {
         "id": str(uuid.uuid4()),
-        "created_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
-        "kind": "company",
+        "created_at": _now_iso(),
+        "source": "manual",
+        "kind": "b",
+        "ticker": ticker,
         "date": date,
         "headline": headline,
-        "ticker": ticker,
         "class": result["class"],
         "score": result["score"],
         "is_stub": result["is_stub"],
     }
-    _append(record)
-    return record
+    _append_rows([row])
+    return {"kind": "b", "rows": [row]}
 
 
-def _load_all() -> list:
-    if not EVENTS_PATH.exists():
-        return []
-    lines = EVENTS_PATH.read_text(encoding="utf-8").splitlines()
-    return [json.loads(line) for line in lines if line.strip()]
-
-
-def list_events_for_ticker(ticker: str) -> dict:
-    """คืน dict {"macro": [...], "company": [...]} สำหรับวาดบนกราฟของ ticker เดียว
-    macro event ทุกอันโผล่ (ใช้ per_ticker[ticker] เป็น class/score) company event
-    เฉพาะอันที่ ticker ตรงกัน"""
-    all_events = _load_all()
-    macro = []
-    for e in all_events:
-        if e["kind"] != "macro":
-            continue
-        result = e["per_ticker"].get(ticker)
-        if result is None:
-            continue
-        macro.append(
+def add_macro_event(date: str, headline: str) -> dict:
+    """kind = 'c' — Model C, รันแยกทุก sector ของทั้ง 5 ticker ใน universe เก็บเป็นคนละแถว
+    (Model C เทรนแยกตาม GICS sector จริง จึงไม่ควรบังคับ class เดียวกันทุก ticker)"""
+    rows = []
+    for ticker in config.TICKERS:
+        etf = config.ticker_to_etf(ticker)
+        result = model_c.predict(headline, etf)
+        rows.append(
             {
-                "id": e["id"],
-                "date": e["date"],
-                "headline": e["headline"],
+                "id": str(uuid.uuid4()),
+                "created_at": _now_iso(),
+                "source": "manual",
+                "kind": "c",
+                "ticker": ticker,
+                "date": date,
+                "headline": headline,
                 "class": result["class"],
                 "score": result["score"],
                 "is_stub": result["is_stub"],
             }
         )
-    company = [e for e in all_events if e["kind"] == "company" and e.get("ticker") == ticker]
-    return {"macro": macro, "company": company}
+    _append_rows(rows)
+    return {"kind": "c", "rows": rows}
 
 
-def list_all_events(limit: int = 100) -> list:
-    """คืน event ทั้งหมด (ใหม่สุดก่อน) สำหรับหน้า Experiments — ไม่กรองตาม ticker"""
-    all_events = _load_all()
-    return list(reversed(all_events))[:limit]
+def _normalize(row: dict) -> dict:
+    """csv.DictReader คืนทุก field เป็น str — แปลง score/is_stub กลับเป็น type ที่ใช้งานได้"""
+    row = dict(row)
+    row["score"] = float(row["score"])
+    row["is_stub"] = row["is_stub"] in ("True", "true", "1")
+    return row
+
+
+def _load_all() -> list:
+    _ensure_file()
+    with MANUAL_EVENTS_PATH.open(newline="", encoding="utf-8") as f:
+        return [_normalize(r) for r in csv.DictReader(f)]
+
+
+def list_events_for_ticker(ticker: str) -> dict:
+    """คืน {"b": [...], "c": [...]} สำหรับวาด marker บนกราฟของ ticker เดียว"""
+    all_rows = _load_all()
+    b = [r for r in all_rows if r["kind"] == "b" and r["ticker"] == ticker]
+    c = [r for r in all_rows if r["kind"] == "c" and r["ticker"] == ticker]
+    return {"b": b, "c": c}
+
+
+def list_all_events(limit: int = 200) -> list:
+    """คืนทุกแถว (ใหม่สุดก่อน) สำหรับหน้า Experiments — ไม่กรองตาม ticker"""
+    return list(reversed(_load_all()))[:limit]
+
+
+def load_events_in_range(start: str, end: str, ticker_set: list) -> list:
+    """สำหรับ Phase 5 experiment runner — คืนทุกแถวที่ date อยู่ใน [start, end] และ ticker
+    อยู่ใน ticker_set"""
+    rows = _load_all()
+    return [r for r in rows if start <= r["date"] <= end and r["ticker"] in ticker_set]

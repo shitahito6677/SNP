@@ -14,10 +14,10 @@
     </label>
 
     <label>From
-      <input type="date" id="date-start">
+      <input type="date" id="date-start" min="{{ date_min }}" max="{{ date_max }}">
     </label>
     <label>To
-      <input type="date" id="date-end">
+      <input type="date" id="date-end" min="{{ date_min }}" max="{{ date_max }}">
     </label>
 
     <button id="reload-btn" type="button">Reload</button>

@@ -79,7 +79,17 @@ a:hover { text-decoration: underline; }
   font-size: 0.85rem;
   line-height: 1.6;
 }
-.hint { color: var(--text-dim); font-size: 0.85rem; }
+.hint { color: var(--text-dim); font-size: 0.8rem; display: block; margin-top: 4px; }
+
+.disclaimer {
+  background: rgba(245, 197, 24, 0.1);
+  border: 1px solid var(--stub-yellow);
+  color: var(--stub-yellow);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
 
 /* dashboard layout */
 .dashboard-layout {

@@ -169,3 +169,66 @@ candlestick, event marker แยก macro/company, popup, STUB badge) จุด�
 (เช่น เพิ่ม Model A signal เข้า dashboard ด้วย — ตอนนี้ Model A ยังไม่ได้ใช้ใน dashboard เลย
 เพราะไม่มี "event" ที่ผูกกับวันที่ชัดเจนแบบ B/C ต้องคิด UI แยกสำหรับมันทีหลัง)
 ---
+
+## sandbox_phase3_manual_event_injection — 2026-09-11 06:20 (+07:00) [overnight unattended]
+
+**วิธีที่ใช้:** Phase 3 ตามคำสั่งผู้ใช้ (overnight unattended run — ดู `sandbox/OVERNIGHT_LOG.md`)
+เขียนใหม่หน้า Events + storage ทั้งหมดให้ตรง spec ที่ต่างจาก Phase 2 เดิม:
+- `sandbox/events_store.py` เขียนใหม่ทั้งไฟล์: เปลี่ยนจาก JSONL (`data/events/events.jsonl`,
+  kind "macro"/"company") เป็น **CSV เดียว** `sandbox/data/manual_events.csv` (kind "b"/"c"
+  ตรงตามที่ผู้ใช้ระบุ) ทุกแถวมี `source = "manual"` เสมอ (บังคับตาม field เดียวกับที่ระบุ)
+  event แบบ C เขียน 5 แถว (1 ต่อ ticker/sector) แบบ B เขียน 1 แถว
+- `sandbox/config.py` เพิ่ม `TICKERS_WITH_COMPANY_NEWS` (set, default = ทุก ticker) +
+  `has_company_news()` + `price_date_range()` (อ่านช่วงวันที่จริงจากไฟล์ราคา ไม่ hardcode —
+  intersection ของทั้ง 5 ตัว)
+- หน้า Events ปรับ UI: เลือก ticker ก่อน (ไม่ใช่เลือก scope ก่อนแบบเดิม) เพราะต้องรู้ ticker
+  ก่อนถึงจะเช็คได้ว่า disable ปุ่ม B ไหม, date input มี `min`/`max` จาก `price_date_range()`,
+  เพิ่ม disclaimer ข้อความตามที่กำหนดเป๊ะ, validate date range ทั้ง client-side (JS) และ
+  server-side (Flask, กัน bypass)
+- `sandbox/app/server.py`: `/api/events` POST เช็ค date อยู่ในช่วงราคาจริงก่อนเรียกโมเดล,
+  `/api/events` GET คืน `{"b": [...], "c": [...]}` ตาม ticker (schema ใหม่)
+- อัปเดต `sandbox/templates/experiments.html`, `sandbox/static/js/main.js` (dashboard render
+  ใช้ `events.b`/`events.c` แทน `events.company`/`events.macro`) ให้ตรง schema ใหม่ทั้งหมด
+
+**Decision ที่ไม่แน่ใจ (overnight, เลือก low-risk เอง — ดูรายละเอียดใน OVERNIGHT_LOG.md):**
+เก็บ manual event เป็น CSV แบบ 1 แถวต่อ (event, ticker) แทนที่จะ nest per_ticker ใน JSON
+เพราะแมพตรงกับ DoD ("B ขึ้นแค่หุ้นเดียว, C ขึ้นทุกหุ้น") ได้ตรงไปตรงมาที่สุด และ diff/grep
+ตรวจสอบง่ายกว่า JSON ซ้อน
+
+**ข้อมูลที่ใช้:** ราคาจาก `sandbox/data/prices/*.csv` (Phase 0) event ทดสอบเป็น headline
+สมมติผ่าน curl (B: NVDA "NVDA beats earnings estimates" วันที่ 2025-06-15, C: "Fed holds
+rates steady" วันที่ 2025-07-01) เคลียร์ `manual_events.csv` ทิ้งหลังทดสอบแล้ว (gitignored)
+
+**ผลลัพธ์ (Checklist บังคับก่อน commit — ทุกข้อมีหลักฐานจริง):**
+1. รัน server จริง (`python3 -m sandbox.app.server`, port 5050) — ทุกหน้า `/`, `/dashboard`,
+   `/events`, `/rules`, `/experiments` → HTTP 200 (curl) — **ผ่าน** (ยังไม่ได้เปิด browser
+   ด้วยตาเอง ต้องให้ผู้ใช้ตรวจตามที่กำหนดไว้)
+2. Scope B/C ถูกต้อง: `POST /api/events {kind:"b", ticker:"NVDA", ...}` → เขียน 1 แถว (NVDA
+   เท่านั้น); `POST /api/events {kind:"c", ...}` → เขียน 5 แถว (ครบทุก ticker, class ต่างกัน
+   จริงตาม sector); `GET /api/events?ticker=NVDA` → b:1, c:1; `GET /api/events?ticker=META`
+   → b:0, c:1 (ไม่มี B เพราะไม่เคย inject ให้ META) — **ผ่าน**
+3. ไฟล์ manual event ไม่ปนกับ dataset training จริง: เช็คด้วยโค้ดจริง —
+   `data/raw/macro_news_raw.parquet` (477 แถว, คอลัมน์ date/text/source/url) vs
+   `sandbox/data/manual_events.csv` (คอลัมน์ id/created_at/source/kind/ticker/date/headline/
+   class/score/is_stub) คนละไฟล์ คนละ path คนละ format คนละคอลัมน์ทั้งหมด, headline ที่ inject
+   ไม่ overlap กับ text ของข่าวจริงเลย (เช็คด้วย set intersection = empty) — **ผ่าน**
+4. Date-range guard: `POST /api/events` วันที่ 2019-01-01 (นอกช่วง 2021-09-10..2026-09-10)
+   → 400 พร้อม error message ระบุช่วงที่ถูกต้อง — **ผ่าน**
+5. B-disable enforcement (server-side, จำลองกรณี ticker ไม่มี company news): ลบ "FDX" ออกจาก
+   `TICKERS_WITH_COMPANY_NEWS` ชั่วคราวแล้วเรียก `add_company_event()` ตรงๆ → raise
+   `ValueError` พร้อมข้อความบอกสาเหตุ, คืนค่า default กลับหลังทดสอบ — **ผ่าน** (server เช็คจริง
+   ไม่ใช่แค่ UI disable ที่ bypass ได้) — ส่วน client-side disable (JS `syncBAvailability`)
+   ตรวจโค้ดแล้วแต่ **ยังไม่ได้เห็นด้วยตาจริงใน browser** เพราะตอนนี้ทุก ticker enabled หมด
+   ไม่มีเคส disabled จริงให้เห็นในสถานะ default
+6. `node --check sandbox/static/js/main.js` ผ่าน, `python3 -m sandbox.scripts.smoke_test`
+   ผ่านครบ 19 check เหมือนเดิม (ไม่กระทบ)
+
+**มุมมอง/การตีความ:** Phase 3 ผ่าน DoD ทั้ง 3 ข้อที่ระบุ (B ขึ้นตัวเดียว, C ขึ้นทุกตัว,
+manual_events.csv แยกจาก training จริง) ด้วยหลักฐานที่ตรวจสอบได้จริงทุกข้อ จุดเดียวที่ยังไม่
+ครบคือการเปิด browser ดูด้วยตาจริงตาม checklist บังคับ — ทำไม่ได้ในโหมด unattended (ไม่มี
+เครื่องมือ browser อัตโนมัติในสภาพแวดล้อมนี้) ต้องรอผู้ใช้เปิดดูเองตอนเช้าตามที่ระบุไว้ใน
+prompt เอง ("พี่ต้องเปิดดูหน้าจอจริงด้วยตาเองด้วย")
+
+**ขั้นต่อไปที่ควรลอง:** Phase 4 — rule engine v1 + versioning (ต่อจากนี้ทันทีตาม instruction
+overnight)
+---

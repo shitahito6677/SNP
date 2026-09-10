@@ -96,18 +96,18 @@ function initDashboard() {
 
     const maxHigh = Math.max(...price.high);
     const macroTrace = {
-      x: events.macro.map((e) => e.date),
-      y: events.macro.map(() => maxHigh * 1.03),
+      x: events.c.map((e) => e.date),
+      y: events.c.map(() => maxHigh * 1.03),
       mode: "markers",
       type: "scatter",
-      name: "Macro event",
+      name: "Macro event (C)",
       marker: {
         symbol: "triangle-down",
         size: 11,
-        color: events.macro.map((e) => classColor(e.class)),
+        color: events.c.map((e) => classColor(e.class)),
         line: { color: "#0e1117", width: 1 },
       },
-      customdata: events.macro,
+      customdata: events.c,
       hovertemplate: "%{x}<extra></extra>",
     };
 
@@ -116,25 +116,25 @@ function initDashboard() {
       dateIndex[d] = i;
     });
     const companyTrace = {
-      x: events.company.map((e) => e.date),
-      y: events.company.map((e) => {
+      x: events.b.map((e) => e.date),
+      y: events.b.map((e) => {
         const i = dateIndex[e.date];
         return i !== undefined ? price.close[i] : null;
       }),
       mode: "markers",
       type: "scatter",
-      name: "Company news",
+      name: "Company news (B)",
       marker: {
         symbol: "circle",
         size: 10,
-        color: events.company.map((e) => classColor(e.class)),
+        color: events.b.map((e) => classColor(e.class)),
         line: { color: "#fff", width: 1 },
       },
-      customdata: events.company,
+      customdata: events.b,
       hovertemplate: "%{x}<extra></extra>",
     };
 
-    const shapes = events.macro.map((e) => ({
+    const shapes = events.c.map((e) => ({
       type: "line",
       xref: "x",
       yref: "paper",
@@ -178,10 +178,10 @@ function initDashboard() {
       price.dates[0] +
       " → " +
       price.dates[price.dates.length - 1] +
-      ") | macro events: " +
-      events.macro.length +
-      " | company events: " +
-      events.company.length;
+      ") | macro (C) events: " +
+      events.c.length +
+      " | company (B) events: " +
+      events.b.length;
   }
 
   tickerSelect.addEventListener("change", render);
@@ -194,31 +194,38 @@ function initDashboard() {
 // --------------------------------------------------------------------------
 
 function renderEventResult(data) {
-  if (data.kind === "company") {
-    const stubBadge = data.is_stub ? '<span class="stub-tag">STUB</span>' : "";
-    return `Injected <strong>company</strong> event for <strong>${data.ticker}</strong> on ${data.date}: <strong>${data.class}</strong> (score ${data.score}) ${stubBadge}`;
-  }
-  const rows = Object.entries(data.per_ticker)
-    .map(([t, r]) => {
+  const rows = data.rows
+    .map((r) => {
       const stubBadge = r.is_stub ? '<span class="stub-tag">STUB</span>' : "";
-      return `<div><strong>${t}</strong>: ${r.class} (${r.score}) ${stubBadge}</div>`;
+      return `<div><strong>${r.ticker}</strong>: ${r.class} (${r.score}) ${stubBadge}</div>`;
     })
     .join("");
-  return `Injected <strong>macro</strong> event on ${data.date} — per ticker/sector:${rows}`;
+  const label = data.kind === "b" ? "B (company — 1 ticker)" : "C (macro — ทุก ticker)";
+  return `Injected <strong>${label}</strong> event — ${data.rows.length} row(s) written to
+    <code>sandbox/data/manual_events.csv</code>:${rows}`;
 }
 
 function initEvents() {
+  const tickerSelect = document.getElementById("event-ticker");
   const kindSelect = document.getElementById("event-kind");
-  const tickerField = document.getElementById("ticker-field");
+  const bOption = kindSelect.querySelector('option[value="b"]');
+  const bHint = document.getElementById("b-disabled-hint");
   const form = document.getElementById("event-form");
   const errorEl = document.getElementById("event-error");
   const resultEl = document.getElementById("event-result");
+  const tickersWithCompanyNews = window.__TICKERS_WITH_COMPANY_NEWS__ || [];
 
-  function syncTickerField() {
-    tickerField.style.display = kindSelect.value === "company" ? "block" : "none";
+  // Phase 3 rule: ถ้า ticker ไม่มี company-level news ที่เกี่ยวข้อง ต้อง disable ปุ่ม/option B
+  // อัตโนมัติ (เผื่ออนาคต — ตอนนี้ทุก ticker รองรับหมดเพราะ Model B ยังเป็น stub)
+  function syncBAvailability() {
+    const ticker = tickerSelect.value;
+    const available = tickersWithCompanyNews.includes(ticker);
+    bOption.disabled = !available;
+    bHint.hidden = available;
+    if (!available && kindSelect.value === "b") kindSelect.value = "c";
   }
-  kindSelect.addEventListener("change", syncTickerField);
-  syncTickerField();
+  tickerSelect.addEventListener("change", syncBAvailability);
+  syncBAvailability();
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -231,7 +238,7 @@ function initEvents() {
       kind: kindSelect.value,
       date: document.getElementById("event-date").value,
       headline: document.getElementById("event-headline").value,
-      ticker: document.getElementById("event-ticker").value,
+      ticker: tickerSelect.value,
     };
 
     try {
@@ -248,8 +255,7 @@ function initEvents() {
       }
       resultEl.innerHTML = renderEventResult(data);
       resultEl.hidden = false;
-      form.reset();
-      syncTickerField();
+      document.getElementById("event-headline").value = "";
     } catch (err) {
       errorEl.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
       errorEl.hidden = false;

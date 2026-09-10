@@ -41,7 +41,13 @@ def _probe_stub_mode() -> bool:
 
 @app.context_processor
 def inject_globals():
-    return {"stub_mode": _probe_stub_mode(), "tickers": config.TICKERS}
+    date_min, date_max = config.price_date_range()
+    return {
+        "stub_mode": _probe_stub_mode(),
+        "tickers": config.TICKERS,
+        "date_min": date_min,
+        "date_max": date_max,
+    }
 
 
 # --------------------------------------------------------------------------
@@ -60,7 +66,11 @@ def dashboard():
 
 @app.route("/events")
 def events_page():
-    return render_template("events.html", ticker_sector=config.TICKER_SECTOR)
+    return render_template(
+        "events.html",
+        ticker_sector=config.TICKER_SECTOR,
+        tickers_with_company_news=sorted(config.TICKERS_WITH_COMPANY_NEWS),
+    )
 
 
 @app.route("/rules")
@@ -139,12 +149,16 @@ def api_events_post():
     if not headline:
         return jsonify({"error": "headline ห้ามว่าง"}), 400
 
+    date_min, date_max = config.price_date_range()
+    if not (date_min <= date <= date_max):
+        return jsonify({"error": f"date ต้องอยู่ในช่วงที่มีข้อมูลราคา ({date_min} .. {date_max})"}), 400
+
     try:
-        if kind == "macro":
+        if kind == "c":
             record = events_store.add_macro_event(date, headline)
         else:
             if ticker not in config.TICKERS:
-                return jsonify({"error": f"company event ต้องระบุ ticker หนึ่งใน {config.TICKERS}"}), 400
+                return jsonify({"error": f"event แบบ B ต้องระบุ ticker หนึ่งใน {config.TICKERS}"}), 400
             record = events_store.add_company_event(date, headline, ticker)
     except Exception as e:  # noqa: BLE001 — ส่ง error กลับเป็น JSON ให้ UI แสดง ไม่ให้ 500 เปล่าๆ
         return jsonify({"error": f"{type(e).__name__}: {e}"}), 500

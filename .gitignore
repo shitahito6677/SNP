@@ -10,8 +10,13 @@ data/processed/*
 !data/processed/.gitkeep
 
 # sandbox dashboard event history (local UI test data, not a deliverable — regenerable
-# by using the tool; see sandbox/events_store.py)
+# by using the tool; see sandbox/events_store.py). Never contains real training data —
+# see Phase 3 in experiments/log.md for the separation-from-training-data check.
+sandbox/data/manual_events.csv
 sandbox/data/events/*.jsonl
+
+# sandbox Phase 5 experiment persistence (local SQLite, regenerable via the Experiments page)
+sandbox/experiments.db
 
 # OS / editor
 .DS_Store

@@ -16,8 +16,8 @@ fix ไว้แล้ว พร้อมสลับเป็นของจร
 
 ```
 sandbox/
-  config.py                    # universe (5 ticker) + sector/ETF mapping — ยืนยันจริงใน Phase 0
-  events_store.py              # บันทึก/โหลด event ที่ inject จากหน้า Events (JSON Lines)
+  config.py                    # universe (5 ticker) + sector/ETF mapping + price date range — ยืนยันจริงใน Phase 0
+  events_store.py              # บันทึก/โหลด manual event จากหน้า Events (CSV, source="manual" เสมอ)
   inference/
     model_a.py / model_b.py / model_c.py   # STUB predict() — ดู inference/README.md สำหรับ contract
     _stub_utils.py               # helper ที่ stub ใช้ร่วมกัน (ลบทิ้งได้เมื่อ swap ครบ)
@@ -37,7 +37,9 @@ sandbox/
   data/
     prices/{TICKER}.csv          # Phase 0 output
     validation_report.md         # Phase 0 output
-    events/events.jsonl          # event ที่ inject จากหน้า Events (gitignored ตัวไฟล์ข้อมูล)
+    manual_events.csv            # Phase 3 output — event ที่ inject จากหน้า Events
+                                  # (gitignored ตัวไฟล์ข้อมูล, source="manual" เสมอ,
+                                  # แยกขาดจาก data/raw/macro_news_raw.parquet ที่ root repo)
 ```
 
 ## วิธีรัน
@@ -63,10 +65,13 @@ python3 -m sandbox.app.server
   เส้นประแนวตั้ง = macro event (สีตาม class, โผล่ทุก ticker แต่ class อาจต่างกันเพราะคนละ
   sector), จุดสีบนแท่งเทียน = company news event เฉพาะ ticker นั้น, คลิก marker เพื่อดู
   รายละเอียด (วันที่, class, score, is_stub badge)
-- **Events** (`/events`) — manual event injection: พิมพ์ headline เอง เลือกเป็น macro
-  (รันผ่าน Model C ทุก sector) หรือ company (รันผ่าน Model B ตัวเดียว) แล้วบันทึกเป็น event
+- **Events** (`/events`) — manual event injection: เลือก ticker ก่อน แล้วเลือก scope B
+  (หุ้นนี้เท่านั้น, Model B) หรือ C (ทุกหุ้น, Model C แยกตาม sector) เลือกวันที่ (จำกัดในช่วง
+  ที่มีข้อมูลราคาจริง) พิมพ์ headline แล้ว "รันผ่านโมเดล" — ปุ่ม B จะ disable อัตโนมัติถ้า
+  ticker นั้นไม่อยู่ใน `config.TICKERS_WITH_COMPANY_NEWS` (เช็คทั้ง client-side และ server-side)
+  มี disclaimer ชัดเจนว่าเป็นการทดสอบพฤติกรรม stub ไม่ใช่ backtest
 - **Rules** (`/rules`) — 27-row rule engine lookup table (Model A × B × C → BUY/HOLD/SELL)
-- **Experiments** (`/experiments`) — ประวัติ event ที่ inject ไปแล้วทั้งหมด
+- **Experiments** (`/experiments`) — ประวัติ manual event ที่ inject ไปแล้วทั้งหมด
 
 STUB badge มุมขวาบนทุกหน้า คำนวณจาก module-level `IS_STUB` ของแต่ละ inference module (ไม่ได้
 hardcode, ไม่เรียก `predict()` จริงเพื่อเช็ค) — พอ Model A/B/C ถูกสลับเป็นของจริงครบทั้ง 3 ตัว
