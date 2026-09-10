@@ -18,6 +18,7 @@ fix ไว้แล้ว พร้อมสลับเป็นของจร
 sandbox/
   config.py                    # universe (5 ticker) + sector/ETF mapping + price date range — ยืนยันจริงใน Phase 0
   events_store.py              # บันทึก/โหลด manual event จากหน้า Events (CSV, source="manual" เสมอ)
+  experiments_db.py            # Phase 5 — SQLite (sandbox/experiments.db) run/list/diff experiment
   inference/
     model_a.py / model_b.py / model_c.py   # STUB predict() — ดู inference/README.md สำหรับ contract
     _stub_utils.py               # helper ที่ stub ใช้ร่วมกัน (ลบทิ้งได้เมื่อ swap ครบ)
@@ -43,6 +44,7 @@ sandbox/
     manual_events.csv            # Phase 3 output — event ที่ inject จากหน้า Events
                                   # (gitignored ตัวไฟล์ข้อมูล, source="manual" เสมอ,
                                   # แยกขาดจาก data/raw/macro_news_raw.parquet ที่ root repo)
+  experiments.db                 # Phase 5 output — SQLite, gitignored, regenerable ผ่านหน้า Experiments
 ```
 
 ## วิธีรัน
@@ -79,7 +81,10 @@ python3 -m sandbox.app.server
 - **Rules** (`/rules`) — 27-row rule engine lookup table (Model A × B × C → buy/hold/sell)
   editable ผ่าน UI (dropdown ต่อแถว) กด "Save as new version" สร้าง `rule_v{n+1}.json` ใหม่
   เสมอ ห้ามทับไฟล์เดิม — ดู version เก่าได้ผ่าน `/rules?version=n`
-- **Experiments** (`/experiments`) — ประวัติ manual event ที่ inject ไปแล้วทั้งหมด
+- **Experiments** (`/experiments`) — รัน experiment ใหม่ (เลือก rule version + ticker_set +
+  date range → สแกน manual event หาคู่ (ticker,date) ที่มีทั้ง B+C แล้วรัน `combine()`, บันทึก
+  ลง `sandbox/experiments.db`), รายการ experiment ที่ save ไว้ (เลือก 2 อันมา diff ดูว่า
+  decision ต่างกันวันไหน), และประวัติ manual event ทั้งหมด
 
 STUB badge มุมขวาบนทุกหน้า คำนวณจาก module-level `IS_STUB` ของแต่ละ inference module (ไม่ได้
 hardcode, ไม่เรียก `predict()` จริงเพื่อเช็ค) — พอ Model A/B/C ถูกสลับเป็นของจริงครบทั้ง 3 ตัว

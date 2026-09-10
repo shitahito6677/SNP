@@ -62,3 +62,49 @@ Commit: `sandbox: Phase 3 - manual event injection UI (B/C toggle, CSV, disclaim
 - ยังไม่ได้เปิด browser ดู editable UI ด้วยตาเอง (เหตุผลเดียวกับ Phase 3)
 
 Commit: `sandbox: Phase 4 - rule engine v1 + versioning (combine(), rule_v1.json, unit tests)`
+
+---
+
+## Phase 5 — เสร็จ, commit แล้ว
+
+รายละเอียดเต็มใน `experiments/log.md` หัวข้อ `sandbox_phase5_experiment_persistence` —
+สรุปสั้น:
+
+- `sandbox/experiments_db.py` (SQLite `sandbox/experiments.db`, schema ตรง spec เป๊ะทุก
+  column) + หน้า Experiments เพิ่มฟอร์มรัน experiment + ตาราง saved experiments + diff
+- ทดสอบจริงครบ DoD: รัน v1, แก้ rule เป็น v2 (เปลี่ยน decision ของ 1 combo), รัน v2, diff —
+  เจอ diff ตรงจุดที่แก้จริง 1 คู่ (ticker,date) เป๊ะ ไม่มากไม่น้อยกว่านั้น
+- Decision ที่เลือกเอง: "experiment" = รัน `combine()` เฉพาะ (ticker,date) ที่มี manual event
+  ครบทั้ง B+C เท่านั้น (ข้ามคู่ที่ไม่ครบ ไม่ fabricate) — ทางเลือกอื่นที่ปฏิเสธไปเพราะขัดกับ
+  "ห้ามเดา" documented ไว้ใน docstring + log
+
+---
+
+## สรุปรวม — จบ session overnight (Phase 0-5 ครบตาม prompt)
+
+Commit ทั้งหมด 6 commit แยกตาม phase, push ขึ้น `feature/ensemble-sandbox` ทุกครั้ง (ไม่แตะ
+main, ไม่ force push):
+1. `12b8cff` Phase 0 — data validation
+2. `dd10150` Phase 1 — stub interfaces
+3. `28baa23` Phase 2 — Flask + Plotly dashboard
+4. `07a7d71` Phase 3 — manual event injection (CSV, B/C toggle)
+5. `93b53b8` Phase 4 — rule engine v1 + versioning
+6. Phase 5 — SQLite experiment persistence + diff (commit นี้เอง — ดู `git log` สำหรับ hash)
+
+**สิ่งที่ยังไม่ได้ทำ / ต้องให้พี่ตัดสินใจตอนเช้า:**
+1. **เปิด browser ดู UI ด้วยตาเองทุกหน้า** — checklist บังคับข้อนี้ทำเองในโหมด unattended
+   ไม่ได้เลยสักครั้ง (ไม่มี browser automation tool ในสภาพแวดล้อมนี้) ทุกอย่างที่ automate ได้
+   (HTTP status, schema, MD5 diff, unit test) ตรวจผ่านหมดแล้วทุก phase แต่การเห็นหน้าจอจริง
+   ยังไม่มีใครยืนยัน
+2. **rule_v1.json ใช้ vocabulary "positive/neutral/negative" สำหรับ b/c** (ไม่ใช่ "buy/sell"
+   ตามตัวอย่าง JSON ที่แปะมาใน prompt) — ตัดสินใจว่าตัวอย่างเป็น typo เพราะขัดกับ contract
+   จริงของ Model B/C ที่ fix มาตั้งแต่ Phase 1 ถ้าไม่ใช่ typo ต้องแก้
+   `sandbox/scripts/generate_rule_v1.py` ใหม่
+3. **"A+B override C" priority logic** เป็น design ที่เขียนเองจาก description สั้นๆ ที่ให้มา
+   ยังไม่ผ่านการ validate ใดๆ กับพฤติกรรมโมเดลจริง (เพราะยังไม่มีโมเดลจริง) — revisit ตอนมี
+   Model A/B/C จริง
+4. **ไม่มี Model A ในกราฟ Dashboard เลย** — Dashboard แสดงแค่ event ของ B/C (macro/company)
+   เพราะ Model A ไม่ใช่ event-driven (ไม่มี headline ผูกกับมัน) ยังไม่ได้ออกแบบ UI สำหรับมัน
+
+ไม่มีบั๊กที่ค้างแบบ "พังจริง" — ทุกจุดที่ list ไว้ข้างบนเป็น decision ที่ทำไปแล้วพร้อมเหตุผล
+ไม่ใช่ของที่ทำไม่ได้แล้วข้ามเฉยๆ

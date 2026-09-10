@@ -292,3 +292,67 @@ Model A/B/C ตัวจริงมาทดสอบว่า priority นี�
 
 **ขั้นต่อไปที่ควรลอง:** Phase 5 — SQLite experiment persistence + diff (ต่อจากนี้ทันที)
 ---
+
+## sandbox_phase5_experiment_persistence — 2026-09-11 06:30 (+07:00) [overnight unattended]
+
+**วิธีที่ใช้:** Phase 5 ตาม schema ที่กำหนดเป๊ะ — `sandbox/experiments_db.py` ใหม่ทั้งไฟล์:
+- SQLite `sandbox/experiments.db` (gitignored, local) ตาราง `experiments` — column ตรงตาม
+  spec ทุกตัว: `experiment_id TEXT PK`, `rule_version TEXT`, `ticker_set TEXT` (JSON list),
+  `date_range_start/end DATE`, `decisions_json TEXT`, `created_at TIMESTAMP`, `notes TEXT`
+- `run_experiment(rule_version, ticker_set, start, end, notes)`: scan
+  `sandbox/data/manual_events.csv` (ผ่าน `events_store.load_events_in_range()` ที่เพิ่มใหม่)
+  หาคู่ (ticker, date) ที่มี**ทั้ง** B และ C event ในช่วงที่กำหนด → คำนวณ A ด้วย
+  `model_a.predict(ticker, date)` → lookup decision ด้วย `combine()` จาก Phase 4 — คู่ที่ไม่ครบ
+  B+C **ข้ามไปเลย ไม่ fabricate** (documented ชัดใน docstring)
+- `list_experiments()`, `get_experiment()`, `diff_experiments(id_a, id_b)` — diff คีย์ด้วย
+  (ticker, date) แยกเป็น differs / same / only_in_a / only_in_b
+- หน้า Experiments เพิ่ม 2 ส่วนใหม่ต่อจาก event log เดิม: (1) ฟอร์มรัน experiment ใหม่ (เลือก
+  rule version, ticker checkbox, date range, notes) (2) ตาราง saved experiments พร้อม
+  checkbox เลือก 2 อันมา diff
+- `sandbox/app/server.py` เพิ่ม `POST /api/experiments/runs`, `GET /api/experiments/runs`,
+  `GET /api/experiments/diff?a=&b=`
+
+**Decision ที่ตัดสินใจเอง (overnight, documented ใน docstring ของ experiments_db.py ด้วย):**
+"experiment" นิยามว่าเป็นการรัน `combine()` บนคู่ (ticker,date) ที่มี manual event ครบ B+C
+เท่านั้น (ไม่ใช่ทุกวันในช่วงวันที่ที่เลือก) เพราะ Model B/C เป็น event-driven (ต้องการ
+headline) ไม่มีค่าให้ทุกวันแบบ Model A — ทางเลือกอื่นที่ปฏิเสธ: fallback ใช้ headline ล่าสุด
+ซ้ำทุกวัน (เป็นการเดา ขัดกับกฎ "ห้ามเดา"), หรือข้าม A/B/C ที่ไม่มีข้อมูล (ขัดกับ `combine()`
+ที่ต้องการครบ 3 ค่าเสมอ) — เลือกวิธี "ข้าม (ticker,date) ที่ไม่ครบ" เพราะตรงไปตรงมาที่สุดและ
+สอดคล้องกับกฎ "ห้ามเดา" ชัดเจนสุด
+
+**ข้อมูลที่ใช้:** manual event ที่ inject ทดสอบเอง 5 event (C: "Fed signals dovish pivot"
+2025-06-15 ครบ 5 ticker, B: NVDA/META วันเดียวกัน, C: "Fed hikes rates unexpectedly"
+2025-07-01 ครบ 5 ticker, B: TSLA วันเดียวกัน) — สร้างคู่ B+C ที่ครบ 3 คู่: (NVDA,06-15),
+(META,06-15), (TSLA,07-01) เคลียร์ `manual_events.csv`/`experiments.db` ทิ้งหลังทดสอบ
+(ทั้งคู่ gitignored)
+
+**ผลลัพธ์ (Checklist บังคับก่อน commit):**
+1. รัน server จริง (port 5050) — `/experiments` → HTTP 200 — **ผ่าน** (ยังไม่เปิด browser ด้วยตาเอง)
+2. `POST /api/experiments/runs` (rule_version=v1, ticker_set ครบ 5 ตัว, ช่วง 2025-06-01..07-31)
+   → คืน 3 decisions ตรงกับคู่ B+C ที่มีจริงเป๊ะ (META, NVDA, TSLA) ไม่มี SCHW/FDX เพราะไม่มี
+   B event ให้ (ไม่ fabricate) — **ผ่าน**
+3. แก้ rule (hold,negative,positive): sell→buy บันทึกเป็น `rule_v2.json` (ผ่าน
+   `/api/rules/save`) รัน experiment รอบสองด้วย v2 → decision ของ META เปลี่ยนจาก sell→buy
+   จริง, NVDA/TSLA เหมือนเดิม (ตามที่ควรเป็น เพราะ combo ของมันไม่ได้แก้) — **ผ่าน**
+4. `GET /api/experiments/diff?a=<v1_id>&b=<v2_id>` → `differs` มีแค่ META/2025-06-15
+   (`decision_a="sell"`, `decision_b="buy"`) เป๊ะ, `same` มี NVDA+TSLA ครบ 2, `only_in_a`/
+   `only_in_b` ว่างทั้งคู่ (ถูกต้อง เพราะ ticker_set/date range เดียวกันทุกอย่าง) — **ผ่าน**
+5. SQLite schema ตรวจด้วย `PRAGMA table_info` ตรงตาม spec ทุก column, `sqlite3` query ตรงๆ
+   นับแถวได้ 2 (ตาม 2 experiment ที่รัน) — **ผ่าน**
+6. Edge case: ticker ไม่อยู่ใน universe → 400; rule_version ไม่มีไฟล์จริง → 400
+   (FileNotFoundError); ช่วงวันที่ไม่มี event เลย → `decisions: []` (ไม่ fabricate) —
+   ทั้งหมด **ผ่าน**
+
+**มุมมอง/การตีความ:** Phase 5 ผ่าน DoD ครบ ("รัน 2 experiment คนละ rule version, save, diff
+กันเห็นว่า decision ต่างวันไหนบ้าง") ด้วยหลักฐานที่ตรวจสอบได้จริง ไม่ใช่แค่ "รันไม่ error"
+— diff ระบุ (ticker, date) ที่ต่างกันได้ถูกต้องแม่นยำ 1/3 คู่ (ตรงกับที่แก้ไว้จริง)
+
+ทุก Phase (0-5) ที่ระบุใน prompt overnight ทำครบแล้ว — สรุปรวมอยู่ใน
+`sandbox/OVERNIGHT_LOG.md`
+
+**ขั้นต่อไปที่ควรลอง:** (1) ผู้ใช้เปิด browser ตรวจ UI จริงตามที่ระบุไว้ (checklist ข้อเดียวที่
+ทำเองในโหมด unattended ไม่ได้ — ทำซ้ำทุก phase) (2) เมื่อ Model A/B เขียนเสร็จ + Model C wrap
+inference จริงแล้ว กลับมาทำ "Phase 1 จริง" (wrap ของจริงตาม `sandbox/inference/README.md`,
+sanity check เทียบ exp_02, สลับ `is_stub`/`IS_STUB` เป็น False) — ไม่ต้องแก้ dashboard/events/
+rules/experiments เลยเพราะ interface fix ไว้แล้วตั้งแต่ Phase 1
+---

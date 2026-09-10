@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
-from sandbox import config, events_store
+from sandbox import config, events_store, experiments_db
 from sandbox.inference import model_a, model_b, model_c
 from sandbox.rules import versions as rule_versions
 
@@ -87,7 +87,12 @@ def rules_page():
 
 @app.route("/experiments")
 def experiments_page():
-    return render_template("experiments.html", events=events_store.list_all_events())
+    return render_template(
+        "experiments.html",
+        events=events_store.list_all_events(),
+        runs=experiments_db.list_experiments(),
+        rule_version_options=[f"v{n}" for n in rule_versions.list_versions()],
+    )
 
 
 # --------------------------------------------------------------------------
@@ -206,6 +211,49 @@ def api_rules_save():
         return jsonify({"error": f"{type(e).__name__}: {e}"}), 400
 
     return jsonify(result)
+
+
+# --------------------------------------------------------------------------
+# API — experiments (Phase 5: SQLite persistence + diff)
+# --------------------------------------------------------------------------
+
+@app.route("/api/experiments/runs", methods=["POST"])
+def api_experiments_run():
+    payload = request.get_json(force=True, silent=True) or {}
+    rule_version = (payload.get("rule_version") or "").strip()
+    ticker_set = payload.get("ticker_set") or []
+    start = (payload.get("start") or "").strip()
+    end = (payload.get("end") or "").strip()
+    notes = (payload.get("notes") or "").strip()
+
+    if not rule_version:
+        return jsonify({"error": "rule_version ห้ามว่าง (เช่น 'v1')"}), 400
+    if not start or not end:
+        return jsonify({"error": "start/end ห้ามว่าง (YYYY-MM-DD)"}), 400
+
+    try:
+        record = experiments_db.run_experiment(rule_version, ticker_set, start, end, notes)
+    except (ValueError, FileNotFoundError) as e:
+        return jsonify({"error": f"{type(e).__name__}: {e}"}), 400
+
+    return jsonify(record)
+
+
+@app.route("/api/experiments/runs")
+def api_experiments_runs_list():
+    return jsonify(experiments_db.list_experiments())
+
+
+@app.route("/api/experiments/diff")
+def api_experiments_diff():
+    id_a = request.args.get("a")
+    id_b = request.args.get("b")
+    if not id_a or not id_b:
+        return jsonify({"error": "ต้องระบุ ?a=<experiment_id>&b=<experiment_id>"}), 400
+    try:
+        return jsonify(experiments_db.diff_experiments(id_a, id_b))
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
 
 
 if __name__ == "__main__":

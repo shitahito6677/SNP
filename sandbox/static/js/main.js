@@ -314,6 +314,118 @@ function initRules() {
 }
 
 // --------------------------------------------------------------------------
+// Experiments page (Phase 5: run + diff)
+// --------------------------------------------------------------------------
+
+function initExperiments() {
+  const runForm = document.getElementById("run-experiment-form");
+  const runError = document.getElementById("run-error");
+  const runResult = document.getElementById("run-result");
+
+  if (runForm) {
+    runForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      runError.hidden = true;
+      runResult.hidden = true;
+      const submitBtn = runForm.querySelector("button[type=submit]");
+      submitBtn.disabled = true;
+
+      const tickerSet = Array.from(document.querySelectorAll(".exp-ticker-checkbox:checked")).map(
+        (el) => el.value
+      );
+      const payload = {
+        rule_version: document.getElementById("exp-rule-version").value,
+        ticker_set: tickerSet,
+        start: document.getElementById("exp-date-start").value,
+        end: document.getElementById("exp-date-end").value,
+        notes: document.getElementById("exp-notes").value,
+      };
+
+      try {
+        const res = await fetch("/api/experiments/runs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          runError.textContent = data.error || "เกิดข้อผิดพลาด";
+          runError.hidden = false;
+          return;
+        }
+        runResult.innerHTML = `Saved experiment <strong>${data.experiment_id}</strong> — ${data.decisions.length} decision(s). Reload the page to see it in the list below.`;
+        runResult.hidden = false;
+      } catch (err) {
+        runError.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
+        runError.hidden = false;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  }
+
+  const diffBtn = document.getElementById("diff-btn");
+  const diffError = document.getElementById("diff-error");
+  const diffResult = document.getElementById("diff-result");
+
+  if (diffBtn) {
+    diffBtn.addEventListener("click", async () => {
+      diffError.hidden = true;
+      diffResult.hidden = true;
+
+      const selected = Array.from(document.querySelectorAll(".diff-checkbox:checked")).map(
+        (el) => el.value
+      );
+      if (selected.length !== 2) {
+        diffError.textContent = "เลือกให้ครบ 2 experiment เพื่อ diff";
+        diffError.hidden = false;
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/experiments/diff?a=${selected[0]}&b=${selected[1]}`);
+        const data = await res.json();
+        if (!res.ok) {
+          diffError.textContent = data.error || "เกิดข้อผิดพลาด";
+          diffError.hidden = false;
+          return;
+        }
+        diffResult.innerHTML = renderDiff(data);
+        diffResult.hidden = false;
+      } catch (err) {
+        diffError.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
+        diffError.hidden = false;
+      }
+    });
+  }
+}
+
+function renderDiff(data) {
+  const header = `<strong>${data.experiment_a.rule_version}</strong> (${data.experiment_a.experiment_id.slice(0, 8)}…)
+    vs <strong>${data.experiment_b.rule_version}</strong> (${data.experiment_b.experiment_id.slice(0, 8)}…)`;
+
+  if (!data.differs.length) {
+    return `${header}<br><br>ไม่มี (ticker, date) ไหน decision ต่างกันเลย
+      (same: ${data.same.length}, only in A: ${data.only_in_a.length}, only in B: ${data.only_in_b.length})`;
+  }
+
+  const rows = data.differs
+    .map(
+      (d) =>
+        `<tr><td>${d.ticker}</td><td>${d.date}</td><td>${d.decision_a}</td><td>${d.decision_b}</td></tr>`
+    )
+    .join("");
+
+  return `${header}<br><br>
+    <strong>${data.differs.length}</strong> (ticker, date) ที่ decision ต่างกัน
+    (same: ${data.same.length}, only in A: ${data.only_in_a.length}, only in B: ${data.only_in_b.length})
+    <table class="data-table" style="margin-top:10px">
+      <thead><tr><th>Ticker</th><th>Date</th><th>Decision A</th><th>Decision B</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// --------------------------------------------------------------------------
 // Dispatch on page load
 // --------------------------------------------------------------------------
 
@@ -321,4 +433,5 @@ document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("candlestick-chart")) initDashboard();
   if (document.getElementById("event-form")) initEvents();
   if (document.getElementById("rules-form")) initRules();
+  if (window.__PAGE__ === "experiments") initExperiments();
 });
