@@ -62,6 +62,45 @@
 
   {% endif %}
 </div>
+
+<div class="panel wide">
+  <h1>Edit rule logic (code editor)</h1>
+  <p class="note">
+    แก้ <code>decide(a, b, c)</code> ตรงๆ ในเบราว์เซอร์ — "Save as new version &amp;
+    regenerate" จะเขียน <code>rule_v{N+1}_logic.py</code> ใหม่เสมอ (ไม่ทับของเก่า) แล้ว
+    generate <code>rule_v{N+1}.json</code> จากมันอัตโนมัติ (เหมือนรัน
+    <code>generate_rule_table.py</code> เอง) ⚠️ code editor นี้รันโค้ด python ที่พิมพ์เข้ามา
+    จริงบน server (สำหรับ dev sandbox บน localhost เท่านั้น — ห้ามเปิดเครื่องนี้ให้เข้าถึงจาก
+    เครือข่ายอื่นตอนใช้ฟีเจอร์นี้)
+  </p>
+
+  {% if not logic_versions %}
+  <p class="hint">ยังไม่มีไฟล์ rule_v{N}_logic.py เลย</p>
+  {% else %}
+  <label>โหลด logic เริ่มต้นจาก version
+    <select id="logic-version-select">
+      {% for v in logic_versions|reverse %}
+      <option value="{{ v }}" {{ "selected" if v == logic_versions|max }}>v{{ v }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <textarea id="logic-editor" rows="16" spellcheck="false" class="code-editor"></textarea>
+
+  <div class="button-row">
+    <button type="button" id="validate-logic-btn">Validate</button>
+    <button type="button" id="save-logic-btn">Save as new version &amp; regenerate</button>
+  </div>
+
+  <label>Description ของ version ใหม่ (optional)
+    <input type="text" id="logic-description" placeholder="เช่น 'majority vote แทน veto'">
+  </label>
+
+  <p id="logic-validate-result" hidden></p>
+  <p id="logic-error" class="error" hidden></p>
+  <div id="logic-save-result" class="result-box" hidden></div>
+  {% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}

@@ -24,6 +24,7 @@ from pathlib import Path
 import pandas as pd
 
 from sandbox import events_store, historical_data
+from sandbox.analytics import metrics as metrics_module
 from sandbox.inference import model_a
 from sandbox.strategy.base import PortfolioState
 
@@ -139,6 +140,9 @@ def run_simulation(strategy_name: str, ticker_set: list, start: str, end: str, i
 
     final_value = portfolio_value_series[-1]["value"] if portfolio_value_series else float(initial_cash)
 
+    strategy_metrics = metrics_module.compute_metrics(trade_log, portfolio_value_series, float(initial_cash))
+    benchmark = metrics_module.compute_buy_and_hold(price_by_ticker, dates, ticker_set, float(initial_cash))
+
     return {
         "strategy": strategy.name,
         "ticker_set": ticker_set,
@@ -150,4 +154,6 @@ def run_simulation(strategy_name: str, ticker_set: list, start: str, end: str, i
         "portfolio_value_series": portfolio_value_series,
         "final_holdings": {t: round(s, 6) for t, s in portfolio.holdings.items() if s},
         "final_cash": round(portfolio.cash, 2),
+        "metrics": strategy_metrics,
+        "benchmark": benchmark,
     }

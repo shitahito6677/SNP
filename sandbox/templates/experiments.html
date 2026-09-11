@@ -55,7 +55,8 @@
   <p class="note">
     เลือก 2 อันเพื่อ diff — ดูว่า (ticker, date) ไหน decision ต่างกันระหว่าง rule version
     (diff รองรับเฉพาะ rule-lookup experiment เท่านั้น ไม่รองรับ strategy run — ดู
-    <a href="/strategies">Strategies</a> สำหรับผลจำลอง strategy โดยเฉพาะ)
+    <a href="/strategies">Strategies</a> สำหรับผลจำลอง strategy โดยเฉพาะ) strategy run
+    แสดง metric (return/drawdown/win rate) ในตารางนี้ด้วย เทียบข้าม run ได้ตรงๆ
   </p>
 
   {% if not runs %}
@@ -64,10 +65,15 @@
   <div class="table-wrap">
     <table class="data-table">
       <thead>
-        <tr><th>Diff?</th><th>Kind</th><th>Created</th><th>Rule/Strategy</th><th>Tickers</th><th>Date range</th><th># rows</th><th>Notes</th></tr>
+        <tr>
+          <th>Diff?</th><th>Kind</th><th>Created</th><th>Rule/Strategy</th><th>Tickers</th>
+          <th>Date range</th><th># rows</th><th>Return %</th><th>Max DD %</th><th>Win rate</th>
+          <th>Notes</th>
+        </tr>
       </thead>
       <tbody>
         {% for r in runs %}
+        {% set m = r.strategy_result.metrics if r.is_strategy else None %}
         <tr>
           <td><input type="checkbox" class="diff-checkbox" value="{{ r.experiment_id }}" {{ "disabled" if r.is_strategy }}></td>
           <td>{{ "strategy" if r.is_strategy else "rule-lookup" }}</td>
@@ -76,6 +82,9 @@
           <td>{{ r.ticker_set|join(", ") }}</td>
           <td>{{ r.date_range_start }} → {{ r.date_range_end }}</td>
           <td>{{ r.decisions|length }}</td>
+          <td>{{ (m.total_return_pct ~ "%") if m else "-" }}</td>
+          <td>{{ (m.max_drawdown_pct ~ "%") if m else "-" }}</td>
+          <td>{{ (m.win_rate_pct ~ "%") if m and m.win_rate_pct is not none else ("n/a" if m else "-") }}</td>
           <td>{{ r.notes }}</td>
         </tr>
         {% endfor %}

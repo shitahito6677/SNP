@@ -4,6 +4,9 @@
 
 <p class="disclaimer strategy-banner">
   ⚠️ ผลจำลองนี้ใช้ signal จาก STUB — ทดสอบว่า logic ทำงานถูก ไม่ใช่ทดสอบว่ากลยุทธ์กำไรจริง
+  <br>
+  metric ด้านล่าง (return, drawdown, win rate) ก็เช่นกัน — ทดสอบว่า<strong>โค้ดคำนวณถูก</strong>
+  เท่านั้น ไม่ได้แปลว่ากลยุทธ์นี้จะทำกำไรได้จริงเมื่อใช้ signal จากโมเดลจริง
 </p>
 
 <div class="panel wide">
@@ -60,6 +63,15 @@
     <h2>Result</h2>
     <p id="strategy-summary" class="note"></p>
     <div id="portfolio-chart"></div>
+
+    <h3>Metrics — strategy vs. buy-and-hold benchmark</h3>
+    <div class="table-wrap">
+      <table class="data-table" id="metrics-table">
+        <thead><tr><th>Metric</th><th>Strategy</th><th>Buy-and-hold (same tickers/period)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
     <h3>Trade log</h3>
     <div class="table-wrap">
       <table class="data-table" id="trade-log-table">
@@ -78,14 +90,26 @@
   {% else %}
   <div class="table-wrap">
     <table class="data-table">
-      <thead><tr><th>Created</th><th>Strategy</th><th>Tickers</th><th>Date range</th><th>Initial cash</th><th>Final value</th><th># trades</th><th>Notes</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Created</th><th>Strategy</th><th>Tickers</th><th>Date range</th>
+          <th>Return %</th><th>vs. B&amp;H %</th><th>Max DD %</th><th>Win rate</th>
+          <th>Initial cash</th><th>Final value</th><th># trades</th><th>Notes</th>
+        </tr>
+      </thead>
       <tbody>
         {% for r in runs %}
+        {% set m = r.strategy_result.metrics %}
+        {% set bh = r.strategy_result.benchmark %}
         <tr>
           <td>{{ r.created_at }}</td>
           <td>{{ r.rule_version.replace("strategy:", "") }}</td>
           <td>{{ r.ticker_set|join(", ") }}</td>
           <td>{{ r.date_range_start }} → {{ r.date_range_end }}</td>
+          <td>{{ m.total_return_pct }}%</td>
+          <td>{{ bh.total_return_pct if bh else "-" }}%</td>
+          <td>{{ m.max_drawdown_pct }}%</td>
+          <td>{{ (m.win_rate_pct ~ "%") if m.win_rate_pct is not none else "n/a" }} ({{ m.closed_trades }} closed)</td>
           <td>{{ "%.2f"|format(r.strategy_result.initial_cash) }}</td>
           <td>{{ "%.2f"|format(r.strategy_result.final_value) }}</td>
           <td>{{ r.decisions|length }}</td>

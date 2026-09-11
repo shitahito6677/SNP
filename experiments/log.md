@@ -590,3 +590,117 @@ trade log table, portfolio chart) ในเบราว์เซอร์
 **ขั้นต่อไปที่ควรลอง:** ผู้ใช้เปิด browser ทดสอบทั้ง 4 เรื่องที่ทำวันนี้ (indicators,
 bulk upload, rule engine ใหม่, strategy engine) ด้วยตาจริง
 ---
+
+## sandbox_rule_logic_code_editor — 2026-09-11 12:15 (+07:00)
+
+**วิธีที่ใช้:** เพิ่ม `sandbox/rules/codegen.py` — backend สำหรับ code editor ในหน้า Rules:
+- `validate_source(source)` — compile + exec ใน namespace แยก เช็คว่ามี `decide()` จริง เรียก
+  ได้จริง (ทดสอบด้วย `decide("buy","positive","positive")`) และ return ค่าที่ใช้ได้ ไม่เขียน
+  ไฟล์ใดๆ คืน error message ระบุเลขบรรทัดถ้าเป็น `SyntaxError`
+- `save_new_version_from_source(source, description)` — validate ซ้ำ (ไม่เชื่อ client) แล้ว
+  เขียน `rule_v{next}_logic.py` **ไฟล์ใหม่เสมอ** (next = max version ที่มีอยู่ + 1, auto-
+  increment เหมือน `versions.py` — คนละกลไกกับ CLI `generate_rule_table.py` ที่ regenerate
+  ทับไฟล์ paired ได้) รัน `build_table()` (import จาก `generate_rule_table.py` เดิม ไม่เขียน
+  logic ซ้ำ) generate `rule_v{next}.json` คู่กัน คืน distribution diff เทียบ version ก่อนหน้า
+  (before/after count ของ buy/hold/sell + changed_rows/27 + %)
+- หน้า Rules เพิ่ม panel "Edit rule logic" — dropdown เลือก version logic ที่มีจริงมาเป็นจุด
+  เริ่มต้น, textarea (monospace), ปุ่ม Validate (ไม่ save) + ปุ่ม Save as new version &
+  regenerate (แสดง distribution diff ทันทีหลัง save)
+- `POST /api/rules/logic/validate`, `POST /api/rules/logic/save`, `GET /api/rules/logic`
+
+**⚠️ Security note (ต้องรู้):** ฟีเจอร์นี้ `exec()` python source code ที่ส่งมาจาก browser
+ตรงๆ — เป็น arbitrary code execution โดยเจตนา (ไม่มีทางเลี่ยงได้ถ้าจะให้ "แก้โค้ดในเบราว์เซอร์
+แล้วรันได้เลย" ตามที่ขอ) ยอมรับได้เพราะรันบน localhost คนเดียวใช้ ไม่มี auth — ห้ามเปิดเครื่อง
+ให้เข้าถึงจากเครือข่ายอื่น (0.0.0.0, ngrok, ฯลฯ) ตอนใช้ฟีเจอร์นี้ ระบุคำเตือนนี้ไว้ทั้งใน
+docstring ของ `codegen.py` และข้อความในหน้า UI เอง
+
+**ข้อมูลที่ใช้:** ไม่มีข้อมูลจริงเกี่ยวข้อง (เป็น dev tool)
+
+**ผลลัพธ์ (ทดสอบผ่าน HTTP API จริง ไม่ใช่แค่เรียก function ตรงๆ):**
+- `python3 -c` ทดสอบ `validate_source()` 5 case: syntax ถูก (valid=True), syntax ผิด (ชี้
+  บรรทัดถูก), ไม่มี `decide()`, `decide()` raise exception, `decide()` return ค่านอก
+  buy/hold/sell — ทุกกรณีจับ error ได้ถูกต้องตามที่ตั้งใจ
+- `POST /api/rules/logic/save` ผ่าน HTTP จริง ด้วย logic ใหม่ (majority-vote formula ต่างจาก
+  v1's veto logic โดยสิ้นเชิง) → สร้าง `rule_v2.json` + `rule_v2_logic.py` จริง, MD5 ของ
+  `rule_v1.json` **เหมือนเดิมทุกตัวอักษร** ก่อน/หลัง (`e84e5a8ac5006f94af7e9327feff28d6`)
+  distribution diff ถูกต้อง: before(v1)={buy:4,hold:19,sell:4} → after(v2)=
+  {buy:10,hold:7,sell:10}, changed_rows=12/27 (44.4%) — ตรงกับที่คำนวณตรงๆ ด้วยมือ
+- หน้า `/rules` แสดง version picker อัปเดตมี v2 เพิ่มมาจริงหลัง save (grep เจอ `version=2`)
+- ลบ `rule_v2.json`/`rule_v2_logic.py` (test artifact) ทิ้งหลังทดสอบ เหลือแค่ v1 ใน repo
+
+**บั๊ก/ของค้างที่เจอระหว่างทำ (ไม่เกี่ยวกับ feature นี้):** พบไฟล์ `rule_v2.json` ค้างอยู่แบบ
+untracked จากการทดสอบ turn ก่อนหน้าที่ไม่ได้ลบให้สะอาด (`git status` ยืนยันว่าไม่เคย commit)
+ทำให้การทดสอบ distribution diff รอบแรกเทียบกับ baseline ผิด (เทียบกับ v2 เก่าที่ไม่รู้ที่มา
+แทนที่จะเป็น v1) แก้โดยลบทิ้งแล้วทดสอบใหม่จาก baseline ที่ถูกต้อง — เป็นบทเรียนเรื่อง cleanup
+discipline ระหว่าง test iteration ในหลาย turn ต่อเนื่องกัน
+
+**มุมมอง/การตีความ:** ฟีเจอร์นี้ทำให้ "ลอง logic ใหม่" เร็วขึ้นมากจริง (พิมพ์โค้ดในเบราว์เซอร์
+→ validate → save → เห็น distribution เปลี่ยนทันที ไม่ต้อง SSH เข้าเครื่อง ไม่ต้องรัน CLI
+เอง) แต่ต้องแลกกับ security surface ที่กว้างขึ้น (arbitrary code exec) ซึ่งยอมรับได้เฉพาะ
+บริบท local dev sandbox เท่านั้น — ต้องเตือนผู้ใช้ให้ชัดถ้าจะ deploy ที่ไหนที่ไม่ใช่ localhost
+
+**ขั้นต่อไปที่ควรลอง:** เรื่องที่ 2/3 (ต่อจากนี้ในบันทึกถัดไป)
+---
+
+## sandbox_dashboard_marker_toggle — 2026-09-11 12:20 (+07:00)
+
+**วิธีที่ใช้:** เพิ่ม checkbox 2 อันใน Dashboard sidebar: "Show macro (C) events" / "Show
+company (B) events" (default เปิดทั้งคู่) แก้ `render()` ใน `main.js` ให้เช็ค checkbox ก่อน
+push trace/shape ของ C (triangle marker + dashed line) และ B (circle marker) เข้า Plotly
+figure — ผูก `change` event เข้ากับ `render()` เดียวกับที่ indicator checkbox ใช้อยู่แล้ว
+(pattern เดิมจากงานก่อนหน้า ไม่ต้องเขียนกลไกใหม่)
+
+**ข้อมูลที่ใช้:** ไม่มีข้อมูลจริงเกี่ยวข้อง (UI toggle เฉยๆ)
+
+**ผลลัพธ์:** `curl` ยืนยัน checkbox `id="show-c-events"`/`id="show-b-events"` render บนหน้า
+Dashboard จริง, `node --check` ผ่าน — ตรรกะ conditional (skip push trace ถ้า unchecked) ตรวจ
+ด้วยการอ่านโค้ดเอง **ยังไม่เคยเห็นด้วยตาว่า marker หายจากกราฟจริงตอนคลิก** เพราะไม่มี browser
+ในสภาพแวดล้อมนี้
+
+**มุมมอง/การตีความ:** ฟีเจอร์เล็ก ทำตาม pattern ที่มีอยู่แล้ว (indicator toggle) เสี่ยงต่ำ
+
+**ขั้นต่อไปที่ควรลอง:** เรื่องที่ 3 — metrics
+---
+
+## sandbox_strategy_metrics — 2026-09-11 12:30 (+07:00)
+
+**วิธีที่ใช้:** เพิ่ม `sandbox/analytics/metrics.py`:
+- `compute_max_drawdown_pct()` — running peak เทียบกับมูลค่าปัจจุบันทุกวัน (ไม่ใช่เทียบกับ
+  initial cash เฉยๆ ซึ่งจะผิด ถ้าพอร์ตเคยขึ้นไปสูงกว่าแล้วค่อยร่วง)
+- `compute_win_rate()` — running weighted-average cost basis ต่อ ticker (ไม่ใช่ FIFO lot)
+  ใช้ได้ตรงกับ strategy_v1 เพราะ sell ขายทั้งหมดทุกครั้ง (ไม่มี partial sell) — sell ที่ราคา
+  > average cost = win, reset cost basis เป็น 0 หลัง sell หมด
+- `compute_buy_and_hold()` — benchmark: ซื้อ ticker_set เท่าๆ กันที่วันแรกของช่วง ถือเฉยๆ
+  ตลอด คำนวณ metric ชุดเดียวกันเพื่อเทียบตรงๆ
+- ต่อเข้า `sandbox/engine/simulate.py` — `run_simulation()` return เพิ่ม `metrics` +
+  `benchmark` (มี `portfolio_value_series` ของ benchmark ด้วย สำหรับวาดกราฟเทียบ) เก็บลง
+  `experiments_db` อัตโนมัติ (อยู่ใน `decisions_json` เดิมอยู่แล้ว ไม่ต้อง migrate schema)
+- หน้า Strategies: banner เพิ่มบรรทัดชัดเจนว่า metric ทดสอบโค้ดถูก ไม่ใช่กำไรจริง, เพิ่มตาราง
+  metrics (strategy vs benchmark), กราฟ portfolio value ใส่เส้น benchmark เพิ่ม (เส้นประ
+  เหลือง), ตาราง saved runs เพิ่มคอลัมน์ return%/drawdown%/win rate
+- หน้า Experiments: ตาราง runs เพิ่มคอลัมน์ metric เดียวกัน (ว่างสำหรับ rule-lookup row) ให้
+  เทียบข้าม run ได้ตรงๆ ตามที่ขอ
+
+**ข้อมูลที่ใช้:** ราคาจริง 5 ปี (`sandbox/data/prices/*.csv`) + real historical macro data
+(477 ข่าว, เชื่อมไว้จาก fix ก่อนหน้า)
+
+**ผลลัพธ์ (ทดสอบจริงทุกจุด):**
+- รันเต็ม 5 ปี (5 ticker, $100k): strategy total_return=302.69%, max_drawdown=51.38%,
+  win_rate=53.66% (41 closed trades จาก 91 trade รวม) — **max drawdown ตรวจสอบด้วยมือแยก
+  ต่างหาก** (recompute จาก portfolio_value_series ตรงๆ) ได้ 51.38% เป๊ะ ตรงกับที่ engine
+  คำนวณ, เกิดวันที่ 2023-01-03 ตรงกัน
+- benchmark (buy-and-hold ticker เดียวกัน ช่วงเดียวกัน): return=218.29%, drawdown=47.04% —
+  strategy ทำได้ดีกว่า benchmark ทั้ง return (สูงกว่า) แต่ drawdown ก็สูงกว่าด้วย (trade-off
+  ที่สมเหตุสมผล ไม่ใช่ตัวเลขที่ดูผิดปกติ)
+- `POST /api/strategies/run` ผ่าน HTTP จริง → metrics/benchmark ตรงกับที่ทดสอบตรงๆ ทุกตัว
+- หน้า `/strategies` และ `/experiments` แสดงตัวเลข 302.69% ตรงกันทั้งคู่ (grep ยืนยัน) banner
+  มีข้อความ "โค้ดคำนวณถูก" ตามที่กำหนด
+
+**มุมมอง/การตีความ:** ตัวเลขที่ได้ดูสมเหตุสมผลภายในตัวเอง (strategy ให้ return สูงกว่าแต่
+drawdown สูงกว่าด้วย ซึ่งเป็น trade-off ปกติของการเทรดบ่อยกว่า) แต่ต้องย้ำอีกครั้งว่านี่คือ
+ผลจาก **สัญญาณ stub deterministic** ไม่ใช่สัญญาณจากโมเดลจริง — ตัวเลข 302% ไม่ได้แปลว่า
+strategy_v1 จะทำกำไรขนาดนี้จริงเมื่อ Model A/B/C เป็นของจริง (ตามที่ banner ระบุไว้)
+
+**ขั้นต่อไปที่ควรลอง:** ผู้ใช้เปิด browser ทดสอบทั้ง 3 เรื่องด้วยตาจริง โดยเฉพาะ code editor
+(เรื่องที่ 1) ที่มี UX ซับซ้อนกว่าฟีเจอร์อื่น (dropdown โหลด source, validate, save)
+---

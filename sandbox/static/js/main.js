@@ -92,6 +92,8 @@ function initDashboard() {
 
     const showSma20 = document.getElementById("ind-sma20").checked;
     const showSma50 = document.getElementById("ind-sma50").checked;
+    const showCEvents = document.getElementById("show-c-events").checked;
+    const showBEvents = document.getElementById("show-b-events").checked;
     const subplots = activeSubplots(); // ordered list of active {key, title}
     const needIndicators = showSma20 || showSma50 || subplots.some((p) => p.key !== "volume");
 
@@ -161,49 +163,52 @@ function initDashboard() {
     }
 
     const maxHigh = Math.max(...price.high);
-    traces.push({
-      x: events.c.map((e) => e.date),
-      y: events.c.map(() => maxHigh * 1.03),
-      mode: "markers", type: "scatter", name: "Macro event (C)",
-      xaxis: "x", yaxis: "y",
-      marker: {
-        symbol: "triangle-down", size: 11,
-        color: events.c.map((e) => classColor(e.class)),
-        line: { color: "#0e1117", width: 1 },
-      },
-      customdata: events.c,
-      hovertemplate: "%{x}<extra></extra>",
-    });
+    if (showCEvents) {
+      traces.push({
+        x: events.c.map((e) => e.date),
+        y: events.c.map(() => maxHigh * 1.03),
+        mode: "markers", type: "scatter", name: "Macro event (C)",
+        xaxis: "x", yaxis: "y",
+        marker: {
+          symbol: "triangle-down", size: 11,
+          color: events.c.map((e) => classColor(e.class)),
+          line: { color: "#0e1117", width: 1 },
+        },
+        customdata: events.c,
+        hovertemplate: "%{x}<extra></extra>",
+      });
+      shapes.push(
+        ...events.c.map((e) => ({
+          type: "line", xref: "x", yref: "y domain",
+          x0: e.date, x1: e.date, y0: 0, y1: 1,
+          line: { color: classColor(e.class), dash: "dash", width: 1 },
+          opacity: 0.6,
+        }))
+      );
+    }
 
-    const dateIndex = {};
-    price.dates.forEach((d, i) => {
-      dateIndex[d] = i;
-    });
-    traces.push({
-      x: events.b.map((e) => e.date),
-      y: events.b.map((e) => {
-        const i = dateIndex[e.date];
-        return i !== undefined ? price.close[i] : null;
-      }),
-      mode: "markers", type: "scatter", name: "Company news (B)",
-      xaxis: "x", yaxis: "y",
-      marker: {
-        symbol: "circle", size: 10,
-        color: events.b.map((e) => classColor(e.class)),
-        line: { color: "#fff", width: 1 },
-      },
-      customdata: events.b,
-      hovertemplate: "%{x}<extra></extra>",
-    });
-
-    shapes.push(
-      ...events.c.map((e) => ({
-        type: "line", xref: "x", yref: "y domain",
-        x0: e.date, x1: e.date, y0: 0, y1: 1,
-        line: { color: classColor(e.class), dash: "dash", width: 1 },
-        opacity: 0.6,
-      }))
-    );
+    if (showBEvents) {
+      const dateIndex = {};
+      price.dates.forEach((d, i) => {
+        dateIndex[d] = i;
+      });
+      traces.push({
+        x: events.b.map((e) => e.date),
+        y: events.b.map((e) => {
+          const i = dateIndex[e.date];
+          return i !== undefined ? price.close[i] : null;
+        }),
+        mode: "markers", type: "scatter", name: "Company news (B)",
+        xaxis: "x", yaxis: "y",
+        marker: {
+          symbol: "circle", size: 10,
+          color: events.b.map((e) => classColor(e.class)),
+          line: { color: "#fff", width: 1 },
+        },
+        customdata: events.b,
+        hovertemplate: "%{x}<extra></extra>",
+      });
+    }
 
     // --- subplots (Volume / RSI / MACD) ---
     const domains = computeDomains(subplots.length);
@@ -291,7 +296,7 @@ function initDashboard() {
       events.b.length;
   }
 
-  ["ind-sma20", "ind-sma50", "ind-volume", "ind-rsi", "ind-macd"].forEach((id) => {
+  ["ind-sma20", "ind-sma50", "ind-volume", "ind-rsi", "ind-macd", "show-c-events", "show-b-events"].forEach((id) => {
     document.getElementById(id).addEventListener("change", render);
   });
 
@@ -517,6 +522,111 @@ function initRules() {
       submitBtn.disabled = false;
     }
   });
+
+  initLogicEditor();
+}
+
+function initLogicEditor() {
+  const versionSelect = document.getElementById("logic-version-select");
+  const editor = document.getElementById("logic-editor");
+  const validateBtn = document.getElementById("validate-logic-btn");
+  const saveBtn = document.getElementById("save-logic-btn");
+  const validateResult = document.getElementById("logic-validate-result");
+  const errorEl = document.getElementById("logic-error");
+  const saveResult = document.getElementById("logic-save-result");
+
+  if (!versionSelect) return; // ยังไม่มี logic version เลย
+
+  async function loadSource(version) {
+    const res = await fetch("/api/rules/logic?version=" + version);
+    const data = await res.json();
+    if (res.ok) editor.value = data.source;
+  }
+
+  versionSelect.addEventListener("change", () => loadSource(versionSelect.value));
+  loadSource(versionSelect.value);
+
+  validateBtn.addEventListener("click", async () => {
+    errorEl.hidden = true;
+    saveResult.hidden = true;
+    validateResult.hidden = true;
+    validateBtn.disabled = true;
+
+    try {
+      const res = await fetch("/api/rules/logic/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: editor.value }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        validateResult.className = "success";
+        validateResult.textContent = "✓ Valid — syntax ถูกต้อง, decide() เรียกได้จริง";
+      } else {
+        validateResult.className = "error";
+        validateResult.textContent =
+          "✗ " + data.error + (data.lineno ? ` (บรรทัด ${data.lineno})` : "");
+      }
+      validateResult.hidden = false;
+    } catch (err) {
+      errorEl.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
+      errorEl.hidden = false;
+    } finally {
+      validateBtn.disabled = false;
+    }
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    errorEl.hidden = true;
+    saveResult.hidden = true;
+    validateResult.hidden = true;
+    saveBtn.disabled = true;
+
+    const description = document.getElementById("logic-description").value;
+
+    try {
+      const res = await fetch("/api/rules/logic/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: editor.value, description }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorEl.textContent = data.error || "เกิดข้อผิดพลาด";
+        errorEl.hidden = false;
+        return;
+      }
+
+      const diff = data.distribution_diff;
+      let diffHtml = "";
+      if (diff.before) {
+        const rows = ["buy", "hold", "sell"]
+          .map((d) => {
+            const before = diff.before[d];
+            const after = diff.after[d];
+            const arrow = before === after ? "" : before < after ? " ⬆" : " ⬇";
+            return `<div><strong>${d}</strong>: ${before} → ${after}${arrow}</div>`;
+          })
+          .join("");
+        diffHtml = `
+          <p><strong>Distribution change from ${diff.previous_version}:</strong>
+          ${diff.changed_rows}/27 rows changed (${diff.changed_pct}%)</p>
+          ${rows}`;
+      }
+
+      saveResult.innerHTML = `Saved <strong>${data.version}</strong> →
+        <code>${data.logic_path.split("/").slice(-1)[0]}</code> +
+        <code>${data.json_path.split("/").slice(-1)[0]}</code>.
+        <a href="/rules?version=${data.version.replace("v", "")}">เปิดดู version นี้</a>
+        ${diffHtml}`;
+      saveResult.hidden = false;
+    } catch (err) {
+      errorEl.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
+      errorEl.hidden = false;
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
 }
 
 // --------------------------------------------------------------------------
@@ -644,24 +754,37 @@ function initStrategies() {
   const summaryEl = document.getElementById("strategy-summary");
   const chartDiv = document.getElementById("portfolio-chart");
   const tradeLogBody = document.querySelector("#trade-log-table tbody");
+  const metricsBody = document.querySelector("#metrics-table tbody");
 
-  function renderPortfolioChart(series, initialCash) {
-    const trace = {
-      x: series.map((p) => p.date),
-      y: series.map((p) => p.value),
-      type: "scatter",
-      mode: "lines",
-      name: "Portfolio value",
-      line: { color: "#4f8cff", width: 2 },
-    };
-    const baseline = {
-      x: series.map((p) => p.date),
-      y: series.map(() => initialCash),
-      type: "scatter",
-      mode: "lines",
-      name: "Initial cash",
-      line: { color: "#8b92a3", width: 1, dash: "dot" },
-    };
+  function renderPortfolioChart(series, benchmarkSeries, initialCash) {
+    const traces = [
+      {
+        x: series.map((p) => p.date),
+        y: series.map((p) => p.value),
+        type: "scatter",
+        mode: "lines",
+        name: "Strategy",
+        line: { color: "#4f8cff", width: 2 },
+      },
+      {
+        x: series.map((p) => p.date),
+        y: series.map(() => initialCash),
+        type: "scatter",
+        mode: "lines",
+        name: "Initial cash",
+        line: { color: "#8b92a3", width: 1, dash: "dot" },
+      },
+    ];
+    if (benchmarkSeries) {
+      traces.push({
+        x: benchmarkSeries.map((p) => p.date),
+        y: benchmarkSeries.map((p) => p.value),
+        type: "scatter",
+        mode: "lines",
+        name: "Buy-and-hold",
+        line: { color: "#f5c518", width: 1.5, dash: "dash" },
+      });
+    }
     const layout = {
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
@@ -671,7 +794,24 @@ function initStrategies() {
       yaxis: { gridcolor: "#262b36", title: "Portfolio value (USD)" },
       legend: { orientation: "h", y: -0.2, font: { color: "#d1d4dc" } },
     };
-    Plotly.newPlot(chartDiv, [trace, baseline], layout, { responsive: true, displaylogo: false });
+    Plotly.newPlot(chartDiv, traces, layout, { responsive: true, displaylogo: false });
+  }
+
+  function renderMetrics(metrics, benchmark) {
+    const rows = [
+      ["Total return", `${metrics.total_return_pct}%`, benchmark ? `${benchmark.total_return_pct}%` : "-"],
+      ["Max drawdown", `${metrics.max_drawdown_pct}%`, benchmark ? `${benchmark.max_drawdown_pct}%` : "-"],
+      ["Total trades", metrics.total_trades, "0 (buy once, hold)"],
+      [
+        "Win rate (closed trades)",
+        metrics.win_rate_pct !== null ? `${metrics.win_rate_pct}% (${metrics.closed_trades} closed)` : "n/a (no closed trades)",
+        "n/a",
+      ],
+      ["Final value", `$${metrics.final_value.toLocaleString()}`, benchmark ? `$${benchmark.final_value.toLocaleString()}` : "-"],
+    ];
+    metricsBody.innerHTML = rows
+      .map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`)
+      .join("");
   }
 
   function renderTradeLog(trades) {
@@ -729,7 +869,12 @@ function initStrategies() {
         initial: $${data.initial_cash.toLocaleString()} | final: $${data.final_value.toLocaleString()}
         (${pnl >= 0 ? "+" : ""}${pnlPct.toFixed(1)}%) | ${data.trade_log.length} trade(s) |
         saved as experiment <code>${data.experiment_id}</code>`;
-      renderPortfolioChart(data.portfolio_value_series, data.initial_cash);
+      renderPortfolioChart(
+        data.portfolio_value_series,
+        data.benchmark ? data.benchmark.portfolio_value_series : null,
+        data.initial_cash
+      );
+      renderMetrics(data.metrics, data.benchmark);
       renderTradeLog(data.trade_log);
       resultSection.hidden = false;
     } catch (err) {

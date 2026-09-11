@@ -17,6 +17,7 @@ from sandbox import config, events_bulk, events_store, experiments_db, historica
 from sandbox.analytics import indicators
 from sandbox.engine import simulate
 from sandbox.inference import model_a, model_b, model_c
+from sandbox.rules import codegen as rule_codegen
 from sandbox.rules import versions as rule_versions
 
 SANDBOX_DIR = Path(__file__).resolve().parent.parent
@@ -115,7 +116,12 @@ def rules_page():
         {"n": v, **rule_versions.load_version(v)} for v in rule_versions.list_versions()
     ]
     return render_template(
-        "rules.html", error=None, payload=payload, current_n=n, all_versions=all_versions
+        "rules.html",
+        error=None,
+        payload=payload,
+        current_n=n,
+        all_versions=all_versions,
+        logic_versions=rule_codegen.list_logic_versions(),
     )
 
 
@@ -353,6 +359,37 @@ def api_rules_save():
     try:
         result = rule_versions.save_new_version(table, description=description)
     except (ValueError, FileExistsError) as e:
+        return jsonify({"error": f"{type(e).__name__}: {e}"}), 400
+
+    return jsonify(result)
+
+
+@app.route("/api/rules/logic")
+def api_rules_logic_get():
+    n = request.args.get("version", type=int)
+    try:
+        n = n if n is not None else max(rule_codegen.list_logic_versions())
+        return jsonify({"version": n, "source": rule_codegen.load_logic_source(n)})
+    except (FileNotFoundError, ValueError) as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.route("/api/rules/logic/validate", methods=["POST"])
+def api_rules_logic_validate():
+    payload = request.get_json(force=True, silent=True) or {}
+    source = payload.get("source") or ""
+    return jsonify(rule_codegen.validate_source(source))
+
+
+@app.route("/api/rules/logic/save", methods=["POST"])
+def api_rules_logic_save():
+    payload = request.get_json(force=True, silent=True) or {}
+    source = payload.get("source") or ""
+    description = (payload.get("description") or "").strip()
+
+    try:
+        result = rule_codegen.save_new_version_from_source(source, description=description)
+    except (ValueError, FileExistsError, RuntimeError) as e:
         return jsonify({"error": f"{type(e).__name__}: {e}"}), 400
 
     return jsonify(result)

@@ -149,6 +149,17 @@ select, input[type="date"], input[type="text"], textarea {
 }
 textarea { resize: vertical; }
 
+.code-editor {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.button-row { display: flex; gap: 10px; margin: 14px 0; }
+.button-row button { margin: 0; }
+
 fieldset.ticker-checkboxes {
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -194,6 +205,7 @@ button:hover { opacity: 0.9; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .error { color: var(--down); font-size: 0.85rem; }
+.success { color: var(--up); font-size: 0.85rem; font-weight: 600; }
 
 .result-box {
   margin-top: 16px;
