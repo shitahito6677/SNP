@@ -29,20 +29,24 @@ sandbox/
     README.md                    # input/output contract ของแต่ละโมเดล + วิธี swap เป็นของจริง
   engine/
     combine.py                    # combine(a, b, c, rule_path) -> decision, lookup ตรง ห้าม fallback
+    simulate.py                    # Strategy engine — วน day-by-day, เรียก strategy.on_day(), trade log เต็ม
   rules/
     rule_v1.json, rule_v2.json..  # versioned lookup table (27 แถวเสมอ) — ห้ามทับของเก่า มีแต่เพิ่ม version ใหม่
     rule_v1_logic.py               # decide(a,b,c) -> str ต้นทางของ rule_v1.json ("A เป็นหลัก, B/C เป็น veto")
     versions.py                   # list/load/save version ผ่าน UI (save = สร้างไฟล์ใหม่เสมอ)
+  strategy/
+    base.py                        # Strategy interface + PortfolioState (cash/holdings/last_sell_price)
+    strategy_v1.py                  # sell บน C=negative, ซื้อคืน -20%, DCA เข้า C=positive
   app/
     server.py                    # Flask entry point (รันด้วย python -m sandbox.app.server)
-  templates/                     # base.html + dashboard/events/rules/experiments.html
+  templates/                     # base.html + dashboard/events/rules/experiments/strategies.html
   static/css/style.css           # dark trading-dashboard theme (#0e1117)
-  static/js/main.js              # Plotly.js candlestick + event marker + injection/rule-edit form
+  static/js/main.js              # Plotly.js candlestick + event marker + injection/rule-edit/strategy form
   scripts/
     phase0_validate_universe.py  # Phase 0 — validate universe (เสร็จแล้ว, ดู data/validation_report.md)
     generate_rule_table.py       # import decide(a,b,c) จาก logic module (เช่น rule_v1_logic) -> rule_v{N}.json
     smoke_test.py                # sanity check inference stub + config แบบไม่ต้องเปิด server
-    test_combine.py              # unit test ของ sandbox/engine/combine.py (unittest, 8 case)
+    test_combine.py              # unit test ของ sandbox/engine/combine.py + rule_v1_logic.py (unittest, 13 case)
   data/
     prices/{TICKER}.csv          # Phase 0 output
     validation_report.md         # Phase 0 output
@@ -89,7 +93,13 @@ python3 -m sandbox.app.server
 - **Experiments** (`/experiments`) — รัน experiment ใหม่ (เลือก rule version + ticker_set +
   date range → สแกน manual event หาคู่ (ticker,date) ที่มีทั้ง B+C แล้วรัน `combine()`, บันทึก
   ลง `sandbox/experiments.db`), รายการ experiment ที่ save ไว้ (เลือก 2 อันมา diff ดูว่า
-  decision ต่างกันวันไหน), และประวัติ manual event ทั้งหมด
+  decision ต่างกันวันไหน — เฉพาะ rule-lookup experiment เท่านั้น), และประวัติ manual event
+  ทั้งหมด
+- **Strategies** (`/strategies`) — เลือก strategy file + ticker_set + date range + เงินทุน
+  ตั้งต้น กด "Run simulation" วน day-by-day เรียก `strategy.on_day()` เห็น trade log +
+  กราฟมูลค่าพอร์ต เก็บลง `sandbox/experiments.db` ตารางเดียวกับ rule-lookup experiment
+  (แยกด้วย `rule_version = "strategy:<name>"`) — banner บังคับเตือนว่าใช้ signal จาก stub
+  เสมอ (ทดสอบ logic ไม่ใช่ทดสอบกำไรจริง)
 
 STUB badge มุมขวาบนทุกหน้า คำนวณจาก module-level `IS_STUB` ของแต่ละ inference module (ไม่ได้
 hardcode, ไม่เรียก `predict()` จริงเพื่อเช็ค) — พอ Model A/B/C ถูกสลับเป็นของจริงครบทั้ง 3 ตัว

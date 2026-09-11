@@ -632,6 +632,116 @@ function renderDiff(data) {
 }
 
 // --------------------------------------------------------------------------
+// Strategies page (Strategy engine — run simulation, see trade log + portfolio chart)
+// --------------------------------------------------------------------------
+
+function initStrategies() {
+  const form = document.getElementById("run-strategy-form");
+  if (!form) return; // ไม่มี strategy ให้เลือกเลย (strategy_options ว่าง)
+
+  const errorEl = document.getElementById("strategy-run-error");
+  const resultSection = document.getElementById("strategy-run-result");
+  const summaryEl = document.getElementById("strategy-summary");
+  const chartDiv = document.getElementById("portfolio-chart");
+  const tradeLogBody = document.querySelector("#trade-log-table tbody");
+
+  function renderPortfolioChart(series, initialCash) {
+    const trace = {
+      x: series.map((p) => p.date),
+      y: series.map((p) => p.value),
+      type: "scatter",
+      mode: "lines",
+      name: "Portfolio value",
+      line: { color: "#4f8cff", width: 2 },
+    };
+    const baseline = {
+      x: series.map((p) => p.date),
+      y: series.map(() => initialCash),
+      type: "scatter",
+      mode: "lines",
+      name: "Initial cash",
+      line: { color: "#8b92a3", width: 1, dash: "dot" },
+    };
+    const layout = {
+      paper_bgcolor: "rgba(0,0,0,0)",
+      plot_bgcolor: "rgba(0,0,0,0)",
+      font: { color: "#d1d4dc" },
+      margin: { t: 10, r: 20, l: 60, b: 40 },
+      xaxis: { gridcolor: "#262b36" },
+      yaxis: { gridcolor: "#262b36", title: "Portfolio value (USD)" },
+      legend: { orientation: "h", y: -0.2, font: { color: "#d1d4dc" } },
+    };
+    Plotly.newPlot(chartDiv, [trace, baseline], layout, { responsive: true, displaylogo: false });
+  }
+
+  function renderTradeLog(trades) {
+    tradeLogBody.innerHTML = trades
+      .map(
+        (t) => `
+        <tr>
+          <td>${t.date}</td>
+          <td>${t.type.toUpperCase()}</td>
+          <td>${t.ticker}</td>
+          <td>${t.shares}</td>
+          <td>${t.price}</td>
+          <td>${t.reason}</td>
+        </tr>`
+      )
+      .join("");
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl.hidden = true;
+    resultSection.hidden = true;
+    const submitBtn = form.querySelector("button[type=submit]");
+    submitBtn.disabled = true;
+
+    const tickerSet = Array.from(
+      document.querySelectorAll(".strategy-ticker-checkbox:checked")
+    ).map((el) => el.value);
+
+    const payload = {
+      strategy: document.getElementById("strategy-select").value,
+      ticker_set: tickerSet,
+      start: document.getElementById("strategy-date-start").value,
+      end: document.getElementById("strategy-date-end").value,
+      initial_cash: document.getElementById("strategy-initial-cash").value,
+      notes: document.getElementById("strategy-notes").value,
+    };
+
+    try {
+      const res = await fetch("/api/strategies/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorEl.textContent = data.error || "เกิดข้อผิดพลาด";
+        errorEl.hidden = false;
+        return;
+      }
+
+      const pnl = data.final_value - data.initial_cash;
+      const pnlPct = (pnl / data.initial_cash) * 100;
+      summaryEl.innerHTML = `<strong>${data.strategy}</strong> — ${data.start} → ${data.end} |
+        initial: $${data.initial_cash.toLocaleString()} | final: $${data.final_value.toLocaleString()}
+        (${pnl >= 0 ? "+" : ""}${pnlPct.toFixed(1)}%) | ${data.trade_log.length} trade(s) |
+        saved as experiment <code>${data.experiment_id}</code>`;
+      renderPortfolioChart(data.portfolio_value_series, data.initial_cash);
+      renderTradeLog(data.trade_log);
+      resultSection.hidden = false;
+    } catch (err) {
+      errorEl.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
+      errorEl.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+}
+
+// --------------------------------------------------------------------------
 // Dispatch on page load
 // --------------------------------------------------------------------------
 
@@ -640,4 +750,5 @@ document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("event-form")) initEvents();
   if (document.getElementById("rules-form")) initRules();
   if (window.__PAGE__ === "experiments") initExperiments();
+  if (window.__PAGE__ === "strategies") initStrategies();
 });

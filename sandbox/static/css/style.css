@@ -92,6 +92,9 @@ a:hover { text-decoration: underline; }
   font-size: 0.85rem;
   font-weight: 600;
 }
+.strategy-banner { margin-bottom: 20px; font-size: 0.9rem; text-align: center; }
+
+#portfolio-chart { width: 100%; height: 340px; margin: 12px 0 20px; }
 
 /* dashboard layout */
 .dashboard-layout {

@@ -15,6 +15,7 @@ from flask import Flask, jsonify, render_template, request
 
 from sandbox import config, events_bulk, events_store, experiments_db, historical_data
 from sandbox.analytics import indicators
+from sandbox.engine import simulate
 from sandbox.inference import model_a, model_b, model_c
 from sandbox.rules import versions as rule_versions
 
@@ -125,6 +126,17 @@ def experiments_page():
         events=events_store.list_all_events(),
         runs=experiments_db.list_experiments(),
         rule_version_options=[f"v{n}" for n in rule_versions.list_versions()],
+    )
+
+
+@app.route("/strategies")
+def strategies_page():
+    all_runs = experiments_db.list_experiments()
+    strategy_runs = [r for r in all_runs if r["is_strategy"]]
+    return render_template(
+        "strategies.html",
+        strategy_options=simulate.list_available_strategies(),
+        runs=strategy_runs,
     )
 
 
@@ -387,6 +399,51 @@ def api_experiments_diff():
         return jsonify(experiments_db.diff_experiments(id_a, id_b))
     except KeyError as e:
         return jsonify({"error": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+# --------------------------------------------------------------------------
+# API — strategies (Strategy engine)
+# --------------------------------------------------------------------------
+
+@app.route("/api/strategies/run", methods=["POST"])
+def api_strategies_run():
+    payload = request.get_json(force=True, silent=True) or {}
+    strategy = (payload.get("strategy") or "").strip()
+    ticker_set = payload.get("ticker_set") or []
+    start = (payload.get("start") or "").strip()
+    end = (payload.get("end") or "").strip()
+    initial_cash = payload.get("initial_cash")
+    notes = (payload.get("notes") or "").strip()
+
+    if not strategy:
+        return jsonify({"error": "strategy ห้ามว่าง (เช่น 'strategy_v1')"}), 400
+    if not start or not end:
+        return jsonify({"error": "start/end ห้ามว่าง (YYYY-MM-DD)"}), 400
+    try:
+        initial_cash = float(initial_cash)
+    except (TypeError, ValueError):
+        return jsonify({"error": "initial_cash ต้องเป็นตัวเลข"}), 400
+
+    invalid = [t for t in ticker_set if t not in config.TICKERS]
+    if invalid:
+        return jsonify({"error": f"ticker ไม่อยู่ใน universe: {invalid}"}), 400
+
+    try:
+        record = experiments_db.run_strategy_experiment(
+            strategy, ticker_set, start, end, initial_cash, notes
+        )
+    except (ValueError, FileNotFoundError) as e:
+        return jsonify({"error": f"{type(e).__name__}: {e}"}), 400
+
+    return jsonify(record)
+
+
+@app.route("/api/strategies/runs")
+def api_strategies_runs():
+    all_runs = experiments_db.list_experiments()
+    return jsonify([r for r in all_runs if r["is_strategy"]])
 
 
 if __name__ == "__main__":

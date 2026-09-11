@@ -529,3 +529,64 @@ consensus vs. conservative-veto) ถ้าเดาแล้วใช้ logic �
 **ขั้นต่อไปที่ควรลอง:** Strategy engine (base.py, strategy_v1.py, engine/simulate.py, UI
 ใหม่) — ใช้ C signal ตรงๆ ไม่ผ่าน rule engine (ตามตัวอย่างที่ผู้ใช้ให้มา)
 ---
+
+## sandbox_strategy_engine — 2026-09-11 11:45 (+07:00)
+
+**วิธีที่ใช้:** เพิ่ม Strategy engine เต็มระบบ แยกจาก rule engine (Phase 4) โดยสิ้นเชิง:
+- `sandbox/strategy/base.py` — `Strategy` (interface, `on_day(date, signals_per_ticker,
+  portfolio_state) -> actions`) + `PortfolioState` (dataclass: cash, holdings,
+  last_sell_price — ตามที่กำหนดเป๊ะ)
+- `sandbox/strategy/strategy_v1.py` — implement ตามตัวอย่าง: C=negative → sell ทั้งหมด +
+  จำราคาขาย, ราคาตก -20% จากจุดขายเดิม → ซื้อคืน (หารเงินเท่ากันถ้าหลาย ticker เข้าเงื่อนไข
+  พร้อมกัน, เคลียร์ last_sell_price กันซื้อคืนซ้ำจุดเดิม), cash ที่เหลือ → DCA เข้า
+  ticker ที่ C=positive วันนั้น (หารเท่ากัน) — รายละเอียดที่ตัวอย่างไม่ระบุ (ลำดับ
+  sell→buyback→DCA, วิธีหารเงินเมื่อมีหลาย ticker) documented ไว้ในไฟล์ตรงๆ
+- `sandbox/engine/simulate.py` — `run_simulation()` วน day-by-day (ใช้ trading date จริง
+  จากไฟล์ราคา) ต่อวัน: a จาก `model_a.predict()` เสมอ, b จาก manual event ตรงวันนั้นเป๊ะ, c
+  จาก manual + real historical (477 ข่าว, เหมือนที่ Dashboard ใช้ — manual ชนะถ้าชนวันเดียวกัน)
+  **ไม่ forward-fill สัญญาณข้ามวัน** (ห้ามเดา) trade log เต็ม + portfolio value รายวัน
+- หน้า Strategies ใหม่ (nav bar เพิ่ม tab ที่ 5) — banner บังคับ (ข้อความตรงตามที่กำหนดเป๊ะ):
+  "ผลจำลองนี้ใช้ signal จาก STUB — ทดสอบว่า logic ทำงานถูก ไม่ใช่ทดสอบว่ากลยุทธ์กำไรจริง"
+  ฟอร์ม (strategy select, ticker checkbox, date range, initial cash, notes) → trade log
+  table + Plotly line chart มูลค่าพอร์ต
+- `sandbox/experiments_db.py` เพิ่ม `run_strategy_experiment()` — เก็บลงตาราง `experiments`
+  เดียวกับ Phase 5 เป๊ะ (schema ไม่เปลี่ยน) ผูก `rule_version = "strategy:<name>"` เป็นตัวแยก
+  ประเภทตอนอ่านกลับ (`is_strategy` flag) `diff_experiments()` reject การ diff strategy run
+  (raise ValueError ชัดเจน — trade log เทียบแบบ (ticker,date)→decision ไม่ได้) UI (หน้า
+  Experiments) disable diff checkbox ของ strategy row ไปเลยไม่ให้เลือกผิดตั้งแต่แรก
+
+**บั๊กที่เจอแล้วแก้ระหว่างทดสอบ:** `load_strategy()` เดิมปล่อยให้
+`ModuleNotFoundError` หลุดออกไปดิบๆ เป็น Flask debug 500 traceback เต็มหน้า (ไม่ใช่ JSON
+error สะอาดๆ) เวลาระบุ strategy ที่ไม่มีจริง — เจอจาก curl ทดสอบจริง (`strategy_v99`) ไม่ใช่
+แค่ตรวจโค้ด แก้เป็น catch `ModuleNotFoundError` เทียบ `e.name` ให้ชัดว่าเป็น module ที่เรา
+import เอง (ไม่ใช่ import ที่พังข้างในไฟล์ strategy อื่น) แล้วแปลงเป็น `FileNotFoundError`
+พร้อม list strategy ที่มีจริงให้
+
+**ข้อมูลที่ใช้:** ราคาจาก `sandbox/data/prices/*.csv` (Phase 0), real historical macro
+data 477 ข่าว (เชื่อมไว้แล้วจาก fix ก่อนหน้า) ทดสอบรันจริง: 1 ปี (2024, 5 ticker,
+$100k) และเต็ม 5 ปี (2021-09-10..2026-09-10)
+
+**ผลลัพธ์ (ทดสอบจริงทุกข้อ):**
+- รัน 1 ปี (2024, ticker ครบ 5 ตัว, $100,000) → final_value=$176,508.91, 21 trades
+  (mix sell/dca ตามที่คาด, first day value = initial cash เป๊ะ, ticker_set แคบลง (2 ตัว) ให้
+  ผลต่างกันจริง — final_value=$100,764 สมเหตุสมผลกับ universe เล็กลง/สั้นลง)
+- รันเต็ม 5 ปี → 91 trades, **8 buyback event เกิดขึ้นจริง** ทุกอันราคาตก ≥20% จากจุดขายจริง
+  (เช่น META -38.9%, NVDA -45.5%) ยืนยันว่า threshold -20% ทำงานถูกต้องด้วยข้อมูลราคาจริง
+- `POST /api/strategies/run` → persist ลง `experiments.db` สำเร็จ, `GET
+  /api/strategies/runs` เห็น run ที่เพิ่ง save, หน้า `/strategies` render ตาราง saved run
+  ถูกต้อง
+- diff guard: สร้าง 1 rule-lookup + 1 strategy experiment แล้วลอง diff คู่กัน →
+  `ValueError` ชัดเจน ไม่ crash, ตรวจ UI แล้วว่า checkbox ของ strategy row มี `disabled`
+  attribute จริงในหน้า `/experiments`
+- error path ครบ: unknown strategy (แก้บั๊กแล้ว → 400 JSON สะอาด), ชื่อ pattern ผิด, cash
+  ติดลบ, start>end → ทุกกรณี 400 พร้อมข้อความชัดเจน ไม่ใช่ 500
+- `smoke_test`, `test_combine` (13 case), `node --check` ผ่านหมด ไม่กระทบ
+
+**มุมมอง/การตีความ:** Strategy engine ทำงานจบ end-to-end จริงด้วยข้อมูลราคา+ข่าวจริง (ไม่ใช่
+mock) — buyback -20% ที่ trigger ได้จริง 8 ครั้งใน 5 ปี พิสูจน์ว่า logic ตอบสนองข้อมูลจริง
+ถูกต้อง ไม่ใช่แค่ผ่าน unit test สังเคราะห์ จุดที่ยังไม่ครบ: ยังไม่ได้เห็น UI จริง (form,
+trade log table, portfolio chart) ในเบราว์เซอร์
+
+**ขั้นต่อไปที่ควรลอง:** ผู้ใช้เปิด browser ทดสอบทั้ง 4 เรื่องที่ทำวันนี้ (indicators,
+bulk upload, rule engine ใหม่, strategy engine) ด้วยตาจริง
+---

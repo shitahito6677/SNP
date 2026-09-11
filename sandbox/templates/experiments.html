@@ -52,7 +52,11 @@
 
 <div class="panel wide">
   <h1>Saved experiments</h1>
-  <p class="note">เลือก 2 อันเพื่อ diff — ดูว่า (ticker, date) ไหน decision ต่างกันระหว่าง rule version</p>
+  <p class="note">
+    เลือก 2 อันเพื่อ diff — ดูว่า (ticker, date) ไหน decision ต่างกันระหว่าง rule version
+    (diff รองรับเฉพาะ rule-lookup experiment เท่านั้น ไม่รองรับ strategy run — ดู
+    <a href="/strategies">Strategies</a> สำหรับผลจำลอง strategy โดยเฉพาะ)
+  </p>
 
   {% if not runs %}
   <p class="hint">ยังไม่มี experiment ที่ save ไว้เลย</p>
@@ -60,12 +64,13 @@
   <div class="table-wrap">
     <table class="data-table">
       <thead>
-        <tr><th>Diff?</th><th>Created</th><th>Rule</th><th>Tickers</th><th>Date range</th><th># decisions</th><th>Notes</th></tr>
+        <tr><th>Diff?</th><th>Kind</th><th>Created</th><th>Rule/Strategy</th><th>Tickers</th><th>Date range</th><th># rows</th><th>Notes</th></tr>
       </thead>
       <tbody>
         {% for r in runs %}
         <tr>
-          <td><input type="checkbox" class="diff-checkbox" value="{{ r.experiment_id }}"></td>
+          <td><input type="checkbox" class="diff-checkbox" value="{{ r.experiment_id }}" {{ "disabled" if r.is_strategy }}></td>
+          <td>{{ "strategy" if r.is_strategy else "rule-lookup" }}</td>
           <td>{{ r.created_at }}</td>
           <td>{{ r.rule_version }}</td>
           <td>{{ r.ticker_set|join(", ") }}</td>

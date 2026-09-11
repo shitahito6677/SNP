@@ -20,9 +20,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sandbox import config, events_store
+from sandbox.engine import simulate
 from sandbox.engine.combine import combine
 from sandbox.inference import model_a
 from sandbox.rules.versions import RULES_DIR
+
+STRATEGY_PREFIX = "strategy:"  # rule_version column reused to tag strategy runs (see run_strategy_experiment)
 
 DB_PATH = Path(__file__).resolve().parent / "experiments.db"
 
@@ -124,10 +127,53 @@ def run_experiment(rule_version: str, ticker_set: list, start: str, end: str, no
     return {**record, "ticker_set": ticker_set, "decisions": decisions}
 
 
+def run_strategy_experiment(
+    strategy_name: str, ticker_set: list, start: str, end: str, initial_cash: float, notes: str = ""
+) -> dict:
+    """เหมือน run_experiment() แต่รัน Strategy engine (sandbox/engine/simulate.py) แทน
+    rule-lookup — เก็บลงตาราง `experiments` เดียวกันเลย (schema เดียวกันเป๊ะ ไม่ต้อง migrate
+    อะไร) โดยผูก `rule_version = "strategy:<strategy_name>"` เป็นตัวแยกประเภทตอนอ่านกลับ
+    (ดู _row_to_dict) — decisions_json เก็บผลจำลองเต็ม (trade_log, portfolio_value_series,
+    ฯลฯ) แทนที่จะเป็น list ของ decision แบบ rule-lookup"""
+    result = simulate.run_simulation(strategy_name, ticker_set, start, end, initial_cash)
+
+    record = {
+        "experiment_id": str(uuid.uuid4()),
+        "rule_version": f"{STRATEGY_PREFIX}{strategy_name}",
+        "ticker_set": json.dumps(ticker_set),
+        "date_range_start": start,
+        "date_range_end": end,
+        "decisions_json": json.dumps(result),
+        "created_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+        "notes": notes,
+    }
+
+    conn = _connect()
+    with conn:
+        conn.execute(
+            """INSERT INTO experiments
+               (experiment_id, rule_version, ticker_set, date_range_start, date_range_end,
+                decisions_json, created_at, notes)
+               VALUES (:experiment_id, :rule_version, :ticker_set, :date_range_start,
+                       :date_range_end, :decisions_json, :created_at, :notes)""",
+            record,
+        )
+    conn.close()
+
+    return {**record, "ticker_set": ticker_set, **result}
+
+
 def _row_to_dict(row: sqlite3.Row) -> dict:
     d = dict(row)
     d["ticker_set"] = json.loads(d["ticker_set"])
-    d["decisions"] = json.loads(d["decisions_json"])
+    is_strategy = d["rule_version"].startswith(STRATEGY_PREFIX)
+    d["is_strategy"] = is_strategy
+    if is_strategy:
+        strategy_result = json.loads(d["decisions_json"])
+        d["strategy_result"] = strategy_result
+        d["decisions"] = strategy_result.get("trade_log", [])  # ให้ len(decisions) ยังใช้ได้
+    else:
+        d["decisions"] = json.loads(d["decisions_json"])
     return d
 
 
@@ -156,6 +202,13 @@ def diff_experiments(id_a: str, id_b: str) -> dict:
     rows ที่เหมือนกัน, และ rows ที่มีแค่ฝั่งเดียว"""
     exp_a = get_experiment(id_a)
     exp_b = get_experiment(id_b)
+
+    if exp_a["is_strategy"] or exp_b["is_strategy"]:
+        raise ValueError(
+            "diff รองรับเฉพาะ rule-lookup experiment (decision ต่อ (ticker,date)) เท่านั้น — "
+            "strategy run เก็บ trade log/portfolio value ซึ่งเทียบแบบนี้ไม่ได้ "
+            f"(experiment_a.is_strategy={exp_a['is_strategy']}, experiment_b.is_strategy={exp_b['is_strategy']})"
+        )
 
     map_a = {(d["ticker"], d["date"]): d for d in exp_a["decisions"]}
     map_b = {(d["ticker"], d["date"]): d for d in exp_b["decisions"]}

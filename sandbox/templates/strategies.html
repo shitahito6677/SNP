@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Strategies — SP Ensemble Sandbox{% endblock %}
+{% block content %}
+
+<p class="disclaimer strategy-banner">
+  ⚠️ ผลจำลองนี้ใช้ signal จาก STUB — ทดสอบว่า logic ทำงานถูก ไม่ใช่ทดสอบว่ากลยุทธ์กำไรจริง
+</p>
+
+<div class="panel wide">
+  <h1>Run a strategy simulation</h1>
+  <p class="note">
+    วน day-by-day ตามช่วงวันที่ที่เลือก โดยดึง signal C จาก manual event + real historical
+    macro data (เหมือนที่ Dashboard ใช้) และ signal B จาก manual event เท่านั้น (ไม่มี
+    historical data จริงของ Model B) — วันที่ไม่มี event ของ ticker นั้นจริง signal จะเป็น
+    "no signal" (ไม่ forward-fill ไม่เดา) รายละเอียด strategy ที่เลือกอยู่ ดูได้จาก docstring
+    ในไฟล์ <code>sandbox/strategy/&lt;strategy&gt;.py</code>
+  </p>
+
+  {% if not strategy_options %}
+  <p class="hint">ยังไม่มี strategy เลย — เพิ่มไฟล์ <code>sandbox/strategy/strategy_v{N}.py</code> ก่อน</p>
+  {% else %}
+  <form id="run-strategy-form">
+    <label>Strategy
+      <select id="strategy-select">
+        {% for s in strategy_options %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <fieldset class="ticker-checkboxes">
+      <legend>Ticker set</legend>
+      {% for t in tickers %}
+      <label class="checkbox-label">
+        <input type="checkbox" class="strategy-ticker-checkbox" value="{{ t }}" checked> {{ t }}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <label>From
+      <input type="date" id="strategy-date-start" min="{{ date_min }}" max="{{ date_max }}" value="{{ date_min }}">
+    </label>
+    <label>To
+      <input type="date" id="strategy-date-end" min="{{ date_min }}" max="{{ date_max }}" value="{{ date_max }}">
+    </label>
+
+    <label>Initial cash (USD)
+      <input type="number" id="strategy-initial-cash" value="100000" min="1" step="1000">
+    </label>
+
+    <label>Notes (optional)
+      <input type="text" id="strategy-notes" placeholder="เช่น 'strategy_v1 full 5y run'">
+    </label>
+
+    <button type="submit">Run simulation</button>
+  </form>
+  <p id="strategy-run-error" class="error" hidden></p>
+
+  <div id="strategy-run-result" hidden>
+    <h2>Result</h2>
+    <p id="strategy-summary" class="note"></p>
+    <div id="portfolio-chart"></div>
+    <h3>Trade log</h3>
+    <div class="table-wrap">
+      <table class="data-table" id="trade-log-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Ticker</th><th>Shares</th><th>Price</th><th>Reason</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel wide">
+  <h1>Saved strategy runs</h1>
+  {% if not runs %}
+  <p class="hint">ยังไม่มี strategy run ที่ save ไว้เลย</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Created</th><th>Strategy</th><th>Tickers</th><th>Date range</th><th>Initial cash</th><th>Final value</th><th># trades</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for r in runs %}
+        <tr>
+          <td>{{ r.created_at }}</td>
+          <td>{{ r.rule_version.replace("strategy:", "") }}</td>
+          <td>{{ r.ticker_set|join(", ") }}</td>
+          <td>{{ r.date_range_start }} → {{ r.date_range_end }}</td>
+          <td>{{ "%.2f"|format(r.strategy_result.initial_cash) }}</td>
+          <td>{{ "%.2f"|format(r.strategy_result.final_value) }}</td>
+          <td>{{ r.decisions|length }}</td>
+          <td>{{ r.notes }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.__PAGE__ = "strategies";</script>
+{% endblock %}
