@@ -374,6 +374,101 @@ function initEvents() {
       submitBtn.disabled = false;
     }
   });
+
+  initBulkUpload();
+}
+
+function initBulkUpload() {
+  const fileInput = document.getElementById("bulk-file");
+  const previewBtn = document.getElementById("bulk-preview-btn");
+  const confirmBtn = document.getElementById("bulk-confirm-btn");
+  const errorEl = document.getElementById("bulk-error");
+  const previewSection = document.getElementById("bulk-preview-section");
+  const summaryEl = document.getElementById("bulk-summary");
+  const tableBody = document.querySelector("#bulk-preview-table tbody");
+  const commitResultEl = document.getElementById("bulk-commit-result");
+
+  if (!fileInput) return; // หน้านี้ไม่มี bulk upload section
+
+  function renderPreviewTable(rows) {
+    tableBody.innerHTML = rows
+      .map(
+        (r) => `
+        <tr class="${r.valid ? "" : "signal-sell"}">
+          <td>${r.row_num}</td>
+          <td>${r.date}</td>
+          <td>${r.ticker || "-"}</td>
+          <td>${r.type ? r.type.toUpperCase() : "-"}</td>
+          <td class="headline-cell" title="${(r.headline || "").replace(/"/g, "&quot;")}">${(r.headline || "").slice(0, 50)}</td>
+          <td>${r.valid ? '<span class="real-tag">OK</span>' : `<span class="stub-tag">ERROR</span> ${r.error}`}</td>
+        </tr>`
+      )
+      .join("");
+  }
+
+  previewBtn.addEventListener("click", async () => {
+    errorEl.hidden = true;
+    previewSection.hidden = true;
+    commitResultEl.hidden = true;
+
+    const file = fileInput.files[0];
+    if (!file) {
+      errorEl.textContent = "เลือกไฟล์ CSV ก่อน";
+      errorEl.hidden = false;
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/events/bulk/preview", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok || data.file_error) {
+        errorEl.textContent = data.error || data.file_error || "เกิดข้อผิดพลาด";
+        errorEl.hidden = false;
+        return;
+      }
+      summaryEl.textContent = `${data.rows.length} แถวทั้งหมด — valid: ${data.valid_count}, error: ${data.error_count}`;
+      renderPreviewTable(data.rows);
+      previewSection.hidden = false;
+      confirmBtn.disabled = data.valid_count === 0;
+    } catch (err) {
+      errorEl.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
+      errorEl.hidden = false;
+    }
+  });
+
+  confirmBtn.addEventListener("click", async () => {
+    errorEl.hidden = true;
+    commitResultEl.hidden = true;
+    confirmBtn.disabled = true;
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/events/bulk/commit", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok || data.file_error) {
+        errorEl.textContent = data.error || data.file_error || "เกิดข้อผิดพลาด";
+        errorEl.hidden = false;
+        return;
+      }
+      commitResultEl.innerHTML = `Imported: <strong>${data.success.length}</strong> row(s) succeeded,
+        <strong>${data.failed.length}</strong> row(s) skipped.
+        ${data.failed.length ? "<br>Skipped: " + data.failed.map((f) => `#${f.row_num} (${f.error})`).join(", ") : ""}`;
+      commitResultEl.hidden = false;
+      previewSection.hidden = true;
+      fileInput.value = "";
+    } catch (err) {
+      errorEl.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
+      errorEl.hidden = false;
+    } finally {
+      confirmBtn.disabled = false;
+    }
+  });
 }
 
 // --------------------------------------------------------------------------

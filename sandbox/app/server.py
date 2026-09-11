@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
-from sandbox import config, events_store, experiments_db, historical_data
+from sandbox import config, events_bulk, events_store, experiments_db, historical_data
 from sandbox.analytics import indicators
 from sandbox.inference import model_a, model_b, model_c
 from sandbox.rules import versions as rule_versions
@@ -277,6 +277,37 @@ def api_events_post():
         return jsonify({"error": f"{type(e).__name__}: {e}"}), 500
 
     return jsonify(record)
+
+
+def _read_uploaded_csv():
+    """อ่าน CSV จาก multipart upload (`request.files['file']`) เป็น text — คืน
+    (text, error_response_or_None)"""
+    if "file" not in request.files:
+        return None, (jsonify({"error": "ต้องแนบไฟล์ใน field 'file'"}), 400)
+    f = request.files["file"]
+    if not f.filename:
+        return None, (jsonify({"error": "ไม่ได้เลือกไฟล์"}), 400)
+    try:
+        text = f.read().decode("utf-8-sig")  # -sig กัน Excel ใส่ BOM นำหน้าไฟล์ CSV
+    except UnicodeDecodeError:
+        return None, (jsonify({"error": "อ่านไฟล์ไม่ได้ — ต้องเป็น UTF-8 CSV"}), 400)
+    return text, None
+
+
+@app.route("/api/events/bulk/preview", methods=["POST"])
+def api_events_bulk_preview():
+    text, err = _read_uploaded_csv()
+    if err:
+        return err
+    return jsonify(events_bulk.parse_and_validate(text))
+
+
+@app.route("/api/events/bulk/commit", methods=["POST"])
+def api_events_bulk_commit():
+    text, err = _read_uploaded_csv()
+    if err:
+        return err
+    return jsonify(events_bulk.commit_valid_rows(text))
 
 
 @app.route("/api/experiments")

@@ -52,6 +52,38 @@
   <p id="event-error" class="error" hidden></p>
   <div id="event-result" class="result-box" hidden></div>
 </div>
+
+<div class="panel narrow">
+  <h1>Bulk upload (CSV)</h1>
+  <p class="note">
+    คอลัมน์ที่ต้องมี: <code>date, ticker, type, headline</code> — <code>type</code> เป็น
+    <code>B</code> หรือ <code>C</code> (ไม่สนตัวพิมพ์เล็ก/ใหญ่), <code>ticker</code>
+    ไม่ต้องกรอกถ้า <code>type=C</code> (macro กระทบทุก ticker อยู่แล้ว) กฎเดิมทุกข้อยังใช้
+    (source="manual", แยกไฟล์จาก training data, ปฏิเสธ B ถ้า ticker ไม่มี company news,
+    ต้องอยู่ในช่วงวันที่ {{ date_min }} .. {{ date_max }}) — preview ก่อนเสมอ ยังไม่เขียน
+    อะไรจนกว่าจะกด "Confirm & Run"
+  </p>
+
+  <label>CSV file
+    <input type="file" id="bulk-file" accept=".csv,text/csv">
+  </label>
+  <button type="button" id="bulk-preview-btn">Preview</button>
+
+  <p id="bulk-error" class="error" hidden></p>
+
+  <div id="bulk-preview-section" hidden>
+    <p id="bulk-summary" class="note"></p>
+    <div class="table-wrap">
+      <table class="data-table" id="bulk-preview-table">
+        <thead><tr><th>#</th><th>Date</th><th>Ticker</th><th>Type</th><th>Headline</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <button type="button" id="bulk-confirm-btn">Confirm &amp; Run (เฉพาะแถวที่ valid)</button>
+  </div>
+
+  <div id="bulk-commit-result" class="result-box" hidden></div>
+</div>
 {% endblock %}
 
 {% block scripts %}

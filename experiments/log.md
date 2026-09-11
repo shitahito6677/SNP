@@ -451,3 +451,38 @@ layout, domain stacking math) ตรวจแค่ syntax (`node --check`) + �
 
 **ขั้นต่อไปที่ควรลอง:** เรื่องที่ 2 — CSV bulk upload สำหรับ Events
 ---
+
+## sandbox_csv_bulk_upload — 2026-09-11 10:40 (+07:00)
+
+**วิธีที่ใช้:** เพิ่ม `sandbox/events_bulk.py` — parse+validate CSV (คอลัมน์: date, ticker,
+type, headline; type B/C ไม่สนตัวพิมพ์, ticker ไม่ต้องกรอกถ้า type=C) แยก 2 ฟังก์ชันชัดเจน:
+`parse_and_validate()` (validate อย่างเดียว ไม่เขียนอะไร — ใช้ตอน preview) กับ
+`commit_valid_rows()` (validate ซ้ำอีกรอบไม่เชื่อ client เก่า แล้ว loop เรียก
+`events_store.add_company_event`/`add_macro_event` ทีละแถวเหมือน manual form เดี่ยวทุก
+อย่าง — เฉพาะแถว valid เท่านั้น ข้ามแถว error โดยไม่ทำให้ทั้งไฟล์ fail) validation ใช้กฎ
+เดียวกับฟอร์มเดี่ยวทุกข้อ (date range, ticker ใน universe, `config.has_company_news()`
+disable B) เพิ่ม `POST /api/events/bulk/preview` + `POST /api/events/bulk/commit`
+(multipart file upload) หน้า Events เพิ่ม section "Bulk upload (CSV)" — เลือกไฟล์ → Preview
+(เห็นตารางทุกแถวพร้อม status OK/ERROR) → Confirm & Run (เขียนจริงเฉพาะแถว valid)
+
+**ข้อมูลที่ใช้:** ไฟล์ CSV ทดสอบเอง 8 แถว ครอบคลุมทุก error case ที่คิดได้ (date นอกช่วง,
+ticker ไม่อยู่ใน universe, type ผิด, ticker หายสำหรับ type=B, type ว่าง, type ตัวพิมพ์เล็ก)
+
+**ผลลัพธ์:**
+- `POST /api/events/bulk/preview` กับไฟล์ 8 แถว → valid=3, error=5 ตรงตามที่ตั้งใจทุกแถว
+  พร้อมข้อความ error เฉพาะเจาะจงต่อแถว (ไม่ใช่ error รวมๆ)
+- `POST /api/events/bulk/commit` กับไฟล์เดิม → success=3, failed=5 (row number + เหตุผลตรง
+  กับ preview เป๊ะ) `manual_events.csv` มี 7 แถวข้อมูลจริง (1 B-NVDA + 5 C ทุก ticker +
+  1 B-TSLA lowercase "b" ก็ผ่าน) ทุกแถว `source=manual`
+- ทดสอบ B-disable ผ่าน bulk โดยตรง (ตัด FDX ออกจาก `TICKERS_WITH_COMPANY_NEWS` ชั่วคราว) →
+  `parse_and_validate()` reject แถว FDX/B ถูกต้อง พร้อมข้อความอธิบาย
+- `smoke_test`, `test_combine` ผ่านครบ ไม่กระทบ
+
+**มุมมอง/การตีความ:** ผ่านครบตามที่ระบุ (preview ก่อน confirm, กฎเดิมทุกข้อ, partial
+success ต่อแถวไม่ fail ทั้งไฟล์) decision ที่ตัดสินใจเอง: ใช้ partial-success (ข้ามแถว error
+แทนที่จะ reject ทั้งไฟล์ถ้ามีแถวเดียวพัง) เพราะน่าจะมีประโยชน์กว่าเวลา import ไฟล์ใหญ่ที่มี
+typo ไม่กี่แถว — ยังไม่เคยเห็น UI (drag file, preview table) จริงในเบราว์เซอร์
+
+**ขั้นต่อไปที่ควรลอง:** เรื่องที่ 3 — rule engine code-generation refactor (rule_v1_logic.py)
+แล้วต่อด้วย Strategy engine
+---
