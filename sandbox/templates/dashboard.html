@@ -22,6 +22,15 @@
 
     <button id="reload-btn" type="button">Reload</button>
 
+    <h3>Indicators</h3>
+    <fieldset class="ticker-checkboxes indicator-checkboxes">
+      <label class="checkbox-label"><input type="checkbox" id="ind-sma20" checked> SMA20 (overlay)</label>
+      <label class="checkbox-label"><input type="checkbox" id="ind-sma50" checked> SMA50 (overlay)</label>
+      <label class="checkbox-label"><input type="checkbox" id="ind-volume"> Volume</label>
+      <label class="checkbox-label"><input type="checkbox" id="ind-rsi"> RSI(14)</label>
+      <label class="checkbox-label"><input type="checkbox" id="ind-macd"> MACD(12,26,9)</label>
+    </fieldset>
+
     <h3>Model status</h3>
     <ul class="model-status-list">
       {% for m in model_status %}

@@ -14,6 +14,7 @@ import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
 from sandbox import config, events_store, experiments_db, historical_data
+from sandbox.analytics import indicators
 from sandbox.inference import model_a, model_b, model_c
 from sandbox.rules import versions as rule_versions
 
@@ -128,20 +129,36 @@ def experiments_page():
 
 
 # --------------------------------------------------------------------------
-# API — prices
+# API — prices + indicators
 # --------------------------------------------------------------------------
+
+def _load_price_df(ticker: str) -> pd.DataFrame:
+    """โหลดราคาเต็มช่วง (ไม่ filter วันที่) — ใช้ร่วมกันทั้ง /api/prices และ
+    /api/indicators เพราะ indicator (SMA50 ฯลฯ) ต้องคำนวณจากประวัติเต็มก่อน filter ทีหลัง"""
+    csv_path = PRICES_DIR / f"{ticker}.csv"
+    if not csv_path.exists():
+        raise FileNotFoundError(f"ไม่พบไฟล์ราคา {csv_path.name} — รัน Phase 0 script ก่อน")
+    df = pd.read_csv(csv_path)
+    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.strftime("%Y-%m-%d")
+    return df
+
+
+def _series_to_json_list(series: pd.Series) -> list:
+    """แปลง pandas Series -> list สำหรับ jsonify — NaN ต้องเป็น None (json null) ไม่งั้น
+    Python json module จะ emit ตัวหนังสือ `NaN` ดิบๆ ซึ่งไม่ใช่ JSON ที่ถูกต้อง (JS
+    JSON.parse จะ error) ปัดเศษ 4 ตำแหน่งให้ payload ไม่ใหญ่เกินจำเป็น"""
+    return [None if pd.isna(v) else round(float(v), 4) for v in series]
+
 
 @app.route("/api/prices/<ticker>")
 def api_prices(ticker):
     if ticker not in config.TICKERS:
         return jsonify({"error": f"ticker ต้องเป็นหนึ่งใน {config.TICKERS}"}), 400
 
-    csv_path = PRICES_DIR / f"{ticker}.csv"
-    if not csv_path.exists():
-        return jsonify({"error": f"ไม่พบไฟล์ราคา {csv_path.name} — รัน Phase 0 script ก่อน"}), 404
-
-    df = pd.read_csv(csv_path)
-    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.strftime("%Y-%m-%d")
+    try:
+        df = _load_price_df(ticker)
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
 
     start = request.args.get("start")
     end = request.args.get("end")
@@ -159,6 +176,40 @@ def api_prices(ticker):
             "low": df["Low"].round(2).tolist(),
             "close": df["Close"].round(2).tolist(),
             "volume": df["Volume"].tolist(),
+        }
+    )
+
+
+@app.route("/api/indicators/<ticker>")
+def api_indicators(ticker):
+    if ticker not in config.TICKERS:
+        return jsonify({"error": f"ticker ต้องเป็นหนึ่งใน {config.TICKERS}"}), 400
+
+    try:
+        df = _load_price_df(ticker)
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+
+    # คำนวณจากราคาเต็มช่วงก่อนเสมอ (ดู docstring compute_all) แล้วค่อย filter วันที่ทีหลัง
+    df = indicators.compute_all(df)
+
+    start = request.args.get("start")
+    end = request.args.get("end")
+    if start:
+        df = df[df["Date"] >= start]
+    if end:
+        df = df[df["Date"] <= end]
+
+    return jsonify(
+        {
+            "ticker": ticker,
+            "dates": df["Date"].tolist(),
+            "sma20": _series_to_json_list(df["sma20"]),
+            "sma50": _series_to_json_list(df["sma50"]),
+            "rsi14": _series_to_json_list(df["rsi14"]),
+            "macd": _series_to_json_list(df["macd"]),
+            "macd_signal": _series_to_json_list(df["macd_signal"]),
+            "macd_hist": _series_to_json_list(df["macd_hist"]),
         }
     )
 

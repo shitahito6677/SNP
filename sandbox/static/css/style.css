@@ -167,6 +167,16 @@ fieldset.ticker-checkboxes legend {
 }
 .checkbox-label input { width: auto; margin: 0; }
 
+/* sidebar indicator toggles — stack vertically, unlike the inline ticker checkboxes */
+fieldset.indicator-checkboxes { margin-bottom: 16px; }
+fieldset.indicator-checkboxes .checkbox-label {
+  display: flex !important;
+  margin-right: 0;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
 button {
   background: var(--accent);
   color: #fff;

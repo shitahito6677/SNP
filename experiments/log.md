@@ -418,3 +418,36 @@ FinBERT (ตามที่ exp_02 เคยพบ — XLP/XLV แทบไม�
 **ขั้นต่อไปที่ควรลอง:** ผู้ใช้ refresh browser เช็คทั้ง 3 จุดด้วยตาจริง โดยเฉพาะจุดที่ 1
 (nav bar) ที่ยังไม่มีใครยืนยันด้วยตาว่าหายจริง
 ---
+
+## sandbox_indicators — 2026-09-11 10:05 (+07:00)
+
+**วิธีที่ใช้:** เพิ่ม `sandbox/analytics/indicators.py` — SMA20/SMA50 (rolling mean),
+RSI(14, Wilder's smoothing ผ่าน EWM alpha=1/period), MACD(12,26,9, EMA fast-slow + signal
+EMA9) คำนวณจากราคาที่มีอยู่แล้วใน `sandbox/data/prices/*.csv` เท่านั้น ไม่ดึงข้อมูลใหม่
+เพิ่ม `GET /api/indicators/<ticker>` (คำนวณจากราคาเต็มช่วงก่อนเสมอ แล้วค่อย filter วันที่
+ทีหลัง กัน SMA50/MACD ของวันแรกๆ ในช่วงที่เลือกดูเป็น NaN เพราะข้อมูลย้อนหลังไม่พอ) หน้า
+Dashboard เพิ่ม checkbox 5 ตัว (SMA20/50 เปิดโดย default, Volume/RSI/MACD ปิด) — SMA เป็น
+overlay บนกราฟราคาเดิม (yaxis เดียวกัน) ส่วน Volume/RSI/MACD เป็น subplot แยกด้านล่าง
+(yaxis2/3/4 คนละ domain, xaxis `matches: 'x'` ให้ zoom/pan sync กัน) คำนวณ domain แบบ
+stack จากบนลงล่างให้เติมเต็มพอดี [0,1] ไม่มีช่องว่างเหลือไม่ว่าจะเปิดกี่ panel
+
+**ข้อมูลที่ใช้:** `sandbox/data/prices/NVDA.csv` (Phase 0, 1,255 แถว) ทดสอบคำนวณ indicator
+ตรงๆ ผ่าน python ก่อนต่อ API
+
+**ผลลัพธ์:**
+- ทดสอบ `indicators.compute_all()` ตรงๆ: RSI อยู่ในช่วง [18.8, 87.5] (valid, ไม่หลุด 0-100),
+  NaN count ตรงตาม window (sma20=19, sma50=49, rsi14=14 แถวแรกเป็น NaN ตามที่ควรเป็น, macd=0
+  เพราะ EWM ไม่ต้องการ min_periods)
+- `GET /api/indicators/NVDA` (เต็มช่วง) → 1,255 วัน, sma20 non-null 1,236, sma50 non-null
+  1,206 ตรงกับที่ทดสอบตรงๆ
+- `GET /api/indicators/NVDA?start=2022-01-03&end=2022-01-10` → sma50 มีค่าจริงตั้งแต่วันแรก
+  ของช่วงที่ขอ (29.44) ไม่ใช่ NaN — ยืนยันว่าคำนวณจากประวัติเต็มก่อน filter ทีหลังทำงานถูก
+- `python3 -m sandbox.scripts.smoke_test` ผ่านครบ (ไม่กระทบ)
+
+**มุมมอง/การตีความ:** backend ตรวจสอบได้ครบด้วยตัวเลขจริง ส่วน frontend (multi-panel Plotly
+layout, domain stacking math) ตรวจแค่ syntax (`node --check`) + ทวนสูตรคำนวณ domain ด้วยมือ
+เอง (nExtra=1,2,3 ทุกกรณีเติมเต็มพอดี [0,1] ไม่มี gap เหลือ) **ยังไม่เคยเห็นกราฟจริงในเบราว์เซอร์
+ว่า subplot วางถูกจริง** — ต้องให้ผู้ใช้เปิดดู
+
+**ขั้นต่อไปที่ควรลอง:** เรื่องที่ 2 — CSV bulk upload สำหรับ Events
+---

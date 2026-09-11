@@ -51,6 +51,37 @@ function initDashboard() {
     popup.style.top = Math.min(y, window.innerHeight - 160) + "px";
   }
 
+  // subplot ที่เปิดได้ ในลำดับที่จะวางจากบนลงล่าง (ใต้กราฟราคาหลัก) — Volume ใกล้ราคาสุด,
+  // MACD ล่างสุด ตามธรรมเนียมของ trading platform ทั่วไป
+  const SUBPLOT_ORDER = [
+    { key: "volume", checkboxId: "ind-volume", title: "Volume" },
+    { key: "rsi", checkboxId: "ind-rsi", title: "RSI(14)" },
+    { key: "macd", checkboxId: "ind-macd", title: "MACD(12,26,9)" },
+  ];
+
+  function activeSubplots() {
+    return SUBPLOT_ORDER.filter((p) => document.getElementById(p.checkboxId).checked);
+  }
+
+  // คำนวณ y-axis domain ของแต่ละ panel (main + subplot ที่เปิดอยู่) แบบ stack จากบนลงล่าง
+  // เติมเต็มพอดี [0,1] เสมอไม่ว่าจะเปิดกี่ panel (ไม่เหลือช่องว่างล่างสุด)
+  function computeDomains(nExtra) {
+    if (nExtra === 0) return { main: [0, 1] };
+    const gap = 0.03;
+    const mainHeight = { 1: 0.62, 2: 0.5, 3: 0.42 }[nExtra] || 0.42;
+    const remaining = 1 - mainHeight - gap; // gap ระหว่าง main กับ subplot แรก
+    const slotHeight = (remaining - gap * (nExtra - 1)) / nExtra; // เผื่อ gap ระหว่าง subplot ด้วยกัน
+
+    const domains = { main: [1 - mainHeight, 1] };
+    let top = domains.main[0] - gap;
+    for (let i = 0; i < nExtra; i++) {
+      const bottom = Math.max(top - slotHeight, 0);
+      domains["slot" + i] = [bottom, top];
+      top = bottom - gap;
+    }
+    return domains;
+  }
+
   async function render() {
     const ticker = tickerSelect.value;
     statusEl.textContent = "Loading " + ticker + " ...";
@@ -59,14 +90,22 @@ function initDashboard() {
     if (startInput.value) params.set("start", startInput.value);
     if (endInput.value) params.set("end", endInput.value);
 
-    let price, events;
+    const showSma20 = document.getElementById("ind-sma20").checked;
+    const showSma50 = document.getElementById("ind-sma50").checked;
+    const subplots = activeSubplots(); // ordered list of active {key, title}
+    const needIndicators = showSma20 || showSma50 || subplots.some((p) => p.key !== "volume");
+
+    let price, events, ind;
     try {
-      const [priceRes, eventsRes] = await Promise.all([
+      const fetches = [
         fetch("/api/prices/" + ticker + "?" + params.toString()),
         fetch("/api/events?ticker=" + ticker + "&" + params.toString()),
-      ]);
-      price = await priceRes.json();
-      events = await eventsRes.json();
+      ];
+      if (needIndicators) fetches.push(fetch("/api/indicators/" + ticker + "?" + params.toString()));
+      const responses = await Promise.all(fetches);
+      price = await responses[0].json();
+      events = await responses[1].json();
+      ind = needIndicators ? await responses[2].json() : null;
     } catch (err) {
       statusEl.textContent = "เชื่อมต่อ server ไม่ได้: " + err.message;
       return;
@@ -74,6 +113,10 @@ function initDashboard() {
 
     if (price.error) {
       statusEl.textContent = "Error: " + price.error;
+      return;
+    }
+    if (ind && ind.error) {
+      statusEl.textContent = "Error (indicators): " + ind.error;
       return;
     }
     if (!price.dates.length) {
@@ -86,6 +129,9 @@ function initDashboard() {
     if (!startInput.value) startInput.value = price.dates[Math.max(0, price.dates.length - 300)];
     if (!endInput.value) endInput.value = price.dates[price.dates.length - 1];
 
+    const traces = [];
+    const shapes = [];
+
     const candlestick = {
       x: price.dates,
       open: price.open,
@@ -94,76 +140,133 @@ function initDashboard() {
       close: price.close,
       type: "candlestick",
       name: ticker,
+      xaxis: "x",
+      yaxis: "y",
       increasing: { line: { color: "#26a69a" } },
       decreasing: { line: { color: "#ef5350" } },
     };
+    traces.push(candlestick);
+
+    if (showSma20 && ind) {
+      traces.push({
+        x: ind.dates, y: ind.sma20, type: "scatter", mode: "lines", name: "SMA20",
+        xaxis: "x", yaxis: "y", line: { color: "#f5c518", width: 1.3 },
+      });
+    }
+    if (showSma50 && ind) {
+      traces.push({
+        x: ind.dates, y: ind.sma50, type: "scatter", mode: "lines", name: "SMA50",
+        xaxis: "x", yaxis: "y", line: { color: "#4f8cff", width: 1.3 },
+      });
+    }
 
     const maxHigh = Math.max(...price.high);
-    const macroTrace = {
+    traces.push({
       x: events.c.map((e) => e.date),
       y: events.c.map(() => maxHigh * 1.03),
-      mode: "markers",
-      type: "scatter",
-      name: "Macro event (C)",
+      mode: "markers", type: "scatter", name: "Macro event (C)",
+      xaxis: "x", yaxis: "y",
       marker: {
-        symbol: "triangle-down",
-        size: 11,
+        symbol: "triangle-down", size: 11,
         color: events.c.map((e) => classColor(e.class)),
         line: { color: "#0e1117", width: 1 },
       },
       customdata: events.c,
       hovertemplate: "%{x}<extra></extra>",
-    };
+    });
 
     const dateIndex = {};
     price.dates.forEach((d, i) => {
       dateIndex[d] = i;
     });
-    const companyTrace = {
+    traces.push({
       x: events.b.map((e) => e.date),
       y: events.b.map((e) => {
         const i = dateIndex[e.date];
         return i !== undefined ? price.close[i] : null;
       }),
-      mode: "markers",
-      type: "scatter",
-      name: "Company news (B)",
+      mode: "markers", type: "scatter", name: "Company news (B)",
+      xaxis: "x", yaxis: "y",
       marker: {
-        symbol: "circle",
-        size: 10,
+        symbol: "circle", size: 10,
         color: events.b.map((e) => classColor(e.class)),
         line: { color: "#fff", width: 1 },
       },
       customdata: events.b,
       hovertemplate: "%{x}<extra></extra>",
-    };
+    });
 
-    const shapes = events.c.map((e) => ({
-      type: "line",
-      xref: "x",
-      yref: "paper",
-      x0: e.date,
-      x1: e.date,
-      y0: 0,
-      y1: 1,
-      line: { color: classColor(e.class), dash: "dash", width: 1 },
-      opacity: 0.6,
-    }));
+    shapes.push(
+      ...events.c.map((e) => ({
+        type: "line", xref: "x", yref: "y domain",
+        x0: e.date, x1: e.date, y0: 0, y1: 1,
+        line: { color: classColor(e.class), dash: "dash", width: 1 },
+        opacity: 0.6,
+      }))
+    );
 
+    // --- subplots (Volume / RSI / MACD) ---
+    const domains = computeDomains(subplots.length);
     const layout = {
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
       font: { color: "#d1d4dc" },
-      margin: { t: 20, r: 20, l: 50, b: 40 },
-      xaxis: { gridcolor: "#262b36", rangeslider: { visible: false } },
-      yaxis: { gridcolor: "#262b36", title: "Price (USD)" },
+      margin: { t: 20, r: 20, l: 55, b: 40 },
+      xaxis: { gridcolor: "#262b36", rangeslider: { visible: false }, domain: [0, 1] },
+      yaxis: { gridcolor: "#262b36", title: "Price (USD)", domain: domains.main },
       shapes: shapes,
       showlegend: true,
-      legend: { orientation: "h", y: -0.15, font: { color: "#d1d4dc" } },
+      legend: { orientation: "h", y: -0.08, font: { color: "#d1d4dc" } },
       hovermode: "closest",
     };
 
-    Plotly.newPlot(chartDiv, [candlestick, macroTrace, companyTrace], layout, {
+    subplots.forEach((panel, i) => {
+      const n = i + 2; // axis suffix: main = x/y, first subplot = x2/y2, ...
+      const domain = domains["slot" + i];
+      layout["xaxis" + n] = { gridcolor: "#262b36", matches: "x", domain: [0, 1], anchor: "y" + n };
+      layout["yaxis" + n] = { gridcolor: "#262b36", title: panel.title, domain: domain, anchor: "x" + n };
+
+      if (panel.key === "volume") {
+        traces.push({
+          x: price.dates, y: price.volume, type: "bar", name: "Volume",
+          xaxis: "x" + n, yaxis: "y" + n, showlegend: false,
+          marker: {
+            color: price.close.map((c, idx) => (c >= price.open[idx] ? "#26a69a" : "#ef5350")),
+          },
+        });
+      } else if (panel.key === "rsi" && ind) {
+        traces.push({
+          x: ind.dates, y: ind.rsi14, type: "scatter", mode: "lines", name: "RSI(14)",
+          xaxis: "x" + n, yaxis: "y" + n, showlegend: false, line: { color: "#4f8cff", width: 1.3 },
+        });
+        shapes.push(
+          { type: "line", xref: "x", yref: "y" + n, x0: price.dates[0], x1: price.dates[price.dates.length - 1], y0: 70, y1: 70, line: { color: "#ef5350", dash: "dot", width: 1 } },
+          { type: "line", xref: "x", yref: "y" + n, x0: price.dates[0], x1: price.dates[price.dates.length - 1], y0: 30, y1: 30, line: { color: "#26a69a", dash: "dot", width: 1 } }
+        );
+        layout["yaxis" + n].range = [0, 100];
+      } else if (panel.key === "macd" && ind) {
+        traces.push(
+          {
+            x: ind.dates, y: ind.macd_hist, type: "bar", name: "MACD hist",
+            xaxis: "x" + n, yaxis: "y" + n, showlegend: false,
+            marker: { color: ind.macd_hist.map((v) => (v >= 0 ? "#26a69a" : "#ef5350")) },
+          },
+          {
+            x: ind.dates, y: ind.macd, type: "scatter", mode: "lines", name: "MACD",
+            xaxis: "x" + n, yaxis: "y" + n, showlegend: false, line: { color: "#4f8cff", width: 1.3 },
+          },
+          {
+            x: ind.dates, y: ind.macd_signal, type: "scatter", mode: "lines", name: "MACD signal",
+            xaxis: "x" + n, yaxis: "y" + n, showlegend: false, line: { color: "#f5c518", width: 1.3 },
+          }
+        );
+      }
+    });
+
+    layout.shapes = shapes;
+    chartDiv.style.height = (420 + subplots.length * 160) + "px";
+
+    Plotly.newPlot(chartDiv, traces, layout, {
       responsive: true,
       displaylogo: false,
     });
@@ -187,6 +290,10 @@ function initDashboard() {
       " | company (B) events: " +
       events.b.length;
   }
+
+  ["ind-sma20", "ind-sma50", "ind-volume", "ind-rsi", "ind-macd"].forEach((id) => {
+    document.getElementById(id).addEventListener("change", render);
+  });
 
   tickerSelect.addEventListener("change", render);
   reloadBtn.addEventListener("click", render);

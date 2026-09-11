@@ -19,6 +19,9 @@ sandbox/
   config.py                    # universe (5 ticker) + sector/ETF mapping + price date range — ยืนยันจริงใน Phase 0
   events_store.py              # บันทึก/โหลด manual event จากหน้า Events (CSV, source="manual" เสมอ)
   experiments_db.py            # Phase 5 — SQLite (sandbox/experiments.db) run/list/diff experiment
+  historical_data.py           # เชื่อม macro (C) event จริง (477 ข่าว FOMC/Beige Book) เข้า dashboard
+  analytics/
+    indicators.py                # SMA20/50, RSI(14), MACD(12,26,9) — คำนวณจากราคาที่มีอยู่แล้ว
   inference/
     model_a.py / model_b.py / model_c.py   # STUB predict() — ดู inference/README.md สำหรับ contract
     _stub_utils.py               # helper ที่ stub ใช้ร่วมกัน (ลบทิ้งได้เมื่อ swap ครบ)
