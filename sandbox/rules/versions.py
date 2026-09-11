@@ -36,7 +36,7 @@ def latest_version() -> int:
     if not versions:
         raise FileNotFoundError(
             f"ไม่พบ rule_v*.json เลยใน {RULES_DIR} — ต้องมีอย่างน้อย rule_v1.json "
-            "(รัน sandbox/scripts/generate_rule_v1.py)"
+            "(รัน sandbox/scripts/generate_rule_table.py --logic rule_v1_logic)"
         )
     return versions[-1]
 

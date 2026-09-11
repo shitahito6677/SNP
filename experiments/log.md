@@ -486,3 +486,46 @@ typo ไม่กี่แถว — ยังไม่เคยเห็น UI 
 **ขั้นต่อไปที่ควรลอง:** เรื่องที่ 3 — rule engine code-generation refactor (rule_v1_logic.py)
 แล้วต่อด้วย Strategy engine
 ---
+
+## sandbox_rule_engine_codegen_v1 — 2026-09-11 11:10 (+07:00)
+
+**วิธีที่ใช้:** แก้ปัญหาที่ผู้ใช้ชี้ชัดว่า rule_v1.json เดิม (Phase 4) เป็น "A+B override C"
+ที่ผมเดาขึ้นเองจาก description สั้นๆ — ถามผู้ใช้ตรงๆ ว่า logic จริงคืออะไร ได้คำตอบ: **"A
+เป็นหลัก, B/C เป็น veto"** เขียนเป็น `sandbox/rules/rule_v1_logic.py:decide(a,b,c)` ชัดเจน
+(A=buy แต่ B หรือ C เป็น negative → veto ลดเป็น hold, A=sell แต่ B หรือ C เป็น positive →
+veto ยกเป็น hold, A=hold → hold เสมอ) แล้วเขียน `sandbox/scripts/generate_rule_table.py` ใหม่
+(import decide() จาก logic module ที่ระบุผ่าน `--logic`, วน 27 combination export
+`rule_v{N}.json` — N parse จากชื่อ module ตรงๆ ด้วย regex `rule_v(\d+)_logic`) **regenerate
+`rule_v1.json` ทับของเดิม** (ตั้งใจ — เพราะ v1_logic.py คือต้นทางที่แท้จริงของ v1 เป็นครั้งแรก,
+เนื้อหาเดิมมาจาก formula ที่ยืนยันแล้วว่าผิด ไม่มี experiment จริงอ้างอิงเนื้อหาเดิม) ลบ
+`generate_rule_v1.py` เดิมทิ้ง (superseded) — `combine()`/หน้า Rules **ไม่แก้ interface เลย**
+อ่าน JSON แบบเดิมทุกอย่างตามที่กำหนด "ห้ามทับไฟล์เดิม" ยังคงใช้ได้เต็มที่กับ path การ save
+ผ่าน UI (auto-increment ผ่าน `versions.py`) — generator path นี้แยกกันชัดเจน ปลอดภัยเพราะ
+ผูกกับชื่อไฟล์ source ที่ commit ไว้ใน git โดยตรง (regenerate จาก source ที่ deterministic
+ไม่ใช่การทับ manual edit)
+
+**ข้อมูลที่ใช้:** ไม่มีข้อมูลจริงเกี่ยวข้อง (business logic ที่ผู้ใช้ระบุเอง ไม่ใช่ผลลัพธ์
+ที่ validate จากข้อมูล)
+
+**ผลลัพธ์:**
+- `generate_rule_table.py --logic rule_v1_logic` → 27 rows, กระจาย buy=4, hold=19, sell=4
+  (ตรงกับที่คำนวณด้วยมือไว้ล่วงหน้าเป๊ะทุกตัว)
+- Unit test เพิ่มเป็น 13 case (เดิม 8): เทส `decide()` ตรงๆ 8 case (no-veto ทั้ง buy/sell,
+  veto จาก B และ C แยกกันทั้ง 2 ทิศทาง, hold ไม่ขึ้นกับ B/C เลย, ครบ 27 combo) + เทส
+  `combine()` ผ่านไฟล์จริงอีก 5 case **รวมเทสสำคัญที่สุด: `rule_v1.json` ทุกแถวต้องตรงกับผล
+  `decide()` เป๊ะ** (กัน JSON กับ source โค้ดเพี้ยนกัน) — ผ่านครบ 13/13
+- error handling: `--logic` ชื่อผิด pattern → error ชัดเจนไม่ crash, module ไม่มี `decide()`
+  → error ชัดเจน (ทดสอบสร้าง `rule_v99_logic.py` เปล่าๆ จริง แล้วลบทิ้งหลังทดสอบ)
+- `/rules` page แสดง v1 พร้อม description ใหม่ "generated from
+  sandbox/rules/rule_v1_logic.py:decide()" ถูกต้อง, 27 แถวครบ, `smoke_test` ไม่กระทบ
+
+**มุมมอง/การตีความ:** นี่คือตัวอย่างที่ดีของทำไมต้องถามแทนเดา — logic ใหม่ (A เป็น veto
+gate) ให้ผลต่างจาก logic เดิม (A+B weighted) มาก: distribution เปลี่ยนจาก buy=12/hold=3/
+sell=12 เป็น buy=4/hold=19/sell=4 — ระบบเดิมแทบไม่เคย hold เลย (hold แค่ 3/27) ระบบใหม่
+hold เป็นค่า default เกือบทุกกรณี (19/27) สะท้อน philosophy ที่ต่างกันโดยสิ้นเชิง (weighted
+consensus vs. conservative-veto) ถ้าเดาแล้วใช้ logic ผิดต่อไปจะทำให้ทุก experiment/strategy
+ที่พึ่งพา rule engine ผิดตามไปด้วย
+
+**ขั้นต่อไปที่ควรลอง:** Strategy engine (base.py, strategy_v1.py, engine/simulate.py, UI
+ใหม่) — ใช้ C signal ตรงๆ ไม่ผ่าน rule engine (ตามตัวอย่างที่ผู้ใช้ให้มา)
+---

@@ -1,6 +1,6 @@
 """
-Unit test สำหรับ sandbox/engine/combine.py (Phase 4 DoD: "unit test combine() อย่างน้อย
-5 case ผ่าน") ใช้ unittest จาก stdlib ไม่ต้องติดตั้ง dependency เพิ่ม
+Unit test สำหรับ sandbox/engine/combine.py + sandbox/rules/rule_v1_logic.py
+(DoD เดิม: "unit test combine() อย่างน้อย 5 case ผ่าน") ใช้ unittest จาก stdlib
 
 รัน (จาก project root): python3 -m unittest sandbox.scripts.test_combine -v
 """
@@ -11,11 +11,48 @@ import unittest
 from pathlib import Path
 
 from sandbox.engine.combine import combine
+from sandbox.rules import rule_v1_logic
 from sandbox.rules.versions import RULES_DIR, latest_version, load_version, version_path
 
 
+class TestRuleV1Logic(unittest.TestCase):
+    """เทส decide() ตรงๆ (ไม่ผ่านไฟล์ JSON) — logic: "A เป็นหลัก, B/C เป็น veto" """
+
+    def test_01_buy_with_no_veto_stays_buy(self):
+        self.assertEqual(rule_v1_logic.decide("buy", "positive", "positive"), "buy")
+        self.assertEqual(rule_v1_logic.decide("buy", "neutral", "neutral"), "buy")
+
+    def test_02_buy_vetoed_by_negative_b(self):
+        self.assertEqual(rule_v1_logic.decide("buy", "negative", "positive"), "hold")
+
+    def test_03_buy_vetoed_by_negative_c(self):
+        self.assertEqual(rule_v1_logic.decide("buy", "positive", "negative"), "hold")
+
+    def test_04_sell_with_no_veto_stays_sell(self):
+        self.assertEqual(rule_v1_logic.decide("sell", "negative", "negative"), "sell")
+        self.assertEqual(rule_v1_logic.decide("sell", "neutral", "neutral"), "sell")
+
+    def test_05_sell_vetoed_by_positive_b(self):
+        self.assertEqual(rule_v1_logic.decide("sell", "positive", "negative"), "hold")
+
+    def test_06_sell_vetoed_by_positive_c(self):
+        self.assertEqual(rule_v1_logic.decide("sell", "negative", "positive"), "hold")
+
+    def test_07_hold_always_stays_hold_regardless_of_bc(self):
+        for b in ("positive", "neutral", "negative"):
+            for c in ("positive", "neutral", "negative"):
+                self.assertEqual(rule_v1_logic.decide("hold", b, c), "hold")
+
+    def test_08_all_27_combinations_return_valid_decision(self):
+        for a in ("buy", "hold", "sell"):
+            for b in ("positive", "neutral", "negative"):
+                for c in ("positive", "neutral", "negative"):
+                    self.assertIn(rule_v1_logic.decide(a, b, c), {"buy", "hold", "sell"})
+
+
 class TestCombineAgainstLatestRuleVersion(unittest.TestCase):
-    """เทส combine() กับ rule_v1.json จริงที่ repo ใช้อยู่ (ไม่ mock) — priority: A+B override C"""
+    """เทส combine() กับ rule_v1.json จริงที่ repo ใช้อยู่ (ไม่ mock) — regenerated จาก
+    rule_v1_logic.decide() ผ่าน generate_rule_table.py ต้องตรงกับผลของ decide() ตรงๆ เป๊ะ"""
 
     @classmethod
     def setUpClass(cls):
@@ -23,27 +60,22 @@ class TestCombineAgainstLatestRuleVersion(unittest.TestCase):
         cls.path = str(version_path(cls.n))
         cls.payload = load_version(cls.n)
 
-    def test_01_buy_plus_positive_ignores_negative_c(self):
-        # A=buy(+1) + B=positive(+1) = +2 > 0 -> buy, ไม่สนใจ C เลย (override)
-        self.assertEqual(combine("buy", "positive", "negative", self.path), "buy")
+    def test_09_json_table_matches_decide_function_exactly(self):
+        # rule_v1.json ต้องเป็นผลลัพธ์ของ rule_v1_logic.decide() เป๊ะทุกแถว (regenerate แล้ว
+        # ต้องตรงกัน ไม่งั้นแปลว่ามีคนแก้ JSON มือหรือ generator พัง)
+        for row in self.payload["table"]:
+            expected = rule_v1_logic.decide(row["a"], row["b"], row["c"])
+            self.assertEqual(
+                row["decision"], expected,
+                f"rule_v1.json มี {row} แต่ decide() ให้ {expected!r}",
+            )
 
-    def test_02_sell_plus_negative_ignores_positive_c(self):
-        # A=sell(-1) + B=negative(-1) = -2 < 0 -> sell, ไม่สนใจ C เลย (override)
-        self.assertEqual(combine("sell", "negative", "positive", self.path), "sell")
+    def test_10_combine_reads_through_to_decide_correctly(self):
+        self.assertEqual(combine("buy", "positive", "positive", self.path), "buy")
+        self.assertEqual(combine("buy", "negative", "positive", self.path), "hold")
+        self.assertEqual(combine("sell", "positive", "negative", self.path), "hold")
 
-    def test_03_tie_broken_by_positive_c(self):
-        # A=hold(0) + B=neutral(0) = 0 -> tie, C=positive(+1) ตัดสินเป็น buy
-        self.assertEqual(combine("hold", "neutral", "positive", self.path), "buy")
-
-    def test_04_tie_broken_by_negative_c(self):
-        # A=hold(0) + B=neutral(0) = 0 -> tie, C=negative(-1) ตัดสินเป็น sell
-        self.assertEqual(combine("hold", "neutral", "negative", self.path), "sell")
-
-    def test_05_tie_broken_by_neutral_c_stays_hold(self):
-        # A=hold(0) + B=neutral(0) = 0 -> tie, C=neutral(0) -> hold
-        self.assertEqual(combine("hold", "neutral", "neutral", self.path), "hold")
-
-    def test_06_all_27_combinations_resolve_without_error(self):
+    def test_11_all_27_combinations_resolve_without_error(self):
         classes_a = ["buy", "hold", "sell"]
         classes_bc = ["positive", "neutral", "negative"]
         seen = set()
@@ -55,7 +87,7 @@ class TestCombineAgainstLatestRuleVersion(unittest.TestCase):
                     seen.add((a, b, c))
         self.assertEqual(len(seen), 27)
 
-    def test_07_missing_combination_raises_valueerror_not_fallback(self):
+    def test_12_missing_combination_raises_valueerror_not_fallback(self):
         # ห้าม fallback เดา — ตัดแถวหนึ่งออกจาก table ชั่วคราวแล้วยืนยันว่า raise จริง
         with tempfile.TemporaryDirectory() as tmp:
             broken_table = [
@@ -69,7 +101,7 @@ class TestCombineAgainstLatestRuleVersion(unittest.TestCase):
             with self.assertRaises(ValueError):
                 combine("buy", "positive", "positive", str(broken_path))
 
-    def test_08_missing_rule_file_raises_filenotfounderror(self):
+    def test_13_missing_rule_file_raises_filenotfounderror(self):
         with self.assertRaises(FileNotFoundError):
             combine("buy", "positive", "positive", str(RULES_DIR / "rule_v9999_missing.json"))
 

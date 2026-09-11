@@ -31,7 +31,8 @@ sandbox/
     combine.py                    # combine(a, b, c, rule_path) -> decision, lookup ตรง ห้าม fallback
   rules/
     rule_v1.json, rule_v2.json..  # versioned lookup table (27 แถวเสมอ) — ห้ามทับของเก่า มีแต่เพิ่ม version ใหม่
-    versions.py                   # list/load/save version (save = สร้างไฟล์ใหม่เสมอ)
+    rule_v1_logic.py               # decide(a,b,c) -> str ต้นทางของ rule_v1.json ("A เป็นหลัก, B/C เป็น veto")
+    versions.py                   # list/load/save version ผ่าน UI (save = สร้างไฟล์ใหม่เสมอ)
   app/
     server.py                    # Flask entry point (รันด้วย python -m sandbox.app.server)
   templates/                     # base.html + dashboard/events/rules/experiments.html
@@ -39,7 +40,7 @@ sandbox/
   static/js/main.js              # Plotly.js candlestick + event marker + injection/rule-edit form
   scripts/
     phase0_validate_universe.py  # Phase 0 — validate universe (เสร็จแล้ว, ดู data/validation_report.md)
-    generate_rule_v1.py          # generate sandbox/rules/rule_v1.json จาก formula ("A+B override C")
+    generate_rule_table.py       # import decide(a,b,c) จาก logic module (เช่น rule_v1_logic) -> rule_v{N}.json
     smoke_test.py                # sanity check inference stub + config แบบไม่ต้องเปิด server
     test_combine.py              # unit test ของ sandbox/engine/combine.py (unittest, 8 case)
   data/
