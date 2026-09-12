@@ -757,3 +757,51 @@ derive sector แม่นกว่า topic) จุดที่ต้อง rev
 เดินต่อจากเดิมอัตโนมัติ (2) ตัดสินใจเรื่อง Benzinga key + Group C manual collection + FinBERT
 scoring ของ Finnhub items (ทั้งหมดอยู่ใน DECISIONS_NEEDED.md รอ input)
 ---
+
+## sector_news_rule_based_filter — 2026-09-12 (+07:00)
+
+**วิธีที่ใช้:** เขียน `sandbox/scripts/filter_relevant_news.py` — rule-based เท่านั้น (ไม่ใช้
+LLM) tag 3 อย่างลงคอลัมน์ใหม่ใน `index.csv` เดิม (ไม่ลบ/ไม่ทับข้อมูลเดิม, รันซ้ำได้ปลอดภัย):
+`is_company_level` (นับ distinct company mention — AV ใช้ `ticker_sentiment` ตรงๆ, Finnhub
+ใช้ regex ticker pattern + จับคู่ชื่อบริษัท S&P500 กับข้อความ เพราะไม่มี structured field),
+`is_weak_signal` (ไม่มี sector keyword ที่กำหนดเองเลยสักคำ, keyword list ต่อ 11 sector เขียน
+ไว้ในไฟล์สคริปต์ตรงๆ), `is_mistagged` (บริษัทที่ระบุได้จริงในเนื้อหา sector ไม่ตรงกับที่
+index.csv tag ไว้เลยสักตัว) รวมเป็นคอลัมน์ `scope` (join tag ที่ตรงทั้งหมด หรือ "clean")
+
+**ข้อมูลที่ใช้:** `sandbox/data/sector_news_processed/index.csv` ทั้งหมด (7,176 แถวจริงจาก
+Finnhub+Alpha Vantage วันก่อน) join กับ raw content จาก `sector_news_raw/` (เปิดแต่ละไฟล์
+ครั้งเดียว ไม่เปิดซ้ำต่อแถว — 1,965 raw file)
+
+**ผลลัพธ์ (ตัวเลขจริงจากการรัน ไม่ใช่ประมาณ):**
+- scope breakdown: weak_signal 40.3%, clean 26.0%, company_level+weak_signal 15.9%,
+  company_level เดี่ยว 10.1%, company_level+weak_signal+mistagged 4.5%,
+  company_level+mistagged 2.6%, weak_signal+mistagged 0.3%, mistagged เดี่ยว 0.2%
+- per-flag (นับซ้ำได้): is_company_level 33.2% (2,381), is_weak_signal 61.0% (4,379),
+  is_mistagged 7.7% (552)
+- **แยกตาม source — พบสิ่งที่ยืนยัน internal consistency ของงานเมื่อวาน**:
+  Alpha Vantage `is_mistagged = 0.0%` (0/2,664) พอดี — สมเหตุสมผล เพราะ sector tag ของ AV
+  ทุกแถว derive มาจาก ticker mention ในบทความนั้นเองตั้งแต่ตอน collect (คำนวณจาก source
+  เดียวกัน เปรียบเทียบกับตัวเอง ต้องตรงเสมอ ถ้าไม่ตรงคือ Bug) — เป็น sanity check ที่ผ่านจริง
+  ไม่ใช่การเดาว่าควรจะเป็น 0%
+  Finnhub `is_mistagged = 12.2%` (552/4,512) — ตัวเลขจริงที่แสดงว่า query
+  `company-news?symbol={ETF}` มีข่าวที่จริงๆ พูดถึงบริษัทนอก sector นั้นปนอยู่จริงประมาณ 1
+  ใน 8 (ตรงกับที่ผู้ใช้กังวลไว้ตั้งแต่ต้น)
+
+**Limitation ที่เจอจริงจากการ spot-check (ไม่ใช่แค่คาดเดา):** สุ่มดู mistagged row 2 อัน
+พบว่าเป็นข่าว "Sector Update: Tech Stocks Gain..." (market wrap ทั่วไป พูดถึง XLK ETF เอง)
+ที่ mention คำว่า "State Street" (ชื่อบริษัทผู้ออก SPDR ETF ในชื่อเต็ม "State Street
+Technology Select Sector SPDR ETF") — ระบบจับ "State Street" เป็นบริษัท S&P500 จริง (STT,
+sector จริง = XLF) เลย flag mistagged ทั้งที่บทความไม่ได้พูดถึง State Street Corp ในฐานะ
+ประเด็นข่าวจริง เป็นข้อจำกัดจริงของ name-matching แบบง่าย (จับชื่อบริษัทที่โผล่มาในบริบท
+โครงสร้าง เช่น ชื่อผู้ออก ETF ไม่ใช่แค่ noise เดา — เป็น mechanism ที่ระบุได้ชัดเจน)
+
+**มุมมอง/การตีความ:** ตัวเลขทั้งหมดเป็นค่าที่คำนวณได้จริง ไม่ได้เดา — แต่ยังไม่ตัดสินใจ
+threshold คัดออกตามที่สั่งไว้ (รอ user ตัดสินใจจากตัวเลขจริงชุดนี้) weak_signal สูงถึง 61%
+น่าจะสะท้อนสองสาเหตุผสมกัน: (1) keyword list ที่กำหนดเองอาจแคบไป (2) ข่าวเฉพาะบริษัทจำนวนมาก
+ไม่ได้ใช้คำ sector-level ตรงๆ (เช่นข่าว "Linde stock" ไม่มีคำว่า "chemical"/"materials" เลย
+แม้จะเป็นข่าว sector XLB จริง) — สังเกตว่า company_level กับ weak_signal เกิดร่วมกันบ่อย
+(15.9%+4.5%=20.4%) สนับสนุนสมมติฐานข้อ 2
+
+**ขั้นต่อไปที่ควรลอง:** รอผู้ใช้ตัดสินใจ threshold (เช่น ตัด mistagged ทิ้ง, หรือปรับ keyword
+list ให้กว้างขึ้นก่อนตัดสินใจเรื่อง weak_signal)
+---
