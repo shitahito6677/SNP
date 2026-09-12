@@ -805,3 +805,66 @@ threshold คัดออกตามที่สั่งไว้ (รอ user
 **ขั้นต่อไปที่ควรลอง:** รอผู้ใช้ตัดสินใจ threshold (เช่น ตัด mistagged ทิ้ง, หรือปรับ keyword
 list ให้กว้างขึ้นก่อนตัดสินใจเรื่อง weak_signal)
 ---
+
+---
+## fix_sector_tags — แก้ sector_etf ของข่าว mistagged ด้วย Finnhub company-profile2 — 2026-09-12 17:46
+
+**วิธีที่ใช้:** เขียน `sandbox/scripts/fix_sector_tags.py` — สำหรับแถวที่
+`filter_relevant_news.py` ติด `is_mistagged=True` และ detect ได้บริษัทเดียวไม่กำกวม ยิง
+Finnhub `company-profile2?symbol={ticker}` เอา field `finnhubIndustry` มา map เข้า 1 ใน 11
+sector ETF ด้วย keyword list ที่กำหนดเอง (rule-based ไม่ใช่ LLM) แล้วเขียนทับ `sector_etf`
+พร้อมเก็บค่าเดิมไว้ในคอลัมน์ใหม่ `original_sector_etf` (ไม่ลบทิ้ง) ตาม "ห้ามเดา" — ข้ามไม่แก้
+แถวที่ (1) detect ได้มากกว่า 1 บริษัท (2) หา profile ไม่เจอ (3) industry map เข้า sector
+ไม่ได้ script ออกแบบให้รันซ้ำได้ปลอดภัย (idempotent — แถวที่แก้แล้วจะไม่ใช่ mistagged อีก)
+
+ระหว่างพัฒนาเจอบั๊กจริง 2 ตัวจากการ spot-check ผลลัพธ์ (ไม่ใช่เดา) ต้องแก้ก่อนตัวเลขจะเชื่อถือได้:
+
+1. **False-positive จากชื่อทั่วไป/โครงสร้าง**: รันรอบแรกดิบบน 552 แถว mistagged ได้ "503
+   fixed" (91.1%) แต่ตรวจ raw text จริงพบว่าส่วนใหญ่ผิด — "Nasdaq" (ใช้เป็นชื่อดัชนี/ตลาดหุ้น
+   ทั่วไปในข่าว "Stock Market Today") ไป match ticker NDAQ, "State Street" (ชื่อผู้ออก SPDR
+   ETF ในชื่อเต็ม เช่น "State Street Technology Select Sector SPDR Fund") ไป match STT — นับ
+   ตัวอย่าง 173/503 เป็น sponsor-name pattern ยืนยันชัด ตรวจเพิ่มพบ TGT (6/6 ตัวอย่างเป็นคำว่า
+   "price target" ไม่ใช่ Target Corp), SPGI (อ้างเป็นแหล่งข้อมูล PMI), MSCI (อ้างเป็น index
+   provider), BLK (อ้างเป็น fund manager ของ closed-end fund) เป็น false positive เหมือนกัน —
+   revert ข้อมูลกลับ เพิ่ม `GENERIC_NAME_COLLISION_TICKERS = {NDAQ, STT, TGT, SPGI, MSCI, BLK}`
+   ใน `filter_relevant_news.py` (พร้อม comment อ้างอิงหลักฐานที่ตรวจจริง) แล้วรัน
+   `filter_relevant_news.py` ใหม่ — mistagged ลดจาก 552 (7.7%) เหลือ 167 (2.3%)
+
+2. **Substring match bug ใน industry→ETF mapping**: รันรอบสองบน 167 แถว พบ MRNA (Moderna,
+   `finnhubIndustry="Biotechnology"`) ไม่ถูกแก้ทั้งที่ควรแก้ (XLK -> XLK เฉยๆ) — root cause คือ
+   `map_industry_to_etf()` ใช้ `kw in industry_lower` (substring) และคำ "technology" (keyword
+   กลุ่ม XLK ซึ่งมาก่อนในลิสต์) เป็น substring ของ "biotechnology" (ควรไป XLV) — revert ข้อมูล
+   แล้วเปลี่ยนเป็น `re.search(r"\bkw\b", ...)` (word-boundary) ทั้งหมด ยืนยันด้วย
+   `re.search(r'\btechnology\b','biotechnology')` -> False,
+   `re.search(r'\bbiotechnology\b','biotechnology')` -> True ก่อนรันจริง
+
+**ข้อมูลที่ใช้:** `sandbox/data/sector_news_processed/index.csv` (7,176 แถว, คอลัมน์ tag จาก
+`filter_relevant_news.py`) เฉพาะแถว `is_mistagged=True` (167 แถวหลังแก้บั๊ก 1 — ทั้งหมดเป็น
+source=finnhub เพราะ alpha_vantage mistagged=0% อยู่แล้ว), เรียก Finnhub `company-profile2`
+จริง (unique ticker ที่ยิง = 23 ตัว, rate-limit 1.1s/call)
+
+**ผลลัพธ์:** จาก 167 แถว mistagged (ตัวเลขสุดท้ายหลังแก้บั๊กทั้ง 2 ตัว, รันสะสม 2 รอบย่อยแบบ
+resumable):
+- แก้ sector สำเร็จ: **144 แถว (86.2%)**
+- ข้าม — ambiguous (>1 บริษัท): 20 แถว (12.0%)
+- ข้าม — industry map เข้า sector ไม่ได้: 3 แถว (1.8%) — ทั้งหมดคือ `finnhubIndustry="Consumer
+  products"` (GRMN, LEN → ควรเป็น XLY; PG → ควรเป็น XLP) ตรวจแล้วเป็น ambiguous จริง ไม่ใช่
+  keyword gap ที่ควรเติม — ตั้งใจไม่ map
+- ข้าม — หา Finnhub profile ไม่เจอ: **0 แถว (0.0%)**
+- ไฟล์สุดท้าย: 7,176 แถวครบ (ไม่หาย/ไม่เกิน), เพิ่มคอลัมน์ `original_sector_etf` เก็บค่า sector
+  เดิมไว้ครบทุกแถวที่แก้ (ยืนยันด้วยการอ่านไฟล์จริงหลังรัน ไม่ใช่เดา)
+
+**มุมมอง/การตีความ:** ตัวเลข 144/167 (86.2%) แก้ได้สูง และ 0 แถวหา profile ไม่เจอ แปลว่า
+Finnhub ให้ profile ครบสำหรับทุก ticker ที่ detect ได้จริงใน sample นี้ — ปัญหาคอขวดจริงคือ
+ambiguous (20 แถว, มักเป็นข่าวเปรียบเทียบหลายบริษัทพร้อมกัน) กับ industry ที่กำกวมจริง (3
+แถว, "Consumer products" คร่อม 2 sector) ไม่ใช่ data availability บั๊กทั้ง 2 ตัวที่เจอ
+(generic-name collision, substring match) ชี้ว่า rule-based matching แบบง่ายมีความเสี่ยง false
+positive/false negative สูงถ้าไม่ตรวจ raw text จริงประกอบ — การ spot-check ก่อนเชื่อตัวเลขจึง
+จำเป็นเสมอ (ตรงตามหลัก "ห้ามเดา" ของโปรเจค)
+
+**ขั้นต่อไปที่ควรลอง:** (1) พิจารณาว่า SECTOR_KEYWORDS ใน `filter_relevant_news.py` (ใช้ตัดสิน
+`is_weak_signal`) มีความเสี่ยง substring-collision แบบเดียวกับที่เจอใน
+`INDUSTRY_KEYWORD_TO_ETF` หรือไม่ ยังไม่ได้ตรวจ (2) 23 แถวที่เหลือ (ambiguous 20 + unmapped 3)
+ตัดสินใจว่าจะปล่อยเป็น mistagged ต่อไป หรือ manual review เพราะจำนวนน้อยพอจะดูเองได้ (3)
+พิจารณา re-run `filter_relevant_news.py` เต็มไฟล์อีกครั้งหลังแก้ sector แล้ว เผื่อมี
+weak_signal/company_level tag ที่เปลี่ยนไปตาม sector ใหม่ (ยังไม่ได้ตรวจว่าจำเป็นหรือไม่)

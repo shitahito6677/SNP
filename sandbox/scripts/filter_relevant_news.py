@@ -102,11 +102,35 @@ def load_ticker_to_name_map(max_cache_age_days: int = 7) -> dict:
     return mapping
 
 
+# ticker ที่ชื่อบริษัทชนกับศัพท์ทั่วไป หรือโผล่บ่อยในเนื้อหาแบบ "อ้างอิง/โครงสร้าง" ไม่ใช่
+# ตัวข่าวจริง — ทุกตัวยืนยันด้วยการ spot-check เนื้อหาจริงแล้ว (ไม่ใช่เดา) ดู
+# experiments/log.md หัวข้อ sector_news_false_positive_investigation สำหรับตัวอย่างที่ใช้ยืนยัน:
+#   - NDAQ "Nasdaq Inc" ชนกับ "Nasdaq" ที่หมายถึงตลาดหลักทรัพย์/ดัชนี Nasdaq (ข่าว
+#     "Stock Market Today" ทั่วไปแทบทุกวัน)
+#   - STT  "State Street Corp" ชนกับชื่อผู้ออก SPDR sector ETF ("State Street Technology
+#     Select Sector SPDR Fund" ฯลฯ) — สำคัญมากเพราะ**เป็นผู้ออก ETF ทั้ง 11 ตัวที่ใช้ query
+#     ในงานนี้เอง** โผล่ทุกครั้งที่มีคนเขียนชื่อ ETF เต็มๆ
+#   - TGT  "Target Corporation" ชนกับคำว่า "target" ที่ใช้ทั่วไป (price target, target
+#     price ฯลฯ) — spot-check 6 ตัวอย่าง เป็น false positive ทั้ง 6/6 ไม่มีตัวไหนพูดถึง
+#     Target Corp จริงเลย
+#   - SPGI "S&P Global" โผล่เป็นแหล่งอ้างอิงข้อมูล (PMI survey ฯลฯ) ไม่ใช่ตัวข่าว
+#   - MSCI "MSCI" โผล่เป็นชื่อ index ที่ ETF อื่น track ตาม (เช่น "USMV" track MSCI index)
+#     ไม่ใช่ตัวข่าวเกี่ยวกับบริษัท MSCI เอง
+#   - BLK  "BlackRock" โผล่เป็นชื่อผู้จัดการกองทุนปิด (เช่น BTX, BST, BME) ไม่ใช่ตัวข่าว
+# IVZ (Invesco) เจอในตัวอย่างเดียวตอน STT ยังไม่ถูกตัด แต่หลังตัด STT แล้วไม่เจอ IVZ เป็น
+# ปัญหาเด่นชัดอีกในชุดข้อมูลปัจจุบัน เลย**ไม่เพิ่ม**ไว้ก่อน (ไม่มีหลักฐานพอ) — ถ้าเจอหลักฐาน
+# ใหม่ค่อยเพิ่มทีหลังได้
+GENERIC_NAME_COLLISION_TICKERS = {"NDAQ", "STT", "TGT", "SPGI", "MSCI", "BLK"}
+
+
 def build_name_matchers(ticker_to_name: dict) -> list:
     """คืน list ของ (ticker, compiled_regex) — คอมไพล์ล่วงหน้าทั้งหมดครั้งเดียว (ไม่ใช่ใน
-    loop ต่อบทความ) กันช้า ข้าม ชื่อที่สั้นเกินไปหลังตัด suffix (เสี่ยง false positive สูง)"""
+    loop ต่อบทความ) กันช้า ข้าม ชื่อที่สั้นเกินไปหลังตัด suffix (เสี่ยง false positive สูง)
+    และข้าม ticker ใน GENERIC_NAME_COLLISION_TICKERS (ยืนยันแล้วว่าจับ false positive จริง)"""
     matchers = []
     for ticker, name in ticker_to_name.items():
+        if ticker in GENERIC_NAME_COLLISION_TICKERS:
+            continue
         cleaned = clean_company_name(name)
         if len(cleaned) < 4:
             continue
