@@ -18,6 +18,11 @@ sandbox/data/events/*.jsonl
 # sandbox Phase 5 experiment persistence (local SQLite, regenerable via the Experiments page)
 sandbox/experiments.db
 
+# sector news collection — RAW article text must never reach git (repo is public, several
+# sources' ToS forbid redistribution regardless of local-use legality) — only derived
+# metadata (sandbox/data/sector_news_processed/) is committed. See DECISIONS_NEEDED.md.
+sandbox/data/sector_news_raw/
+
 # OS / editor
 .DS_Store
 __pycache__/

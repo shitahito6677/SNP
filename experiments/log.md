@@ -704,3 +704,56 @@ strategy_v1 จะทำกำไรขนาดนี้จริงเมื�
 **ขั้นต่อไปที่ควรลอง:** ผู้ใช้เปิด browser ทดสอบทั้ง 3 เรื่องด้วยตาจริง โดยเฉพาะ code editor
 (เรื่องที่ 1) ที่มี UX ซับซ้อนกว่าฟีเจอร์อื่น (dropdown โหลด source, validate, save)
 ---
+
+## sector_news_collection_day1 — 2026-09-12 (+07:00)
+
+**วิธีที่ใช้:** เริ่มงานเก็บข่าว sector-tagged สำหรับปรับปรุง Model C (เสริม ไม่แทน
+FOMC/Beige Book เดิม) ตามคำสั่ง unattended หลายวัน — ก่อนเขียน scraper ตัวไหนเลย เปิดหน้า
+Terms of Service จริงของ Group B/C ทั้ง 5 เว็บ (ไม่ใช่แค่ robots.txt ตามที่ผู้ใช้ย้ำกลางทาง)
+ผลคือตัดทั้ง Group B/C ออกจาก automated collection (รายละเอียดเต็ม + หลักฐานทุกเว็บอยู่ใน
+`sandbox/data/DECISIONS_NEEDED.md`) แล้วพบว่า Finnhub `company-news` query ด้วย sector ETF
+ticker ตรงๆ ครอบคลุมเป้าหมายของ Group B ได้อยู่แล้วโดยไม่ต้อง scrape
+
+โครงสร้าง: `sandbox/scripts/_sector_news_common.py` (shared: resumable log, index writer, ticker
+→ GICS sector → ETF map จาก S&P500 ปัจจุบัน ผ่าน Wikipedia, reuse `fetch_sp500_table()` จาก
+Phase 0), `collect_finnhub.py`, `collect_alpha_vantage.py` — raw content ไปที่
+`sandbox/data/sector_news_raw/` (`.gitignore` ทั้งโฟลเดอร์) metadata (source, item_id, date,
+sector_etf, url, sentiment_score, word_count, raw_path) ไปที่
+`sandbox/data/sector_news_processed/index.csv` (commit ได้)
+
+**ข้อมูลที่ใช้:** เรียก API จริงทั้ง Finnhub และ Alpha Vantage (มี key อยู่แล้วใน `.env`)
+ไม่ใช่ mock — verify field name/behavior ด้วยการเรียกจริงก่อนเขียน script เสมอ (พบว่า spec
+เดิมผิดไป 1 จุด: Finnhub `news-sentiment` endpoint คืน 403 บน free tier ทั้งที่ spec บอกว่าใช้
+ได้)
+
+**ผลลัพธ์ (ตัวเลขจริงทั้งหมด):**
+- **Finnhub**: 4,512 รายการ ครบทั้ง 11 sector ETF ย้อนหลัง 2025-10-01 ถึง 2026-09-11 (~11.5
+  เดือน) — resumability ทดสอบแล้วจริง (รันซ้ำ skip ของเดิมหมด 0 API call เพิ่ม)
+- **Alpha Vantage**: 2,664 รายการ — sector derive จาก ticker ที่บทความพูดถึงจริง (join กับ
+  S&P500 ticker→GICS sector, 503 ticker) ไม่ใช่ topic label ตรงๆ (แม่นกว่า, ครอบคลุมครบ 11
+  sector แม้ query แค่ 7 topic — เห็นได้จาก XLC/XLU/XLB/XLRE ที่ไม่มี topic ตรงตัวแต่ยังได้
+  รายการจริงจาก ticker mention) 256/1108 บทความ (23%) แตะมากกว่า 1 sector, sentiment_score
+  อยู่ในช่วง -0.84 ถึง 0.89 (สมเหตุสมผล)
+- **รวม index.csv**: 7,176 แถว metadata — ตรวจแล้วด้วย `git status` ว่า `sector_news_raw/`
+  ไม่หลุดเข้า git เลย (มี raw file จริง 1,965 ไฟล์บน disk แต่ git มองไม่เห็น)
+
+**บั๊กจริงที่เจอระหว่างทำ (รายละเอียดเต็มใน DECISIONS_NEEDED.md):**
+1. Finnhub: query ช่วงวันที่กว้าง (8.5 เดือนทีเดียว) cap ผลลัพธ์แล้ว bias ไปทางข่าวล่าสุด
+   (ข่าวเก่ากว่าในช่วงเดียวกันหายไปเงียบๆ) — แก้โดย query เป็น chunk รายเดือนเสมอ
+2. Alpha Vantage: (a) `time_to` ต้องมี `time_from` คู่กันเสมอ ไม่งั้น API ตอบ
+   "Invalid inputs" (b) cursor ไม่ขยับเพราะ `time_published` (มีวินาที) parse ผิด format
+   (ไม่มีวินาที) — `except ValueError` เดิมจับเงียบๆ ทำให้เกือบวน loop ไม่รู้จบด้วย cursor
+   เดิม (c) สงสัยว่า free tier คืน feed ว่างเฉยๆ ตอนติด rate limit (ไม่ error ชัดเจน) — แก้
+   โดยเลิก mark-exhausted-ถาวรจาก response เดียว เปลี่ยนเป็น retry ทุกวันแทน
+
+**มุมมอง/การตีความ:** วันแรกได้ผลดีกว่าที่ spec เดิมคาดไว้มาก (spec คิดว่า Finnhub ต้อง query
+ทีละบริษัทแล้ว group เอง, ประเมิน sector ไม่ตรง GICS 100% จาก topic — สุดท้ายได้ทั้งสอง
+ปัญหาแก้ไปพร้อมกัน: Finnhub ใช้ ETF ticker ตรงๆ ได้เลย, Alpha Vantage ใช้ ticker mention
+derive sector แม่นกว่า topic) จุดที่ต้อง revisit: sentiment_score ของฝั่ง Finnhub ว่างทั้งหมด
+(ไม่มี scoring endpoint ให้ใช้บน free tier) ต้องตัดสินใจว่าจะรัน FinBERT ให้ทีหลังไหม —
+บันทึกไว้ใน DECISIONS_NEEDED.md แล้ว
+
+**ขั้นต่อไปที่ควรลอง:** (1) พรุ่งนี้ (quota ใหม่) รัน `collect_alpha_vantage.py` ต่อ — cursor
+เดินต่อจากเดิมอัตโนมัติ (2) ตัดสินใจเรื่อง Benzinga key + Group C manual collection + FinBERT
+scoring ของ Finnhub items (ทั้งหมดอยู่ใน DECISIONS_NEEDED.md รอ input)
+---
