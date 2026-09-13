@@ -219,3 +219,74 @@ unidirectional ตามสเปกต้นฉบับ) validation ปฏิ�
 **ขั้นต่อไปที่ควรลอง:** Phase R5 — รัน rule engine (R4) จริงบน 436 ข่าวที่มี structured vars
 ครบ x shock_type (R2) x market data (R1) แล้ว validate กับ CAR จริง (R5a) ตาม protocol ที่กำหนด
 ไว้ล่วงหน้า
+
+---
+## exp_03 Phase R5 — validation กับ CAR จริง (สำคัญที่สุด) — 2026-09-14 03:09
+
+**วิธีที่ใช้:** ใช้ protocol ที่กำหนดไว้ล่วงหน้าทั้งหมด (metric, threshold, train/test split,
+clustering) จากเอกสารสเปก **ไม่เปลี่ยนเกณฑ์ใดๆ หลังเห็นตัวเลข**:
+1. `model_c_rulebase/scripts/r5a_car_windows.py` — เพิ่ม CAR N=1, N=3 วันทำการ ควบคู่กับ N=21
+   เดิมจาก exp_01/exp_02 (`data/processed/labels.parquet`) สูตรเดียวกันเป๊ะ, t0/calendar เดียวกับ
+   `src/s2_build_labels.py` — sanity check: recompute N=21 ตรงกับ 'score' เดิมเป๊ะ (max diff =
+   0.0000000000 จาก 4,371 แถว) ยืนยันว่า methodology ตรงกันจริง ไม่ใช่แค่คิดว่าตรง
+2. `model_c_rulebase/scripts/r5b_validate.py` — รัน rule engine (R4) จริงบน 436 ข่าวที่มี
+   structured vars ครบ (R3) x shock_type (R2) x market data (R1) ได้ 4,796 แถว (436 ข่าว x 11
+   sector) join กับ CAR (R5a) แล้ว **train/test split ใหม่ตามเวลา 80/20 บนหน่วย "ข่าว" (ไม่ใช่
+   split เดิมของ exp_01/exp_02)**: train 348 ข่าว (2026-... ถึง cutoff 2020-12-02), test 87 ข่าว
+   — **รายงานเฉพาะ train ในเฟสนี้ ไม่แตะตัวเลข test เลยแม้แต่ตัวเดียว** ตามที่กำหนด (สงวนไว้
+   สำหรับตรวจครั้งสุดท้ายหลัง R6 calibration เสร็จ ถ้าจะทำ)
+   Significance testing: cluster bootstrap (resample ที่ระดับ "วันข่าว" ไม่ใช่ระดับแถว, n_boot
+   = 1,000) หา 95% CI ของ Spearman rho เคารพว่า 11 sector ของข่าวเดียวกันไม่อิสระจากกัน (ข้อ 4
+   ของ protocol)
+
+**ข้อมูลที่ใช้:** train set = 348 ข่าว x 11 sector = 3,256 แถว join สำเร็จ (583 แถวหาย จาก join —
+ตรวจแล้วเป็น XLRE/XLC ที่ยังไม่มีราคา ETF ก่อนวันเปิดตัวจริง [XLRE เปิด 2015-10-08, XLC เปิด
+2018-06-19] คำนวณ expected-missing ตรงกันพอดี ไม่ใช่บั๊ก join)
+
+**ผลลัพธ์ (TRAIN ONLY, ตัวเลขจริงจากการรัน):**
+
+POOLED rho (ทุก sector, ทุก shock_type รวมกัน):
+| N | rho | 95% CI |
+|---|---|---|
+| 1  | +0.0081 | [-0.027, +0.047] |
+| 3  | -0.0079 | [-0.044, +0.030] |
+| 21 | -0.0153 | [-0.053, +0.022] |
+
+ทั้ง 3 หน้าต่างมี rho ใกล้ 0 มาก และ 95% CI คร่อม 0 เสมอ (ไม่มีนัยสำคัญทางสถิติแม้แต่ระดับ pooled)
+
+By-sector และ by-shock_type (33+15 cell): **มีแค่ 1 cell เดียวที่ CI ไม่คร่อม 0** — XLV ที่ N=1
+(rho=-0.1222, CI=[-0.225,-0.015]) และ XLV ที่ N=21 (rho=-0.1184, CI=[-0.215,-0.018]) แต่ทั้งคู่
+**|rho| < 0.3 (เกณฑ์ที่ตั้งไว้)** — สรุปว่า statistically significant (ไม่ใช่บังเอิญ) แต่ไม่ผ่าน
+threshold ขนาดผลที่ตั้งไว้ล่วงหน้า
+
+**0 จาก 216 cells (pooled + by_sector + by_shock_type + sector_x_shock เต็ม) ผ่านเกณฑ์ทั้งสองข้อ
+พร้อมกัน (|rho|>0.3 AND CI ไม่คร่อม 0)**
+
+**PASS/FAIL: ไม่ผ่าน — NEGATIVE RESULT**
+
+**มุมมอง/การตีความ:** engine เวอร์ชันทฤษฎีล้วน (loading matrix + amplifier constants ที่ยังไม่ผ่าน
+calibration ใดๆ) **ไม่แสดงสัญญาณที่ทั้งมีนัยสำคัญทางสถิติและมีขนาดผลใหญ่พอ**จะผ่านเกณฑ์ที่ตั้งไว้
+ล่วงหน้าเลย สอดคล้องไปในทิศทางเดียวกับ baseline เดิม (exp_01/exp_02 ที่ accuracy ใกล้ random,
+exp_02 แย่กว่า exp_01 ด้วยซ้ำ) — กล่าวคือ **สัญญาณ predictive ของ FOMC/Beige Book text ต่อ
+sector-level CAR ยังคงอ่อนมากไม่ว่าจะแปลงข้อความเป็นตัวแปรด้วยวิธีไหน** (LLM sentiment ตรงๆ แบบ
+exp_02, หรือ LLM สกัดตัวแปรโครงสร้าง + rule engine ทฤษฎีแบบรอบนี้)
+
+จุดที่น่าสนใจที่สุดคือ **XLV (Health Care)** เป็น sector เดียวที่ให้ค่า CI ไม่คร่อม 0 ทั้งที่ N=1
+และ N=21 (สัญญาณสม่ำเสมอข้ามหน้าต่างเวลา ไม่ใช่ noise สุ่ม) แต่ทิศทางน่าแปลกใจ: rho ติดลบ
+(sector_impact_score สูง = CAR ต่ำ) ซึ่ง**ตรงข้าม**กับที่ theory คาด (XLV เป็น defensive sector,
+engine ให้ loading ต่ำแทบทุก channel ตามทฤษฎี "defensive ไม่ค่อย react") — อาจบ่งชี้ว่า loading
+matrix ของ XLV ที่ตั้งไว้ (เกือบเป็นศูนย์ทุกช่อง) ผิดทิศทาง ไม่ใช่แค่ผิดขนาด ถ้าจะ calibrate ใน R6
+ควรเริ่มดู XLV เป็นจุดแรก
+
+**ขั้นต่อไปที่ควรลอง (ตามที่สเปกกำหนดไว้สำหรับกรณี R5 ไม่ผ่าน):** บันทึกเป็น negative result ที่มี
+ค่า (พิสูจน์ว่า FOMC/Beige Book text ให้สัญญาณ sector-level ที่จำกัดจริงด้วยวิธีการที่ทดสอบมาแล้ว
+2 แบบ) — Phase R6 **ไม่ทำ full calibration** ตามเงื่อนไขที่กำหนด ("ถ้า R5 แสดงว่าไม่มีสัญญาณเลย ->
+บันทึกไว้ว่าเป็น negative result แล้วย้ายน้ำหนักไปยัง component อื่นแทน") แต่ควรพิจารณา 2 อย่างก่อน
+ปิด component นี้เต็มที่: (1) ตรวจทิศทางผิดปกติของ XLV ให้ชัดว่าเป็น data artifact หรือสัญญาณจริง
+กลับทิศ (2) พิจารณาว่า amplifier constants ที่ตีความเองใน R4 (ไม่ใช่ loading matrix จากทฤษฎี)
+อาจเป็นสาเหตุที่ signal จางไป ควรลอง sensitivity analysis ง่ายๆ (ปรับ constants เหล่านั้นแล้วดูว่า
+rho เปลี่ยนไปมากน้อยแค่ไหน) ก่อนสรุปว่าไม่มีสัญญาณจริง — แต่ทั้งหมดนี้เป็น **exploratory เท่านั้น
+ไม่ใช่ full R6 calibration** (จะไม่ fit บน train เพื่อ "หาค่าที่ดีที่สุด" เพราะจะขัดกับเกณฑ์ที่ตั้ง
+ไว้ล่วงหน้าว่า "ห้ามสรุปว่าดีขึ้นถ้าตัวเลขไม่ผ่านเกณฑ์ที่กำหนดไว้ก่อนแล้ว")
+
+Test set (87 ข่าว, 957 แถว) **ยังไม่ถูกแตะเลยตลอด phase นี้** ตามที่กำหนด
