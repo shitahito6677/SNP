@@ -290,3 +290,52 @@ rho เปลี่ยนไปมากน้อยแค่ไหน) ก่�
 ไว้ล่วงหน้าว่า "ห้ามสรุปว่าดีขึ้นถ้าตัวเลขไม่ผ่านเกณฑ์ที่กำหนดไว้ก่อนแล้ว")
 
 Test set (87 ข่าว, 957 แถว) **ยังไม่ถูกแตะเลยตลอด phase นี้** ตามที่กำหนด
+
+---
+## exp_03 Phase R6 — Calibration decision (negative result branch) — 2026-09-14 03:11
+
+**วิธีที่ใช้:** ตาม decision rule ที่กำหนดไว้ล่วงหน้าสำหรับกรณี R5 ไม่ผ่านเกณฑ์ ("ถ้า R5 แสดงว่า
+ไม่มีสัญญาณเลย → บันทึกไว้ว่าเป็น negative result ที่มีค่า ... แล้วย้ายน้ำหนักไป component อื่น
+แทน") — Phase R6 นี้**ไม่ทำ full calibration** (ไม่ fit loading matrix หรือ amplifier constants
+ด้วย regression บน train set) เพราะ R5 แสดงชัดว่าไม่มี cell ไหนผ่านเกณฑ์ที่ตั้งไว้ล่วงหน้าเลย
+(0/216 cells) การไป fit ต่อตอนนี้จะเป็นการ "หาค่าที่ทำให้ตัวเลขดีขึ้น" หลังเห็นผลแล้ว ซึ่งขัดกับ
+กฎที่กำหนดไว้เองว่า "ห้ามสรุปว่าดีขึ้นถ้าตัวเลขไม่ผ่านเกณฑ์ที่กำหนดไว้ก่อนแล้ว"
+
+**สิ่งที่ตั้งใจ "ไม่ทำ" ในเฟสนี้ (ระบุไว้ชัดเจน กันเข้าใจผิดว่าลืม):**
+- ไม่ fit loading matrix ใหม่จาก train data
+- ไม่ปรับ amplifier constants (C1 dampener, C2 amplifier, C7 weight, VIX amplifier) ตามตัวเลขที่
+  เห็นจาก R5 — แม้จะรู้ว่าค่าเหล่านี้เป็นการตีความเอง (ไม่ใช่ทฤษฎีล้วน ตามที่ระบุใน R4) ก็ตาม
+  เพราะการปรับหลังเห็นผลถือเป็นการ peek แล้วเปลี่ยนเกณฑ์ ขัดกับ pre-registration
+- ไม่แตะ test set (87 ข่าว, 957 แถว) เลย — ยังคงสภาพเดิมที่ไม่เคยถูกใช้คำนวณอะไรทั้งสิ้น
+
+**ผลลัพธ์:** ตัดสินใจ (formal decision, ไม่ใช่แค่สังเกต):
+1. **Component "FOMC/macro" ของ Model C ตัวนี้ (rule-based, ทฤษฎีล้วน) ให้สัญญาณต่อ CAR
+   sector-level จำกัดเกินกว่าจะใช้เป็น component หลักในทันที** — ยืนยันด้วยผลจริง 2 วิธีที่ต่างกัน
+   (exp_02: Qwen sentiment ตรงๆ → XGBoost, ทำให้แย่กว่า baseline; exp_03: LLM สกัดตัวแปรโครงสร้าง
+   → rule engine ทฤษฎี, ไม่มี cell ไหนผ่านเกณฑ์ที่ตั้งไว้ล่วงหน้าเลย)
+2. **ย้ายน้ำหนักเริ่มต้นในระบบ ensemble ไปทาง component sector-news (Model C ตัวที่ 2, sandbox
+   `feature/ensemble-sandbox`) และ Model A/B แทน** จนกว่าจะมีข้อมูล/หลักฐานใหม่มายืนยันว่า
+   FOMC/macro component ใช้งานได้จริง — ไม่ใช่การตัดทิ้งถาวร (มีค่าไว้ใช้เป็น weak/auxiliary
+   signal หรือ risk-flag เสริมได้ ไม่ใช่ signal หลักที่ตัดสินทิศทาง)
+3. **สิ่งที่ทำไว้ตลอด R1-R5 ยังมีค่าเก็บไว้ใช้ต่อได้** แม้ engine เวอร์ชันนี้จะยังไม่ผ่านเกณฑ์:
+   - `model_c_rulebase/scripts/r1_market_data.py`, `r2_shock_classification.py` — reusable
+     สำหรับ component อื่นที่ต้องการ market-based shock classification (ไม่ผูกกับ rule engine
+     เวอร์ชันนี้โดยเฉพาะ)
+   - `model_c_rulebase/data/fomc_structured_vars.csv` — LLM structured extraction ที่ validate
+     คุณภาพแล้วบางส่วน (spot-check R3, low_confidence 1.4%) เป็น input ที่ reusable ถ้าจะลอง
+     rule engine เวอร์ชันใหม่ในอนาคตโดยไม่ต้องรัน Qwen ซ้ำ
+   - `model_c_rulebase/engine/sector_rules.py` + unit tests — โครงสร้าง engine (loading matrix
+     x channel activation x edge case) พร้อม explainability สมบูรณ์ ถ้าจะ calibrate ในอนาคต
+     (เช่น มีข้อมูลมากขึ้น, หรือมี hypothesis ใหม่ที่ควร pre-register ก่อนทดสอบ) ใช้โครงเดิมได้
+     ไม่ต้องเขียนใหม่ตั้งแต่ต้น
+
+**มุมมอง/การตีความ:** การได้ negative result ที่ตรวจสอบอย่างละเอียด (ไม่ใช่แค่ "ลองแล้วไม่เวิร์ค")
+มีค่าจริงต่อโปรเจค — ตัดความเป็นไปได้ที่จะเสียเวลา build เต็มระบบ (Model C แบบ FOMC-only) ที่ไม่มี
+สัญญาณพอ แล้วหันไปทุ่มทรัพยากรกับ sector-news component และ Model A/B ที่ยังไม่ได้ทดสอบอย่าง
+เข้มงวดขนาดนี้แทน ข้อสังเกตเรื่อง XLV (ทิศทางผิดปกติ, ดูรายละเอียดใน R5) ควรเก็บไว้เป็น hypothesis
+สำหรับรอบทดลองถัดไปที่จะ pre-register ใหม่ ไม่ใช่ไปตรวจเพิ่มตอนนี้ (จะกลายเป็น peek)
+
+**ขั้นต่อไปที่ควรลอง:** เปิด PR `feature/model-c-rulebase` -> `main` (`exp_03: rule-based sector
+impact engine`) อ้างอิงผลสรุปจากทั้ง 6 phase ใน log นี้ — งานถัดไปที่ควรทำนอก branch นี้คือกลับไป
+ทุ่มเวลาที่ `feature/ensemble-sandbox` (sector-news component) และพิจารณา weighted ensemble ที่ให้
+น้ำหนัก FOMC/macro component ต่ำ/เป็น auxiliary signal เท่านั้น
