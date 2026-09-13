@@ -151,3 +151,71 @@ C2 amplifier 1.5 สำหรับ info_positive/negative, C7 balance-sheet wei
 **ขั้นต่อไปที่ควรลอง:** รอ Phase R3 (LLM extraction) รันจบ (กำลังรันอยู่เบื้องหลัง, checkpoint/
 resume ได้) แล้วนำ shock_type (R2) + structured vars จริง (R3) + market data จริง (R1) มาป้อนเข้า
 engine นี้จริงทั้ง 452 ข่าว จากนั้นเข้า Phase R5 (validation กับ CAR จริง ตามเกณฑ์ที่กำหนดไว้ล่วงหน้า)
+
+---
+## exp_03 Phase R3 — LLM structured-variable extraction (Qwen) — 2026-09-14 03:07
+
+**วิธีที่ใช้:** เขียน `model_c_rulebase/scripts/r3_llm_extraction.py` — ยิง Qwen (`qwen-plus`)
+อ่านคู่เอกสาร (CURRENT vs PREVIOUS release ของ source เดียวกัน — FOMC เทียบ FOMC, Beige Book
+เทียบ Beige Book เท่านั้น) แล้วกรอกฟอร์มตัวแปรโครงสร้าง 8 ตัว (`stance_delta`, `growth_delta`,
+`inflation_delta`, `labor_delta`, `forward_guidance_delta`, `balance_sheet_signal`,
+`uncertainty_language`, `financial_stability_concern`) **ห้ามพูดถึง sector เด็ดขาดในprompt**
+บังคับ evidence quote สำหรับทุก field ที่ค่า != 0 (reject+retry ถ้าไม่มี ห้าม fallback เงียบๆ)
+self-consistency ยิงซ้ำ 2 ครั้ง (temperature=0.7) ค่าสุดท้าย = round(mean ของ 2 รอบ), flag
+`low_confidence=True` ถ้า field ใดต่างกันเกิน 1 ระดับ checkpoint แบบ append-JSONL + resume ได้
+ปลอดภัย (ตามแนวทางเดียวกับ `src/s3_sector_views.py` เดิม)
+
+**บั๊กที่เจอและแก้ระหว่าง dev (ก่อนรันจริง):** โมเดลตอบเลขบวกแบบ `+1` (เช่น `"growth_delta": +1`)
+ซึ่งไม่ใช่ JSON number literal ที่ถูกต้อง (JSON ไม่รับ leading `+`) ทำให้ parse fail 100% ของข่าว
+ที่มี field บวก — แก้ด้วย regex sanitize `+` หน้าตัวเลขหลัง `:` ก่อน parse (defense in depth ที่
+2: เพิ่ม instruction ห้ามใช้ `+` prefix ใน prompt ด้วย)
+
+**เหตุการณ์สำคัญระหว่างรันจริง — Qwen API key/account หมดปัญหาซ้ำหลายรอบ (ไม่ใช่บั๊กโค้ด):**
+รันจริงต้องหยุด-resume หลายครั้งเพราะปัญหาบัญชี Qwen ไม่ใช่ปัญหา pipeline:
+  1. Account เดิม (key 1): หยุดที่ 208/450 ด้วย `403 AllocationQuota.FreeTierOnly` (free quota
+     ของ `qwen-plus` หมด)
+  2. เปลี่ยน key ไป account ใหม่ (key 2): test call ผ่าน (HTTP 200) รันต่อได้จริงถึง 393/450
+     ก่อนเจอ `403 AllocationQuota.FreeTierOnly` อีกครั้ง (free quota ของ account นี้เล็กกว่าที่คิด)
+  3. เปลี่ยน key ไป account ใหม่อีก (key 3): เจอ `403 AccessDenied.Unpurchased` ซ้ำ 5 ครั้งติด
+     ทั้งกับ `qwen-plus` และ `qwen-turbo` (ทดสอบแล้วว่าไม่ใช่ปัญหาเฉพาะโมเดล — ทั้งบัญชีไม่มี
+     model access ที่ purchase ไว้เลย) — ตัดสินใจเลิกใช้ account นี้
+  4. สลับ `.env` กลับไปใช้ key 1 เดิม — test ครั้งแรกยังเจอ `403 AccessDenied.Unpurchased`
+     (ผิดคาด เพราะ error type ต่างจากตอน key 1 หยุดครั้งแรก ซึ่งเป็น quota หมดไม่ใช่ unpurchased)
+     แต่ test ซ้ำอีกครั้งผ่าน (HTTP 200) — สรุปว่าเป็น propagation delay ของฝั่ง Qwen ไม่ใช่ปัญหา
+     ถาวร จึงรันต่อด้วย **`qwen-plus` เดิมทั้งหมด** (ไม่ได้สลับไป `qwen-turbo` ตามแผนสำรองที่
+     คุยไว้ระหว่างทาง เพราะ account 1 กลับมาใช้งานได้ก่อนจะต้องพึ่งแผนสำรอง) รันจบจนครบ 450/450
+     ที่พยายาม (436 สำเร็จ) แบบไม่สะดุดอีกเลย
+ทุกจุดตรวจสอบด้วยการ test call จริงก่อนแตะ checkpoint เสมอ (ไม่เดาว่า key ใช้ได้), เช็ค `.env`
+mtime + ความยาว key (ไม่ print ค่าจริง) ยืนยันทุกครั้งว่าเป็น key ใหม่จริงก่อนสรุปผล — พบและแก้
+ความสับสนจริง 1 ครั้ง (mtime ไม่เปลี่ยนหลังผู้ใช้บอกว่าเปลี่ยน key แล้ว แปลว่ายังไม่ได้ save จริง)
+
+**ข้อมูลที่ใช้:** `data/raw/macro_news_raw.parquet` (ข้อความข่าวดิบ 452 ข่าว, ไม่แก้) จับคู่กับ
+release ก่อนหน้าของ source เดียวกัน (450 ข่าวมี baseline เทียบได้, 2 ข่าวแรกสุดของแต่ละ source
+ไม่มี — ข้าม ไม่เดา)
+
+**ผลลัพธ์:** `model_c_rulebase/data/fomc_structured_vars.csv` — **436/450 ข่าวสำเร็จ (96.9%)**
+(FOMC_statement 220, Beige_Book 216), **14 ข่าวล้มเหลว (3.1%)** — token รวมทั้งหมดที่ใช้จริงตลอด
+การรัน (รวมทุก resume/key): ~2,111,000 tokens (452 ข่าว x 2 self-consistency runs)
+
+**พบสิ่งสำคัญจาก 14 ข่าวที่ล้มเหลว (ไม่ใช่ random noise):** **ทั้ง 14 ข่าวล้มเหลวด้วยรูปแบบเดียวกัน
+เป๊ะ** — โมเดลตอบ `uncertainty_language=-1` หรือ `financial_stability_concern=-1` ซึ่งอยู่นอกช่วง
+ที่กำหนด (0..2, ตั้งใจให้เป็น unidirectional "มากขึ้นแค่ไหน") ทุกครั้ง ไม่ใช่ field อื่นเลย — แสดงว่า
+โมเดลบางครั้ง "อยากบอก" ว่าความไม่แน่นอน/ความเสี่ยงเสถียรภาพการเงิน**ลดลง**เทียบครั้งก่อน (เป็น
+สัญชาตญาณทางภาษาที่สมเหตุสมผล) แต่ schema ที่กำหนดไม่มีทางให้แสดงทิศทางลดได้เลย (ตั้งใจให้เป็น
+unidirectional ตามสเปกต้นฉบับ) validation ปฏิเสธค่านี้ถูกต้องตามที่ออกแบบไว้ (ห้าม fallback เป็น 0
+เงียบๆ) แต่ผลคือข่าวเหล่านั้นถูกข้ามไปแทนที่จะได้ค่า 0 ที่อาจจะถูกต้องกว่า
+
+**low_confidence:** 6/436 (1.4%) — ต่ำมาก แสดงว่า self-consistency ระหว่าง 2 รอบเห็นตรงกันเกือบ
+ทั้งหมด (ไม่ได้แปลว่าค่าถูกต้อง แค่แปลว่าโมเดลตอบสม่ำเสมอ)
+
+**มุมมอง/การตีความ:** อัตราสำเร็จ 96.9% สูงพอจะใช้งานต่อได้จริง 14 ข่าวที่ขาดหายเป็น pattern
+เดียวกันชัดเจน (ไม่กระจายสุ่ม) จึงไม่น่าจะทำให้เกิด bias เป็นระบบใน R4/R5 (เป็นข่าวที่กระจายทั้ง
+ช่วงเวลา 1999-2025 ไม่กระจุกช่วงไหนช่วงหนึ่ง) แต่ถ้าจะปรับปรุงในอนาคต ควรพิจารณาขยาย range ของ
+`uncertainty_language`/`financial_stability_concern` เป็น -2..2 (unidirectional -> bidirectional)
+หรือเพิ่ม post-processing step แปลง -1 เป็น 0 แทนที่จะ reject ทั้ง response — ไม่ทำตอนนี้เพราะจะ
+เปลี่ยน schema กลางทางหลังเห็นผลแล้ว (ขัดกับหลัก "ห้ามเปลี่ยนเกณฑ์หลังเห็นตัวเลข") บันทึกไว้เป็น
+ข้อเสนอสำหรับรอบถัดไปแทน
+
+**ขั้นต่อไปที่ควรลอง:** Phase R5 — รัน rule engine (R4) จริงบน 436 ข่าวที่มี structured vars
+ครบ x shock_type (R2) x market data (R1) แล้ว validate กับ CAR จริง (R5a) ตาม protocol ที่กำหนด
+ไว้ล่วงหน้า
