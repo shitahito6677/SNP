@@ -96,3 +96,58 @@ quadrant ไหนครอบงำผิดปกติ บ่งชี้ว�
 
 **ขั้นต่อไปที่ควรลอง:** Phase R3 — เขียน prompt สกัดตัวแปรโครงสร้างจาก Qwen (ห้ามพูดถึง sector
 เด็ดขาด), บังคับ evidence quote, self-consistency 2 รอบ รันกับ 452 ข่าว
+
+---
+## exp_03 Phase R4 — rule engine (loading matrix × channel activation) — 2026-09-13 12:13
+
+**วิธีที่ใช้:** เขียน `model_c_rulebase/engine/sector_rules.py` — ชั้น 3 ของสถาปัตยกรรม รับ
+`shock_type` (จาก R2) + structured variables ที่ LLM สกัดมา (จาก R3, ยังไม่มีให้ใช้จริงตอนเขียน
+R4 เพราะรันคู่ขนานกันอยู่ — ทดสอบด้วยข้อมูลสังเคราะห์ที่ตรงสเปกแทน) + market data ดิบ (R1) แล้ว
+ตัดสิน `sector_impact_score` ของทั้ง 11 sector ผ่าน loading matrix (7 channels: duration/discount
+rate, cyclical growth, NIM, credit risk, dollar, inflation pass-through, leverage/refinancing) x
+channel activation ทุกฟังก์ชันคืนคำอธิบายที่มาของคะแนนเป็นข้อความเสมอ (`explain()`) — ตรงตาม
+หลักการ "explainability ต้องมาก่อน accuracy" ที่กำหนดไว้
+
+**สิ่งที่ต้องเปิดเผยชัดเจน (ไม่ใช่ implementation detail ธรรมดา):** loading matrix ทั้งหมดคือค่า
+จากทฤษฎีตามสเปก (ห้ามถือเป็นค่าจริง ต้อง calibrate ใน R6) — **แต่เพิ่มเติมจากนั้น** ค่าคงที่
+ตัวคูณ/amplifier ในฟังก์ชัน `compute_channel_activations()` (C1 dampener 0.5 สำหรับ info_positive,
+C2 amplifier 1.5 สำหรับ info_positive/negative, C7 balance-sheet weight 0.3, VIX amplifier 1.4
+[ค่ากลางของช่วง 1.3-1.5 ที่สเปกให้]) เป็นการตีความเชิงตัวเลขของคำอธิบายเชิงคุณภาพในสเปก (ลูกศร
+ขึ้น/ลง + คำอธิบายวงเล็บ เช่น "C1↓ อ่อน") เพราะสเปกไม่ได้ให้สูตรตัวเลขตรงๆ ไว้ — ต้อง calibrate
+ใน R6 เหมือน loading matrix เช่นกัน ไม่ใช่ค่าที่พิสูจน์แล้ว ระบุไว้ชัดใน module docstring กัน
+เข้าใจผิดว่าเป็นค่าทฤษฎีล้วนๆ
+
+**การตัดสินใจเติมช่องว่างที่สเปกไม่ได้ระบุไว้ตรงๆ (ต้องบันทึกไว้ตรวจสอบย้อนได้):**
+- C3 (NIM) และ C7 (leverage) ใช้ activation เดียวกันทุก shock_type (ไม่ผูกกับ quadrant) เพราะเป็น
+  กลไกโครงสร้าง (ความชันของ curve, ต้นทุนรีไฟแนนซ์ตามระดับดอกเบี้ยจริง) ไม่ใช่ narrative-dependent
+- C4 (credit risk) activate เฉพาะ policy_tightening (ผูกกับ uncertainty/financial_stability
+  language) และ info_positive/info_negative (ผูกกับ growth_delta ตรงข้าม) — **policy_easing ไม่
+  activate เลย (0)** เพราะสเปกไม่ได้ระบุกลไกไว้สำหรับ quadrant นี้ ไม่เดาเพิ่มเติมเอง
+- C5 (dollar) เมื่อ dxy_delta หายไป (ข่าวก่อน 2006, พบจริง 111/452 จาก R1) -> activation = 0
+  พร้อม flag ในคำอธิบายว่า "ไม่มีข้อมูล" ไม่ใช่การเดาว่าควรเป็นเท่าไหร่
+- XLF C7 ระบุ "n/a" ในสเปกต้นฉบับ -> ใช้ loading=0 ในการคำนวณจริง แต่ flag แยกต่างหากว่าเป็น
+  "n/a เชิงทฤษฎี" ไม่ใช่ "0 เชิงทฤษฎี" (สองอย่างมีความหมายต่างกัน)
+
+**ข้อมูลที่ใช้:** ไม่มีข้อมูลจริงจาก R3 ตอนเขียน (รันคู่ขนานกันอยู่เบื้องหลัง) — unit test ใช้ข้อมูล
+สังเคราะห์ที่ตรงตามช่วงค่าจริงของ schema (rate_surprise, vix_delta ฯลฯ) แทน จะ integration-test
+กับข้อมูลจริงทั้งหมดใน Phase R5
+
+**ผลลัพธ์:** `model_c_rulebase/engine/test_sector_rules.py` — 214 assertion ผ่านทั้งหมด (0 fail)
+ครอบคลุมตามที่กำหนดใน Definition of Done:
+- ทุก 5 shock_type (4 ตามสเปก + `no_rate_surprise` จาก R2) ให้คะแนนครบ 11 sector และอธิบายได้
+- Edge case 1 (XLF pivot): ทดสอบทั้ง trigger จาก financial_stability_concern>=1, จาก
+  curve_slope_delta<0 อย่างเดียว, และกรณีไม่ trigger เลย — loading เปลี่ยนถูกต้องทุกกรณี
+- Edge case 2 (VIX amplifier): ยืนยันคะแนนสเกล x1.4 พอดีเมื่อ vix_delta เกิน p90 (1.128 จาก
+  ข้อมูลจริง R1) ทุก sector ที่ score != 0
+- Edge case 3 (low_confidence dampener): ยืนยันคะแนนสเกล x0.5 พอดี และรวมกับ VIX amplifier
+  แบบคูณ (x0.7) ได้ถูกต้องเมื่อ active พร้อมกัน
+- spot-check loading matrix ตรงกับตารางในสเปกต้นฉบับ (กัน typo ตอน implement)
+
+**มุมมอง/การตีความ:** engine ทำงานตามที่ออกแบบไว้ทุกจุดที่ทดสอบได้ — จุดที่ต้องระวังที่สุดตอนนี้
+ไม่ใช่ความถูกต้องของโค้ด (ทดสอบแล้ว) แต่คือ**ค่าคงที่ตัวคูณที่ตีความเอง**ยังไม่มีข้อมูลจริงมายืนยัน
+เลยว่าเหมาะสม — R5 จะเป็นตัวบอกว่าค่าเหล่านี้ (รวมถึง loading matrix) ให้สัญญาณตรงกับ CAR จริงหรือไม่
+ถ้าไม่ตรง R6 จะต้อง calibrate ทั้งสองชุดพร้อมกัน ไม่ใช่แค่ loading matrix อย่างเดียว
+
+**ขั้นต่อไปที่ควรลอง:** รอ Phase R3 (LLM extraction) รันจบ (กำลังรันอยู่เบื้องหลัง, checkpoint/
+resume ได้) แล้วนำ shock_type (R2) + structured vars จริง (R3) + market data จริง (R1) มาป้อนเข้า
+engine นี้จริงทั้ง 452 ข่าว จากนั้นเข้า Phase R5 (validation กับ CAR จริง ตามเกณฑ์ที่กำหนดไว้ล่วงหน้า)
