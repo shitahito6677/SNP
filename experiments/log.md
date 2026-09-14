@@ -444,3 +444,31 @@ pre-registered criteria ใน E4) ถึงจะตอบได้จริง
 **ขั้นต่อไปที่ควรลอง:** Phase E4 — เขียน pre-registered test criteria (commit ก่อนเห็นผล E5
 เท่านั้น) แล้ว Phase E5 — join กับ sector_impact_score จาก exp_03 รัน Kruskal-Wallis ตามที่
 pre-register ไว้เป๊ะ
+
+---
+## exp_04 Phase E4 — pre-register เกณฑ์ทดสอบ E5 — 2026-09-14 07:19
+
+**วิธีที่ใช้:** เขียน `model_c_event_clustering/PRE_REGISTERED_TEST.md` **ก่อน** join
+`e3_cluster_assignments.csv` กับ `sector_impact_score`/channel score จาก `exp_03` เลยแม้แต่ครั้ง
+เดียว (ยังไม่มีการคำนวณ test statistic ใดๆ ณ จุดที่เขียนไฟล์นี้ — commit นี้จึงมี timestamp
+ก่อน commit ของ Phase E5 เสมอ ตรวจสอบย้อนหลังได้จาก git log) กำหนดตายตัวไว้ล่วงหน้า:
+- Metric: Kruskal-Wallis (ไม่ใช้ ANOVA เพราะ return ไม่ normal), effect size = eta-squared
+  ประมาณจาก H statistic (Tomczak & Tomczak, 2014)
+- ขอบเขต: เฉพาะ sector ที่ E3 พบ cluster เสถียร (ทั้ง 11 sector ตามผล E3), ตัวแปรหลักคือ
+  `sector_impact_score` เท่านั้น (channel C1-C7 เป็น exploratory รอง กัน multiple-comparison
+  จากการเลือกตัวแปรที่ดูดีที่สุดหลังเห็นผล)
+- เกณฑ์ผ่าน: `p < 0.05` **และ** `eta_squared > 0.06` พร้อมกันทั้งสองข้อ — ไม่ปรับ correction
+  ข้าม sector (รายงานผลดิบตรงไปตรงมา พร้อม caveat เรื่อง false positive จาก multiple testing)
+- Triangulation protocol: ต้องเทียบทุก sector กับผล R5 เดิมเสมอ — สอดคล้องกัน (negative ทั้งคู่)
+  = หลักฐานแข็งแรงขึ้น, ขัดแย้งกัน = ตั้งเป็นคำถามเปิด ไม่ฟันธง
+
+**ข้อมูลที่ใช้:** ไม่มี — เป็น phase เขียนเกณฑ์ล้วนๆ ไม่แตะข้อมูลผลลัพธ์ใดๆ
+
+**ผลลัพธ์:** ไฟล์ `PRE_REGISTERED_TEST.md` commit แล้ว (ตรวจสอบ diff ว่าไม่มีตัวเลขผลทดสอบใดๆ
+ปนอยู่ในไฟล์นี้เลย เป็นแค่ methodology/threshold ล้วนๆ)
+
+**มุมมอง/การตีความ:** ไม่มี — phase นี้ไม่มีผลให้ตีความ เป็นการล็อกกฎก่อนเห็นข้อมูลตามหลัก
+"ห้าม fishing" ที่กำหนดไว้
+
+**ขั้นต่อไปที่ควรลอง:** Phase E5 — join กับ `sector_impact_score` จาก exp_03 จริง รัน
+Kruskal-Wallis ตามที่ pre-register ไว้เป๊ะ ไม่ปรับอะไรเพิ่มหลังเห็นผล
