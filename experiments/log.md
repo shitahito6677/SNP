@@ -339,3 +339,195 @@ Test set (87 ข่าว, 957 แถว) **ยังไม่ถูกแตะ
 impact engine`) อ้างอิงผลสรุปจากทั้ง 6 phase ใน log นี้ — งานถัดไปที่ควรทำนอก branch นี้คือกลับไป
 ทุ่มเวลาที่ `feature/ensemble-sandbox` (sector-news component) และพิจารณา weighted ensemble ที่ให้
 น้ำหนัก FOMC/macro component ต่ำ/เป็น auxiliary signal เท่านั้น
+
+---
+## exp_04 Phase E1 — non-overlapping price paths — 2026-09-14 07:11
+
+**วิธีที่ใช้:** เริ่ม `exp_04` (branch `feature/model-c-event-clustering`, แยกจาก
+`feature/model-c-rulebase` ซึ่ง PR #1 ยังไม่ merge เข้า main ณ ตอนแยก branch — ใช้ branch ต้นทาง
+โดยตรงแทนเพราะไฟล์ที่ต้องใช้อยู่ที่นั่น) เป้าหมาย: triangulate ผลลบของ `exp_03`/R5 ด้วยวิธีต่างไป
+(ดู "รูปร่าง" ของเส้นราคาทั้งเส้นแทนที่จะดู CAR endpoint เดียว) เขียน
+`model_c_event_clustering/scripts/e1_price_paths.py` คำนวณ `window_days` ต่อข่าวอัตโนมัติ
+(`min(10, gap_to_next//2, gap_to_prev//2)` คำนวณจากลำดับข่าว**รวมทุก source** เพราะ Beige Book/
+FOMC ออกสลับกันถี่) กันหน้าต่างราคาทับกันระหว่างข่าวที่ออกใกล้กัน ข่าวที่ `window_days < 5` ตัด
+ออกทั้งข่าว (ไม่ยัดเข้าไป)
+
+**นิยามที่ตัดสินใจเอง (ไม่ได้ระบุไว้ตายตัวในสเปก ต้องบันทึกไว้):** `cum_ar` (cumulative abnormal
+return) นิยามให้ต่อเนื่องผ่าน 0 ที่ `t0` พอดี — ก่อน `t0` สะสม "ถอยหลัง" จาก `t0` (ติดลบตาม
+นิยาม), หลัง `t0` สะสมไปข้างหน้าแบบ CAR เดิมทุกประการ — validate ด้วยมือ 1 ตัวอย่าง
+(1999-12-08, XLF) คำนวณ cumsum ตามสูตรเทียบกับที่โค้ดให้มา **ตรงกันทุกตำแหน่ง**
+
+**ข้อมูลที่ใช้:** `data/processed/labels.parquet` (452 ข่าว, ไม่แก้), `data/raw/
+sector_prices_raw.parquet` (price cache เดิมจาก exp_01/02, 7,720 trading days)
+
+**ผลลัพธ์:** `model_c_event_clustering/data/price_paths.csv` — **424/452 ข่าวผ่าน** (93.8%),
+**28 ข่าวถูกตัดออก (6.2%)** เพราะ `window_days < 5`: จำแนกตาม window_days ที่คำนวณได้ —
+window_days=3 (13 ข่าว), =0 (6 ข่าว, ส่วนใหญ่คือคู่ 2014-09-17 ที่มี 2 press release วันเดียวกัน),
+=1 (4 ข่าว), =4 (3 ข่าว รวมถึง **2020-03-15 emergency COVID cut** — ตัดออกเพราะอยู่ใกล้ 2020-03-03
+เกินไป), =2 (2 ข่าว) — 42,252 แถว (ข่าว x sector x offset วัน) ทั้งหมด, `window_days` จริง:
+min=0, median=7, max=10
+
+**มุมมอง/การตีความ:** อัตราคงเหลือ 93.8% สูงพอใช้งานต่อได้จริง ที่น่าสนใจคือ 2020-03-15 (ตัวอย่าง
+สำคัญที่ใช้ใน R2/R3 ของ exp_03) ถูกตัดออกจาก exp_04 เพราะ window ทับกับ 2020-03-03 — เป็นข้อจำกัด
+จริงของวิธี non-overlapping window (ช่วงวิกฤตที่ Fed ประชุมถี่ผิดปกติ จะเสีย sample พอดีตอนที่
+น่าจะมีสัญญาณแรงที่สุด) ต้องระบุไว้เป็น limitation ของ exp_04 เทียบกับ exp_03 ที่ไม่มีปัญหานี้
+(ใช้ fixed ±30 วันได้เพราะไม่สนใจเรื่อง window ทับกัน)
+
+**ขั้นต่อไปที่ควรลอง:** Phase E2 — สกัด feature (cum_return_pre, cum_return_post_short/full,
+peak_day, reversion_ratio) จาก price path นี้ต่อ (ข่าว x sector), สุ่มตรวจ 5 แถวด้วยมือเทียบกราฟจริง
+
+---
+## exp_04 Phase E2 — feature extraction จาก price path — 2026-09-14 07:13
+
+**วิธีที่ใช้:** เขียน `model_c_event_clustering/scripts/e2_features.py` สรุป price path ราย
+วัน (E1) เป็น 5 feature ต่อ (ข่าว x sector): `cum_return_pre` (= cum_ar ที่ offset −1),
+`cum_return_post_short` (= cum_ar ที่ offset +3), `cum_return_post_full` (= cum_ar ที่ offset
+สุดท้ายฝั่ง post), `peak_offset`/`peak_value` (จุดสุดขั้วฝั่ง post ในทิศทางเดียวกับการเคลื่อนไหว
+สุทธิ), `reversion_ratio` (= cum_return_post_full ÷ peak_value, เป็น `NaN` ถ้า peak ≈ 0 กัน
+หารเลขใกล้ 0 จนได้ค่าพิสดาร)
+
+**ข้อมูลที่ใช้:** `model_c_event_clustering/data/price_paths.csv` (E1, 42,252 แถว, 424 ข่าว)
+
+**ผลลัพธ์:** `model_c_event_clustering/data/event_features.csv` — 4,113 แถว (424 ข่าว x
+sector, เฉลี่ย ~9.7 sector/ข่าวเพราะ XLC/XLRE ขาดในข่าวก่อนเปิดตัว ETF) **0 แถวเป็น NaN ทั้ง
+`cum_return_post_short` และ `reversion_ratio`** (ทุก window ที่ผ่าน E1 กว้างพอมี offset+3 จริง
+และไม่มี peak ที่ ≈ 0 เป๊ะเลยสักแถว) `reversion_ratio` เฉลี่ย = 0.787 (std=0.289) — บ่งชี้ว่าโดย
+เฉลี่ยราคาหลังข่าวมักมี partial reversion เล็กน้อยจาก peak ไม่ใช่ full momentum ต่อเนื่องหรือ
+full reversal เต็มที่
+
+**สุ่มตรวจ 5 แถวด้วยมือ (เทียบ feature ที่คำนวณได้กับ cum_ar series ทั้งเส้นตรงๆ ไม่ใช่แค่เชื่อ
+สูตร):**
+- 2000-03-21 (XLP): ราคาไหลลงต่อเนื่องตลอด post window (offset 1→4: −0.014→−0.066) peak ตรงที่
+  offset สุดท้ายพอดี, reversion_ratio=1.000 (ไม่มีการสะท้อนกลับเลย ถูกต้องตามรูปเส้น)
+- 2000-05-16 (XLK): จุดต่ำสุดที่ offset 3 (−0.040) แล้วฟื้นเล็กน้อยที่ offset 4 (−0.037) →
+  reversion_ratio=0.925 ตรงกับที่เห็นในเส้นจริง
+- 2002-10-23 (XLP): จุดต่ำสุดที่ offset 3 (−0.024) แล้ว**สะท้อนกลับแรงมาก**เหลือ −0.003 ที่
+  offset 5 → reversion_ratio=0.145 (ตัวอย่างที่ metric นี้จับพฤติกรรม mean-reversion ได้ชัดเจน)
+- 2015-09-17 (XLK): ราคาขึ้นต่อเนื่องตลอด → reversion_ratio=1.000 ถูกต้อง
+- 2017-02-01 (XLB): จุดต่ำสุดที่ offset 4 (−0.019) ฟื้นเล็กน้อยที่ offset 5 (−0.018) →
+  reversion_ratio=0.947 ตรงกับเส้นจริง
+ทุกตัวอย่างตัวเลขที่คำนวณได้ตรงกับรูปเส้น cum_ar จริงเป๊ะ ไม่มีความคลาดเคลื่อน
+
+**มุมมอง/การตีความ:** feature ทั้ง 5 ตัวจับพฤติกรรมได้ตามที่ตั้งใจ (ทิศทาง, ขนาด, และการสะท้อน
+กลับของราคา) — reversion_ratio โดยเฉพาะดูมีความหมายและกระจายตัวได้ดี (ไม่กระจุกที่ 0 หรือ 1)
+พร้อมป้อนเข้า clustering ใน E3
+
+**ขั้นต่อไปที่ควรลอง:** Phase E3 — standardize feature แล้ว clustering แยกต่อ sector (k=3-5)
+พร้อม bootstrap stability check (ARI) ก่อนเลือก k
+
+---
+## exp_04 Phase E3 — clustering price-path shape ต่อ sector — 2026-09-14 07:17
+
+**วิธีที่ใช้:** เขียน `model_c_event_clustering/scripts/e3_clustering.py` — standardize feature
+ทั้ง 6 ตัวจาก E2 (ไม่คัดเลือกบางส่วน กัน fishing) แล้ว K-means แยกทีละ sector ลอง k=3,4,5 เลือก
+k จาก **bootstrap stability (ARI>=0.5) ก่อน แล้วค่อยใช้ silhouette ตัดสินในกลุ่มที่เสถียร** —
+bootstrap stability คำนวณโดย resample ข้อมูล 100 รอบ (with replacement), fit K-means บน resample
+แต่ละรอบ แล้วใช้ centroid ที่ได้ predict label ของข้อมูลเต็มชุดเดิม เทียบกับ label จาก fit เต็มชุด
+เดิมด้วย Adjusted Rand Index — ค่าเฉลี่ย ARI จาก 100 รอบ = stability score
+
+**ข้อมูลที่ใช้:** `model_c_event_clustering/data/event_features.csv` (E2, 4,113 แถว, 11 sector,
+n ต่อ sector = 424 [ปกติ] หรือ 127/170 [XLC/XLRE ที่ ETF เปิดตัวทีหลัง])
+
+**ผลลัพธ์:** `model_c_event_clustering/data/e3_cluster_assignments.csv` +
+`e3_stability_report.csv` — **ทั้ง 11 sector มี cluster ที่เสถียร (ARI ผ่าน 0.5 ทุก k ที่ลองจริง)**
+ARI เฉลี่ยของ k ที่เลือกอยู่ในช่วง 0.62-0.90 (สูงมาก) k ที่เลือกส่วนใหญ่คือ k=3 (8/11 sector),
+k=4 สำหรับ XLC, XLF, XLY
+
+**มุมมอง/การตีความ:** ผลที่ cluster เสถียรทุก sector **ไม่ใช่เรื่องน่าแปลกใจหรือสัญญาณบวกใดๆ
+ต่อคำถามวิจัยหลัก** — feature ที่ใช้ (cum_return_pre/post, reversion_ratio ฯลฯ) เป็นตัวชี้วัด
+ต่อเนื่องที่มี variance ตามธรรมชาติ (บางข่าวราคาขึ้นแรง บางข่าวลงแรง บางข่าวแทบไม่ขยับ) K-means
+แทบจะหา partition ที่เสถียรทางเรขาคณิตได้เสมอจากข้อมูลแบบนี้ — **คำถามที่แท้จริงยังไม่ได้ตอบ**คือ
+cluster เหล่านี้สอดคล้องกับ `sector_impact_score` จาก rule engine (exp_03) หรือเป็นแค่การแบ่งกลุ่ม
+ตามขนาดโดยไม่เกี่ยวกับตัวแปรที่ rule engine ใช้เลย — ต้องรอ Phase E5 (Kruskal-Wallis ตาม
+pre-registered criteria ใน E4) ถึงจะตอบได้จริง
+
+**ขั้นต่อไปที่ควรลอง:** Phase E4 — เขียน pre-registered test criteria (commit ก่อนเห็นผล E5
+เท่านั้น) แล้ว Phase E5 — join กับ sector_impact_score จาก exp_03 รัน Kruskal-Wallis ตามที่
+pre-register ไว้เป๊ะ
+
+---
+## exp_04 Phase E4 — pre-register เกณฑ์ทดสอบ E5 — 2026-09-14 07:19
+
+**วิธีที่ใช้:** เขียน `model_c_event_clustering/PRE_REGISTERED_TEST.md` **ก่อน** join
+`e3_cluster_assignments.csv` กับ `sector_impact_score`/channel score จาก `exp_03` เลยแม้แต่ครั้ง
+เดียว (ยังไม่มีการคำนวณ test statistic ใดๆ ณ จุดที่เขียนไฟล์นี้ — commit นี้จึงมี timestamp
+ก่อน commit ของ Phase E5 เสมอ ตรวจสอบย้อนหลังได้จาก git log) กำหนดตายตัวไว้ล่วงหน้า:
+- Metric: Kruskal-Wallis (ไม่ใช้ ANOVA เพราะ return ไม่ normal), effect size = eta-squared
+  ประมาณจาก H statistic (Tomczak & Tomczak, 2014)
+- ขอบเขต: เฉพาะ sector ที่ E3 พบ cluster เสถียร (ทั้ง 11 sector ตามผล E3), ตัวแปรหลักคือ
+  `sector_impact_score` เท่านั้น (channel C1-C7 เป็น exploratory รอง กัน multiple-comparison
+  จากการเลือกตัวแปรที่ดูดีที่สุดหลังเห็นผล)
+- เกณฑ์ผ่าน: `p < 0.05` **และ** `eta_squared > 0.06` พร้อมกันทั้งสองข้อ — ไม่ปรับ correction
+  ข้าม sector (รายงานผลดิบตรงไปตรงมา พร้อม caveat เรื่อง false positive จาก multiple testing)
+- Triangulation protocol: ต้องเทียบทุก sector กับผล R5 เดิมเสมอ — สอดคล้องกัน (negative ทั้งคู่)
+  = หลักฐานแข็งแรงขึ้น, ขัดแย้งกัน = ตั้งเป็นคำถามเปิด ไม่ฟันธง
+
+**ข้อมูลที่ใช้:** ไม่มี — เป็น phase เขียนเกณฑ์ล้วนๆ ไม่แตะข้อมูลผลลัพธ์ใดๆ
+
+**ผลลัพธ์:** ไฟล์ `PRE_REGISTERED_TEST.md` commit แล้ว (ตรวจสอบ diff ว่าไม่มีตัวเลขผลทดสอบใดๆ
+ปนอยู่ในไฟล์นี้เลย เป็นแค่ methodology/threshold ล้วนๆ)
+
+**มุมมอง/การตีความ:** ไม่มี — phase นี้ไม่มีผลให้ตีความ เป็นการล็อกกฎก่อนเห็นข้อมูลตามหลัก
+"ห้าม fishing" ที่กำหนดไว้
+
+**ขั้นต่อไปที่ควรลอง:** Phase E5 — join กับ `sector_impact_score` จาก exp_03 จริง รัน
+Kruskal-Wallis ตามที่ pre-register ไว้เป๊ะ ไม่ปรับอะไรเพิ่มหลังเห็นผล
+
+---
+## exp_04 Phase E5 — รันเทสตาม pre-registered criteria + triangulation — 2026-09-14 07:22
+
+**วิธีที่ใช้:** เขียน `model_c_event_clustering/scripts/e5_validate.py` — รัน rule engine ของ
+`exp_03` จริง (reuse `run_engine_on_all_news()` จาก `model_c_rulebase/scripts/r5b_validate.py`
+โดยตรง ไม่เขียน logic คำนวณคะแนนใหม่ กัน engine 2 เวอร์ชันเพี้ยนจากกัน) join
+`sector_impact_score` กับ cluster label จาก E3 แล้วรัน Kruskal-Wallis ตามที่ pre-register ไว้ใน
+E4 เป๊ะ (ไม่ปรับ metric/threshold ใดๆ เพิ่มหลังเห็นผล)
+
+**บั๊กที่เจอระหว่างรัน (แก้ก่อนได้ผลจริง):** channel score บางช่อง (เช่น C3 สำหรับทุก sector
+ยกเว้น XLF ที่ loading=0 เสมอ) เป็นค่าเดียวกันหมดทุกแถวของ sector นั้น (ไม่มี variance เลย) ทำให้
+`scipy.stats.kruskal` raise `ValueError: All numbers are identical` — แก้โดยเช็ค variance ก่อน
+เรียก kruskal ถ้าไม่มี variance เลยให้บันทึกเป็น `NaN`/`note="no variance"` ไม่ใช่เดา p-value
+หรือข้ามเงียบๆ
+
+**ข้อมูลที่ใช้:** `sector_impact_score` จาก exp_03 R4 (rerun จริงผ่านโค้ดเดียวกับ R5b, 436 ข่าว
+x 11 sector = 4,796 แถว), cluster label จาก E3 (4,113 แถว, ทั้ง 11 sector), หลัง join เหลือ
+3,955 แถว (ส่วนต่างจากข่าวที่ R3 สกัดไม่สำเร็จ 16 ข่าว + จุดตัดจาก E1's window exclusion)
+
+**ผลลัพธ์ (ตัวเลขจริง, primary test = sector_impact_score):**
+
+| Sector | n | k | H | p | eta² | ผ่าน/ไม่ผ่าน | R5 rho(N=1) | R5 rho(N=21) |
+|---|---|---|---|---|---|---|---|---|
+| XLB | 408 | 3 | 1.711 | 0.4251 | −0.0007 | fail | −0.019 | −0.098 |
+| XLC | 121 | 4 | 2.266 | 0.5191 | −0.0063 | fail | +0.213 | +0.190 |
+| XLE | 408 | 3 | 0.428 | 0.8072 | −0.0039 | fail | +0.037 | −0.063 |
+| XLF | 408 | 4 | 1.050 | 0.7892 | −0.0048 | fail | +0.080 | +0.104 |
+| XLI | 408 | 3 | 0.420 | 0.8105 | −0.0039 | fail | +0.078 | +0.052 |
+| XLK | 408 | 3 | 1.104 | 0.5758 | −0.0022 | fail | −0.033 | −0.091 |
+| XLP | 408 | 3 | 1.867 | 0.3933 | −0.0003 | fail | −0.058 | +0.012 |
+| XLRE| 162 | 3 | 1.145 | 0.5642 | −0.0054 | fail | −0.019 | +0.070 |
+| XLU | 408 | 3 | 1.571 | 0.4559 | −0.0011 | fail | +0.061 | +0.006 |
+| XLV | 408 | 3 | 2.994 | 0.2238 | +0.0025 | fail | −0.122 | −0.118 |
+| XLY | 408 | 4 | 1.887 | 0.5962 | −0.0028 | fail | −0.024 | +0.018 |
+
+**0/11 sector ผ่านเกณฑ์ (p<0.05 AND eta²>0.06) — negative result เต็มรูปแบบ ทั้ง primary test**
+
+**Secondary/exploratory (channel C1-C7, 77 การทดสอบ = 11 sector x 7 channel):** **0/77 ผ่าน
+เกณฑ์เช่นกัน** — ที่น่าสนใจ: XLP channel C4 (credit risk) ได้ p=0.0389 (< 0.05 เดี่ยวๆ) แต่
+eta²=0.0111 (< 0.06 ขาดลอย) → **ไม่ผ่าน** ตามเกณฑ์คู่ที่ pre-register ไว้ — เป็นตัวอย่างที่ตรง
+เป้าหมายการออกแบบเกณฑ์นี้พอดี (กัน sample size ใหญ่ [n=408] ทำให้ p ต่ำได้ง่ายโดยไม่มี effect
+ขนาดที่มีความหมายจริง) ถ้าไม่มี eta² threshold คู่ไว้ อาจรายงานผิดว่า XLP มีสัญญาณ
+
+**Triangulation check กับ R5 (ตามที่ pre-register ไว้):** **ทั้ง 11 sector สอดคล้องกับ R5 เดิม
+100%** — ไม่มี sector ไหนขัดแย้งกัน (ไม่มีเคสที่ผ่านเกณฑ์ exp_04 แต่ R5 บอกไม่มีสัญญาณ หรือกลับกัน)
+ทุก sector ทั้งสองวิธีให้ข้อสรุปเดียวกัน: ไม่มีสัญญาณที่มีนัยสำคัญและขนาดผลใหญ่พอ
+
+**มุมมอง/การตีความ:** นี่คือ **triangulation ที่สำเร็จตามเป้าหมาย** — exp_04 ใช้วิธีวัดที่ต่างไป
+โดยสิ้นเชิงจาก exp_03 (ดูรูปร่างเส้นราคาทั้งเส้น + cluster แทนที่จะดู correlation กับ CAR
+endpoint เดียว) แต่ได้ข้อสรุปเดียวกันเป๊ะ: **rule-based sector_impact_score จาก exp_03 ไม่มี
+ความสัมพันธ์ที่ตรวจจับได้กับพฤติกรรมราคาจริงไม่ว่าจะวัดด้วยวิธีไหน** — ความสอดคล้อง 100% ระหว่าง
+สองวิธีที่เป็นอิสระจากกัน (correlation-based vs. cluster-based) ทำให้ข้อสรุป negative ของ exp_03
+**หนักแน่นขึ้นมาก** ไม่ใช่แค่เป็น artifact ของวิธีวัดแบบใดแบบหนึ่ง
+
+**ขั้นต่อไปที่ควรลอง:** ไม่มี Phase E6 (ตามที่ pre-register ไว้ — เป้าหมาย exp_04 คือ triangulate
+ไม่ใช่สร้างโมเดลใหม่) ปิด exp_04 ด้วยผลนี้ เปิด PR ทิ้งไว้ให้ผู้ใช้ตัดสินใจเรื่อง merge — ข้อเสนอ
+สำหรับงานถัดไปนอก exp_04: ทุ่มเวลาที่ sector-news component (`feature/ensemble-sandbox`) แทน
+ตามที่ exp_03 R6 แนะนำไว้แล้ว ยืนยันซ้ำด้วยหลักฐานที่แข็งแรงขึ้นจาก exp_04 นี้
