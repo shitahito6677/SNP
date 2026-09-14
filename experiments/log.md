@@ -414,3 +414,33 @@ full reversal เต็มที่
 
 **ขั้นต่อไปที่ควรลอง:** Phase E3 — standardize feature แล้ว clustering แยกต่อ sector (k=3-5)
 พร้อม bootstrap stability check (ARI) ก่อนเลือก k
+
+---
+## exp_04 Phase E3 — clustering price-path shape ต่อ sector — 2026-09-14 07:17
+
+**วิธีที่ใช้:** เขียน `model_c_event_clustering/scripts/e3_clustering.py` — standardize feature
+ทั้ง 6 ตัวจาก E2 (ไม่คัดเลือกบางส่วน กัน fishing) แล้ว K-means แยกทีละ sector ลอง k=3,4,5 เลือก
+k จาก **bootstrap stability (ARI>=0.5) ก่อน แล้วค่อยใช้ silhouette ตัดสินในกลุ่มที่เสถียร** —
+bootstrap stability คำนวณโดย resample ข้อมูล 100 รอบ (with replacement), fit K-means บน resample
+แต่ละรอบ แล้วใช้ centroid ที่ได้ predict label ของข้อมูลเต็มชุดเดิม เทียบกับ label จาก fit เต็มชุด
+เดิมด้วย Adjusted Rand Index — ค่าเฉลี่ย ARI จาก 100 รอบ = stability score
+
+**ข้อมูลที่ใช้:** `model_c_event_clustering/data/event_features.csv` (E2, 4,113 แถว, 11 sector,
+n ต่อ sector = 424 [ปกติ] หรือ 127/170 [XLC/XLRE ที่ ETF เปิดตัวทีหลัง])
+
+**ผลลัพธ์:** `model_c_event_clustering/data/e3_cluster_assignments.csv` +
+`e3_stability_report.csv` — **ทั้ง 11 sector มี cluster ที่เสถียร (ARI ผ่าน 0.5 ทุก k ที่ลองจริง)**
+ARI เฉลี่ยของ k ที่เลือกอยู่ในช่วง 0.62-0.90 (สูงมาก) k ที่เลือกส่วนใหญ่คือ k=3 (8/11 sector),
+k=4 สำหรับ XLC, XLF, XLY
+
+**มุมมอง/การตีความ:** ผลที่ cluster เสถียรทุก sector **ไม่ใช่เรื่องน่าแปลกใจหรือสัญญาณบวกใดๆ
+ต่อคำถามวิจัยหลัก** — feature ที่ใช้ (cum_return_pre/post, reversion_ratio ฯลฯ) เป็นตัวชี้วัด
+ต่อเนื่องที่มี variance ตามธรรมชาติ (บางข่าวราคาขึ้นแรง บางข่าวลงแรง บางข่าวแทบไม่ขยับ) K-means
+แทบจะหา partition ที่เสถียรทางเรขาคณิตได้เสมอจากข้อมูลแบบนี้ — **คำถามที่แท้จริงยังไม่ได้ตอบ**คือ
+cluster เหล่านี้สอดคล้องกับ `sector_impact_score` จาก rule engine (exp_03) หรือเป็นแค่การแบ่งกลุ่ม
+ตามขนาดโดยไม่เกี่ยวกับตัวแปรที่ rule engine ใช้เลย — ต้องรอ Phase E5 (Kruskal-Wallis ตาม
+pre-registered criteria ใน E4) ถึงจะตอบได้จริง
+
+**ขั้นต่อไปที่ควรลอง:** Phase E4 — เขียน pre-registered test criteria (commit ก่อนเห็นผล E5
+เท่านั้น) แล้ว Phase E5 — join กับ sector_impact_score จาก exp_03 รัน Kruskal-Wallis ตามที่
+pre-register ไว้เป๊ะ
