@@ -472,3 +472,62 @@ pre-register ไว้เป๊ะ
 
 **ขั้นต่อไปที่ควรลอง:** Phase E5 — join กับ `sector_impact_score` จาก exp_03 จริง รัน
 Kruskal-Wallis ตามที่ pre-register ไว้เป๊ะ ไม่ปรับอะไรเพิ่มหลังเห็นผล
+
+---
+## exp_04 Phase E5 — รันเทสตาม pre-registered criteria + triangulation — 2026-09-14 07:22
+
+**วิธีที่ใช้:** เขียน `model_c_event_clustering/scripts/e5_validate.py` — รัน rule engine ของ
+`exp_03` จริง (reuse `run_engine_on_all_news()` จาก `model_c_rulebase/scripts/r5b_validate.py`
+โดยตรง ไม่เขียน logic คำนวณคะแนนใหม่ กัน engine 2 เวอร์ชันเพี้ยนจากกัน) join
+`sector_impact_score` กับ cluster label จาก E3 แล้วรัน Kruskal-Wallis ตามที่ pre-register ไว้ใน
+E4 เป๊ะ (ไม่ปรับ metric/threshold ใดๆ เพิ่มหลังเห็นผล)
+
+**บั๊กที่เจอระหว่างรัน (แก้ก่อนได้ผลจริง):** channel score บางช่อง (เช่น C3 สำหรับทุก sector
+ยกเว้น XLF ที่ loading=0 เสมอ) เป็นค่าเดียวกันหมดทุกแถวของ sector นั้น (ไม่มี variance เลย) ทำให้
+`scipy.stats.kruskal` raise `ValueError: All numbers are identical` — แก้โดยเช็ค variance ก่อน
+เรียก kruskal ถ้าไม่มี variance เลยให้บันทึกเป็น `NaN`/`note="no variance"` ไม่ใช่เดา p-value
+หรือข้ามเงียบๆ
+
+**ข้อมูลที่ใช้:** `sector_impact_score` จาก exp_03 R4 (rerun จริงผ่านโค้ดเดียวกับ R5b, 436 ข่าว
+x 11 sector = 4,796 แถว), cluster label จาก E3 (4,113 แถว, ทั้ง 11 sector), หลัง join เหลือ
+3,955 แถว (ส่วนต่างจากข่าวที่ R3 สกัดไม่สำเร็จ 16 ข่าว + จุดตัดจาก E1's window exclusion)
+
+**ผลลัพธ์ (ตัวเลขจริง, primary test = sector_impact_score):**
+
+| Sector | n | k | H | p | eta² | ผ่าน/ไม่ผ่าน | R5 rho(N=1) | R5 rho(N=21) |
+|---|---|---|---|---|---|---|---|---|
+| XLB | 408 | 3 | 1.711 | 0.4251 | −0.0007 | fail | −0.019 | −0.098 |
+| XLC | 121 | 4 | 2.266 | 0.5191 | −0.0063 | fail | +0.213 | +0.190 |
+| XLE | 408 | 3 | 0.428 | 0.8072 | −0.0039 | fail | +0.037 | −0.063 |
+| XLF | 408 | 4 | 1.050 | 0.7892 | −0.0048 | fail | +0.080 | +0.104 |
+| XLI | 408 | 3 | 0.420 | 0.8105 | −0.0039 | fail | +0.078 | +0.052 |
+| XLK | 408 | 3 | 1.104 | 0.5758 | −0.0022 | fail | −0.033 | −0.091 |
+| XLP | 408 | 3 | 1.867 | 0.3933 | −0.0003 | fail | −0.058 | +0.012 |
+| XLRE| 162 | 3 | 1.145 | 0.5642 | −0.0054 | fail | −0.019 | +0.070 |
+| XLU | 408 | 3 | 1.571 | 0.4559 | −0.0011 | fail | +0.061 | +0.006 |
+| XLV | 408 | 3 | 2.994 | 0.2238 | +0.0025 | fail | −0.122 | −0.118 |
+| XLY | 408 | 4 | 1.887 | 0.5962 | −0.0028 | fail | −0.024 | +0.018 |
+
+**0/11 sector ผ่านเกณฑ์ (p<0.05 AND eta²>0.06) — negative result เต็มรูปแบบ ทั้ง primary test**
+
+**Secondary/exploratory (channel C1-C7, 77 การทดสอบ = 11 sector x 7 channel):** **0/77 ผ่าน
+เกณฑ์เช่นกัน** — ที่น่าสนใจ: XLP channel C4 (credit risk) ได้ p=0.0389 (< 0.05 เดี่ยวๆ) แต่
+eta²=0.0111 (< 0.06 ขาดลอย) → **ไม่ผ่าน** ตามเกณฑ์คู่ที่ pre-register ไว้ — เป็นตัวอย่างที่ตรง
+เป้าหมายการออกแบบเกณฑ์นี้พอดี (กัน sample size ใหญ่ [n=408] ทำให้ p ต่ำได้ง่ายโดยไม่มี effect
+ขนาดที่มีความหมายจริง) ถ้าไม่มี eta² threshold คู่ไว้ อาจรายงานผิดว่า XLP มีสัญญาณ
+
+**Triangulation check กับ R5 (ตามที่ pre-register ไว้):** **ทั้ง 11 sector สอดคล้องกับ R5 เดิม
+100%** — ไม่มี sector ไหนขัดแย้งกัน (ไม่มีเคสที่ผ่านเกณฑ์ exp_04 แต่ R5 บอกไม่มีสัญญาณ หรือกลับกัน)
+ทุก sector ทั้งสองวิธีให้ข้อสรุปเดียวกัน: ไม่มีสัญญาณที่มีนัยสำคัญและขนาดผลใหญ่พอ
+
+**มุมมอง/การตีความ:** นี่คือ **triangulation ที่สำเร็จตามเป้าหมาย** — exp_04 ใช้วิธีวัดที่ต่างไป
+โดยสิ้นเชิงจาก exp_03 (ดูรูปร่างเส้นราคาทั้งเส้น + cluster แทนที่จะดู correlation กับ CAR
+endpoint เดียว) แต่ได้ข้อสรุปเดียวกันเป๊ะ: **rule-based sector_impact_score จาก exp_03 ไม่มี
+ความสัมพันธ์ที่ตรวจจับได้กับพฤติกรรมราคาจริงไม่ว่าจะวัดด้วยวิธีไหน** — ความสอดคล้อง 100% ระหว่าง
+สองวิธีที่เป็นอิสระจากกัน (correlation-based vs. cluster-based) ทำให้ข้อสรุป negative ของ exp_03
+**หนักแน่นขึ้นมาก** ไม่ใช่แค่เป็น artifact ของวิธีวัดแบบใดแบบหนึ่ง
+
+**ขั้นต่อไปที่ควรลอง:** ไม่มี Phase E6 (ตามที่ pre-register ไว้ — เป้าหมาย exp_04 คือ triangulate
+ไม่ใช่สร้างโมเดลใหม่) ปิด exp_04 ด้วยผลนี้ เปิด PR ทิ้งไว้ให้ผู้ใช้ตัดสินใจเรื่อง merge — ข้อเสนอ
+สำหรับงานถัดไปนอก exp_04: ทุ่มเวลาที่ sector-news component (`feature/ensemble-sandbox`) แทน
+ตามที่ exp_03 R6 แนะนำไว้แล้ว ยืนยันซ้ำด้วยหลักฐานที่แข็งแรงขึ้นจาก exp_04 นี้
