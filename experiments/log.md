@@ -375,3 +375,42 @@ min=0, median=7, max=10
 
 **ขั้นต่อไปที่ควรลอง:** Phase E2 — สกัด feature (cum_return_pre, cum_return_post_short/full,
 peak_day, reversion_ratio) จาก price path นี้ต่อ (ข่าว x sector), สุ่มตรวจ 5 แถวด้วยมือเทียบกราฟจริง
+
+---
+## exp_04 Phase E2 — feature extraction จาก price path — 2026-09-14 07:13
+
+**วิธีที่ใช้:** เขียน `model_c_event_clustering/scripts/e2_features.py` สรุป price path ราย
+วัน (E1) เป็น 5 feature ต่อ (ข่าว x sector): `cum_return_pre` (= cum_ar ที่ offset −1),
+`cum_return_post_short` (= cum_ar ที่ offset +3), `cum_return_post_full` (= cum_ar ที่ offset
+สุดท้ายฝั่ง post), `peak_offset`/`peak_value` (จุดสุดขั้วฝั่ง post ในทิศทางเดียวกับการเคลื่อนไหว
+สุทธิ), `reversion_ratio` (= cum_return_post_full ÷ peak_value, เป็น `NaN` ถ้า peak ≈ 0 กัน
+หารเลขใกล้ 0 จนได้ค่าพิสดาร)
+
+**ข้อมูลที่ใช้:** `model_c_event_clustering/data/price_paths.csv` (E1, 42,252 แถว, 424 ข่าว)
+
+**ผลลัพธ์:** `model_c_event_clustering/data/event_features.csv` — 4,113 แถว (424 ข่าว x
+sector, เฉลี่ย ~9.7 sector/ข่าวเพราะ XLC/XLRE ขาดในข่าวก่อนเปิดตัว ETF) **0 แถวเป็น NaN ทั้ง
+`cum_return_post_short` และ `reversion_ratio`** (ทุก window ที่ผ่าน E1 กว้างพอมี offset+3 จริง
+และไม่มี peak ที่ ≈ 0 เป๊ะเลยสักแถว) `reversion_ratio` เฉลี่ย = 0.787 (std=0.289) — บ่งชี้ว่าโดย
+เฉลี่ยราคาหลังข่าวมักมี partial reversion เล็กน้อยจาก peak ไม่ใช่ full momentum ต่อเนื่องหรือ
+full reversal เต็มที่
+
+**สุ่มตรวจ 5 แถวด้วยมือ (เทียบ feature ที่คำนวณได้กับ cum_ar series ทั้งเส้นตรงๆ ไม่ใช่แค่เชื่อ
+สูตร):**
+- 2000-03-21 (XLP): ราคาไหลลงต่อเนื่องตลอด post window (offset 1→4: −0.014→−0.066) peak ตรงที่
+  offset สุดท้ายพอดี, reversion_ratio=1.000 (ไม่มีการสะท้อนกลับเลย ถูกต้องตามรูปเส้น)
+- 2000-05-16 (XLK): จุดต่ำสุดที่ offset 3 (−0.040) แล้วฟื้นเล็กน้อยที่ offset 4 (−0.037) →
+  reversion_ratio=0.925 ตรงกับที่เห็นในเส้นจริง
+- 2002-10-23 (XLP): จุดต่ำสุดที่ offset 3 (−0.024) แล้ว**สะท้อนกลับแรงมาก**เหลือ −0.003 ที่
+  offset 5 → reversion_ratio=0.145 (ตัวอย่างที่ metric นี้จับพฤติกรรม mean-reversion ได้ชัดเจน)
+- 2015-09-17 (XLK): ราคาขึ้นต่อเนื่องตลอด → reversion_ratio=1.000 ถูกต้อง
+- 2017-02-01 (XLB): จุดต่ำสุดที่ offset 4 (−0.019) ฟื้นเล็กน้อยที่ offset 5 (−0.018) →
+  reversion_ratio=0.947 ตรงกับเส้นจริง
+ทุกตัวอย่างตัวเลขที่คำนวณได้ตรงกับรูปเส้น cum_ar จริงเป๊ะ ไม่มีความคลาดเคลื่อน
+
+**มุมมอง/การตีความ:** feature ทั้ง 5 ตัวจับพฤติกรรมได้ตามที่ตั้งใจ (ทิศทาง, ขนาด, และการสะท้อน
+กลับของราคา) — reversion_ratio โดยเฉพาะดูมีความหมายและกระจายตัวได้ดี (ไม่กระจุกที่ 0 หรือ 1)
+พร้อมป้อนเข้า clustering ใน E3
+
+**ขั้นต่อไปที่ควรลอง:** Phase E3 — standardize feature แล้ว clustering แยกต่อ sector (k=3-5)
+พร้อม bootstrap stability check (ARI) ก่อนเลือก k
