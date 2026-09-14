@@ -339,3 +339,39 @@ Test set (87 ข่าว, 957 แถว) **ยังไม่ถูกแตะ
 impact engine`) อ้างอิงผลสรุปจากทั้ง 6 phase ใน log นี้ — งานถัดไปที่ควรทำนอก branch นี้คือกลับไป
 ทุ่มเวลาที่ `feature/ensemble-sandbox` (sector-news component) และพิจารณา weighted ensemble ที่ให้
 น้ำหนัก FOMC/macro component ต่ำ/เป็น auxiliary signal เท่านั้น
+
+---
+## exp_04 Phase E1 — non-overlapping price paths — 2026-09-14 07:11
+
+**วิธีที่ใช้:** เริ่ม `exp_04` (branch `feature/model-c-event-clustering`, แยกจาก
+`feature/model-c-rulebase` ซึ่ง PR #1 ยังไม่ merge เข้า main ณ ตอนแยก branch — ใช้ branch ต้นทาง
+โดยตรงแทนเพราะไฟล์ที่ต้องใช้อยู่ที่นั่น) เป้าหมาย: triangulate ผลลบของ `exp_03`/R5 ด้วยวิธีต่างไป
+(ดู "รูปร่าง" ของเส้นราคาทั้งเส้นแทนที่จะดู CAR endpoint เดียว) เขียน
+`model_c_event_clustering/scripts/e1_price_paths.py` คำนวณ `window_days` ต่อข่าวอัตโนมัติ
+(`min(10, gap_to_next//2, gap_to_prev//2)` คำนวณจากลำดับข่าว**รวมทุก source** เพราะ Beige Book/
+FOMC ออกสลับกันถี่) กันหน้าต่างราคาทับกันระหว่างข่าวที่ออกใกล้กัน ข่าวที่ `window_days < 5` ตัด
+ออกทั้งข่าว (ไม่ยัดเข้าไป)
+
+**นิยามที่ตัดสินใจเอง (ไม่ได้ระบุไว้ตายตัวในสเปก ต้องบันทึกไว้):** `cum_ar` (cumulative abnormal
+return) นิยามให้ต่อเนื่องผ่าน 0 ที่ `t0` พอดี — ก่อน `t0` สะสม "ถอยหลัง" จาก `t0` (ติดลบตาม
+นิยาม), หลัง `t0` สะสมไปข้างหน้าแบบ CAR เดิมทุกประการ — validate ด้วยมือ 1 ตัวอย่าง
+(1999-12-08, XLF) คำนวณ cumsum ตามสูตรเทียบกับที่โค้ดให้มา **ตรงกันทุกตำแหน่ง**
+
+**ข้อมูลที่ใช้:** `data/processed/labels.parquet` (452 ข่าว, ไม่แก้), `data/raw/
+sector_prices_raw.parquet` (price cache เดิมจาก exp_01/02, 7,720 trading days)
+
+**ผลลัพธ์:** `model_c_event_clustering/data/price_paths.csv` — **424/452 ข่าวผ่าน** (93.8%),
+**28 ข่าวถูกตัดออก (6.2%)** เพราะ `window_days < 5`: จำแนกตาม window_days ที่คำนวณได้ —
+window_days=3 (13 ข่าว), =0 (6 ข่าว, ส่วนใหญ่คือคู่ 2014-09-17 ที่มี 2 press release วันเดียวกัน),
+=1 (4 ข่าว), =4 (3 ข่าว รวมถึง **2020-03-15 emergency COVID cut** — ตัดออกเพราะอยู่ใกล้ 2020-03-03
+เกินไป), =2 (2 ข่าว) — 42,252 แถว (ข่าว x sector x offset วัน) ทั้งหมด, `window_days` จริง:
+min=0, median=7, max=10
+
+**มุมมอง/การตีความ:** อัตราคงเหลือ 93.8% สูงพอใช้งานต่อได้จริง ที่น่าสนใจคือ 2020-03-15 (ตัวอย่าง
+สำคัญที่ใช้ใน R2/R3 ของ exp_03) ถูกตัดออกจาก exp_04 เพราะ window ทับกับ 2020-03-03 — เป็นข้อจำกัด
+จริงของวิธี non-overlapping window (ช่วงวิกฤตที่ Fed ประชุมถี่ผิดปกติ จะเสีย sample พอดีตอนที่
+น่าจะมีสัญญาณแรงที่สุด) ต้องระบุไว้เป็น limitation ของ exp_04 เทียบกับ exp_03 ที่ไม่มีปัญหานี้
+(ใช้ fixed ±30 วันได้เพราะไม่สนใจเรื่อง window ทับกัน)
+
+**ขั้นต่อไปที่ควรลอง:** Phase E2 — สกัด feature (cum_return_pre, cum_return_post_short/full,
+peak_day, reversion_ratio) จาก price path นี้ต่อ (ข่าว x sector), สุ่มตรวจ 5 แถวด้วยมือเทียบกราฟจริง
