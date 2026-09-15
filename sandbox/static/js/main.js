@@ -300,9 +300,75 @@ function initDashboard() {
     document.getElementById(id).addEventListener("change", render);
   });
 
+  // --- Fundamentals panel (P/E, market cap, EPS ฯลฯ) ---
+  // แยก fetch จาก render() เพราะ fundamentals ผูกกับ ticker เท่านั้น (ไม่ผูกกับ date
+  // range/indicator toggle) — เปลี่ยน date range ไม่ควรเรียก API ภายนอกซ้ำโดยไม่จำเป็น
+  const fundamentalsPanel = document.getElementById("fundamentals-panel");
+
+  function fmtNumber(v, decimals) {
+    if (v === null || v === undefined) return "-";
+    return Number(v).toFixed(decimals);
+  }
+
+  function fmtMarketCap(v) {
+    if (v === null || v === undefined) return "-";
+    if (v >= 1e12) return (v / 1e12).toFixed(2) + "T";
+    if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
+    if (v >= 1e6) return (v / 1e6).toFixed(2) + "M";
+    return String(v);
+  }
+
+  function fmtPercent(v) {
+    if (v === null || v === undefined) return "-";
+    return (Number(v) * 100).toFixed(2) + "%";
+  }
+
+  async function loadFundamentals() {
+    const ticker = tickerSelect.value;
+    fundamentalsPanel.innerHTML = '<p class="hint">Loading...</p>';
+    let data;
+    try {
+      const res = await fetch("/api/fundamentals/" + ticker);
+      data = await res.json();
+    } catch (err) {
+      fundamentalsPanel.innerHTML = '<p class="fundamentals-error">เชื่อมต่อ server ไม่ได้: ' + err.message + "</p>";
+      return;
+    }
+
+    if (data.error && data.pe_ratio === undefined) {
+      // ไม่มี cache เลยและเรียก API ไม่สำเร็จ — ไม่มีตัวเลขให้โชว์
+      fundamentalsPanel.innerHTML = '<p class="fundamentals-error">' + data.error + "</p>";
+      return;
+    }
+
+    const staleTag = data.stale ? '<span class="fundamentals-stale-tag">CACHED (stale)</span>' : "";
+    const errorNote = data.error ? '<p class="fundamentals-error">' + data.error + "</p>" : "";
+
+    fundamentalsPanel.innerHTML = `
+      ${staleTag}
+      <div class="fundamentals-name">${data.name || ticker}${data.sector ? " — " + data.sector : ""}</div>
+      <dl class="fundamentals-grid">
+        <dt>P/E Ratio</dt><dd>${fmtNumber(data.pe_ratio, 2)}</dd>
+        <dt>PEG Ratio</dt><dd>${fmtNumber(data.peg_ratio, 2)}</dd>
+        <dt>EPS</dt><dd>${fmtNumber(data.eps, 2)}</dd>
+        <dt>Market Cap</dt><dd>${fmtMarketCap(data.market_cap)}</dd>
+        <dt>Dividend Yield</dt><dd>${fmtPercent(data.dividend_yield)}</dd>
+        <dt>Beta</dt><dd>${fmtNumber(data.beta, 2)}</dd>
+        <dt>Profit Margin</dt><dd>${fmtPercent(data.profit_margin)}</dd>
+        <dt>ROE (TTM)</dt><dd>${fmtPercent(data.roe_ttm)}</dd>
+        <dt>52W High</dt><dd>${fmtNumber(data.week52_high, 2)}</dd>
+        <dt>52W Low</dt><dd>${fmtNumber(data.week52_low, 2)}</dd>
+        <dt>Analyst Target</dt><dd>${fmtNumber(data.analyst_target_price, 2)}</dd>
+      </dl>
+      ${errorNote}
+    `;
+  }
+
   tickerSelect.addEventListener("change", render);
+  tickerSelect.addEventListener("change", loadFundamentals);
   reloadBtn.addEventListener("click", render);
   render();
+  loadFundamentals();
 }
 
 // --------------------------------------------------------------------------

@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
-from sandbox import config, events_bulk, events_store, experiments_db, historical_data
+from sandbox import config, events_bulk, events_store, experiments_db, fundamentals, historical_data
 from sandbox.analytics import indicators
 from sandbox.engine import simulate
 from sandbox.inference import model_a, model_b, model_c
@@ -230,6 +230,17 @@ def api_indicators(ticker):
             "macd_hist": _series_to_json_list(df["macd_hist"]),
         }
     )
+
+
+# --------------------------------------------------------------------------
+# API — fundamentals (P/E ratio, market cap, EPS ฯลฯ — Alpha Vantage OVERVIEW, cached)
+# --------------------------------------------------------------------------
+
+@app.route("/api/fundamentals/<ticker>")
+def api_fundamentals(ticker):
+    if ticker not in config.TICKERS:
+        return jsonify({"error": f"ticker ต้องเป็นหนึ่งใน {config.TICKERS}"}), 400
+    return jsonify(fundamentals.get_fundamentals(ticker))
 
 
 # --------------------------------------------------------------------------

@@ -868,3 +868,60 @@ positive/false negative สูงถ้าไม่ตรวจ raw text จร�
 ตัดสินใจว่าจะปล่อยเป็น mistagged ต่อไป หรือ manual review เพราะจำนวนน้อยพอจะดูเองได้ (3)
 พิจารณา re-run `filter_relevant_news.py` เต็มไฟล์อีกครั้งหลังแก้ sector แล้ว เผื่อมี
 weak_signal/company_level tag ที่เปลี่ยนไปตาม sector ใหม่ (ยังไม่ได้ตรวจว่าจำเป็นหรือไม่)
+
+---
+## sandbox_fundamentals_upgrade_and_smoke_test — 2026-09-15 14:37 (+07:00)
+
+**วิธีที่ใช้:** สอง task รวมกัน (1) auto-test sandbox web simulator ที่มีอยู่แล้ว (Dashboard/
+Events/Rules/Experiments/Strategies) ด้วย automated check ทุกแบบที่ทำได้ในสภาพแวดล้อมนี้ (ไม่มี
+browser automation tool ใช้งานได้ในรอบนี้ — เจ้าของเครื่องเลือก "continue without browser
+tools" ตอนติดตั้ง Claude in Chrome extension) (2) เพิ่ม fundamental data ต่อ ticker (P/E ratio,
+market cap, EPS, dividend yield, beta, PEG, profit margin, ROE TTM, 52-week high/low, analyst
+target price) เข้า Dashboard — โมดูลใหม่ `sandbox/fundamentals.py` เรียก Alpha Vantage
+`OVERVIEW` endpoint (คนละ endpoint จาก `collect_alpha_vantage.py` ที่ใช้ดึงข่าว) cache เป็นไฟล์
+JSON ต่อ ticker (`sandbox/data/fundamentals/{TICKER}.json`, TTL 24 ชม., gitignored เหมือน
+experiments.db) fallback ไป cache เก่า (mark `stale: true`) ถ้าเรียก API ไม่สำเร็จ ไม่มีการ
+fabricate ตัวเลขใดๆ — เพิ่ม endpoint `/api/fundamentals/<ticker>`, panel ใหม่ในหน้า Dashboard
+sidebar (`fundamentals-panel`), และ script prefetch `sandbox/scripts/fetch_fundamentals.py`
+(rate-limit 15s/ticker ตาม free tier 5 req/min)
+
+**ข้อมูลที่ใช้:** โค้ดที่มีอยู่แล้วทั้งหมดใน `sandbox/` (ไม่แก้ inference/rules/engine) +
+เรียก Alpha Vantage OVERVIEW จริงสำหรับ universe 5 ตัว (NVDA, META, TSLA, SCHW, FDX) ผ่าน
+`ALPHA_VANTAGE_API_KEY` ที่มีอยู่แล้วใน `.env` (ใช้ร่วมกับ `collect_alpha_vantage.py`)
+
+**ผลลัพธ์:** (ตัวเลขจริงจากการรันจริงทั้งหมด ไม่มีเดา)
+- `python3 -m sandbox.scripts.smoke_test` → 20/20 PASS, exit code 0
+- `python3 -m unittest sandbox.scripts.test_combine -v` → 13/13 ok
+- `python3 -m py_compile` บนไฟล์ python ใหม่/แก้ทั้งหมด → ผ่าน, `node --check` บน
+  `static/js/main.js` → ผ่าน (ไม่มี syntax error)
+- เรียก Alpha Vantage OVERVIEW จริงผ่าน `fetch_fundamentals.py` ครบ 5/5 ticker สำเร็จ ตัวอย่าง
+  ตัวเลขจริงที่ได้: NVDA PE=27.63 MarketCap=5.271T EPS=7.9, META PE=24.39
+  MarketCap=1.651T EPS=26.57, TSLA PE=332.22 MarketCap=1.443T EPS=1.1, SCHW PE=19.54
+  MarketCap=185.5B EPS=5.49, FDX PE=16.81 MarketCap=73.8B EPS=18.56 — cache file 5 ไฟล์เขียน
+  สำเร็จใน `sandbox/data/fundamentals/`
+- ทดสอบ cache path (`force_refresh=False`) ยิงซ้ำ NVDA → คืนค่าเดิมจาก cache, `stale: false`
+  ไม่เรียก API ซ้ำ (ยืนยันด้วย `fetched_at` timestamp ไม่เปลี่ยน)
+- เปิด Flask server จริง (`python3 -m sandbox.app.server`, port 5050) แล้ว curl ทุกหน้า: `/dashboard`,
+  `/events`, `/rules`, `/experiments`, `/strategies` → HTTP 200 ทั้งหมด
+- curl API เดิมทุกตัวยังทำงานปกติหลังแก้ (`/api/prices/NVDA`, `/api/indicators/NVDA`,
+  `/api/events?ticker=NVDA`) → HTTP 200 ทั้งหมด (ไม่มี regression)
+- curl API ใหม่ `/api/fundamentals/NVDA` → HTTP 200, JSON ตรง schema ที่ออกแบบไว้
+- curl `/api/fundamentals/BADTICKER` (ticker นอก universe) → HTTP 400 ตามที่ตั้งใจ (validation
+  เดียวกับ endpoint เดิม)
+- ตรวจ HTML ของ `/dashboard` มี `<div id="fundamentals-panel">` จริง
+
+**มุมมอง/การตีความ:** ระบบเดิม (Phase 0-5) ยังทำงานถูกต้องครบทุกหน้า/endpoint ไม่มี regression
+จากการเพิ่มโมดูลใหม่ Alpha Vantage OVERVIEW ให้ข้อมูล fundamental ครบตามที่ต้องการ (P/E ฯลฯ)
+สำหรับทั้ง 5 ticker ใน universe ไม่มีตัวไหน rate-limit/error เพราะ prefetch เว้นจังหวะ 15s/ครั้ง
+ตามที่ออกแบบไว้ **ข้อจำกัดที่ยังเหลืออยู่**: ไม่มี browser automation tool ในรอบนี้ (เจ้าของ
+เครื่องเลือก "continue without browser tools" หลัง skill `claude-in-chrome` ถูกเรียก) จึงยังไม่
+ได้เห็น fundamentals panel render จริงบนหน้าจอ/เช็ค JS console error ด้วยตา — ทุกอย่างที่ automate
+ได้ (HTTP status, JSON schema, JS syntax, ค่าตัวเลขจริงจาก API) ตรวจผ่านหมดแล้ว เหมือนกรณีเดียวกับ
+ที่ log ไว้ใน `sandbox/OVERNIGHT_LOG.md` (Phase 3-5)
+
+**ขั้นต่อไปที่ควรลอง:** (1) ให้ผู้ใช้เปิด browser เองยืนยันว่า fundamentals panel แสดงผลถูกต้อง
+ไม่มี JS error (หรือเชื่อม claude-in-chrome ในรอบถัดไป) (2) พิจารณาว่า OVERVIEW field อื่นที่ยังไม่
+ได้ดึง (เช่น QuarterlyEarningsGrowthYOY, RevenueTTM, ExDividendDate) มีประโยชน์กับ Model A
+(Piotroski) หรือไม่ เมื่อเริ่มเขียน inference จริงของ Model A (3) เก็บ Alpha Vantage free-tier
+quota ไว้ (25 req/day รวมทุก endpoint ของ key เดียวกับที่ `collect_alpha_vantage.py` ใช้) —
+ถ้าจะรัน `fetch_fundamentals.py` บ่อยๆ ควรเพิ่ม TTL หรือแยก API key

@@ -21,6 +21,8 @@ sandbox/
   events_bulk.py                # parse+validate CSV bulk upload (preview ก่อน commit เสมอ)
   experiments_db.py            # Phase 5 — SQLite (sandbox/experiments.db) run/list/diff experiment
   historical_data.py           # เชื่อม macro (C) event จริง (477 ข่าว FOMC/Beige Book) เข้า dashboard
+  fundamentals.py               # ดึง+cache fundamental snapshot ต่อ ticker (P/E, market cap, EPS ฯลฯ)
+                                # จาก Alpha Vantage OVERVIEW — ไม่ใช่ Model A (Piotroski ยังเป็น stub)
   analytics/
     indicators.py                # SMA20/50, RSI(14), MACD(12,26,9) — คำนวณจากราคาที่มีอยู่แล้ว
     metrics.py                    # total return/max drawdown/win rate + buy-and-hold benchmark
@@ -49,8 +51,10 @@ sandbox/
     generate_rule_table.py       # import decide(a,b,c) จาก logic module (เช่น rule_v1_logic) -> rule_v{N}.json
     smoke_test.py                # sanity check inference stub + config แบบไม่ต้องเปิด server
     test_combine.py              # unit test ของ sandbox/engine/combine.py + rule_v1_logic.py (unittest, 13 case)
+    fetch_fundamentals.py         # pre-fetch fundamentals ทุก ticker (rate-limit 15s/ตัวตาม Alpha Vantage free tier)
   data/
     prices/{TICKER}.csv          # Phase 0 output
+    fundamentals/{TICKER}.json   # cache ของ fundamentals.py (gitignored, TTL 24 ชม., regenerable)
     validation_report.md         # Phase 0 output
     manual_events.csv            # Phase 3 output — event ที่ inject จากหน้า Events
                                   # (gitignored ตัวไฟล์ข้อมูล, source="manual" เสมอ,
@@ -85,7 +89,10 @@ python3 -m sandbox.app.server
   sector), จุดสีบนแท่งเทียน = company news event เฉพาะ ticker นั้น, คลิก marker เพื่อดู
   รายละเอียด (วันที่, class, score, is_stub/real badge) — checkbox เปิด/ปิด macro (C)/company
   (B) marker แยกกันได้ทันทีไม่ต้อง reload, indicator overlay/subplot (SMA20/50, Volume,
-  RSI(14), MACD)
+  RSI(14), MACD), panel **Fundamentals** ต่อ ticker (P/E ratio, PEG, EPS, market cap, dividend
+  yield, beta, profit margin, ROE TTM, 52-week high/low, analyst target price — จาก Alpha
+  Vantage OVERVIEW ผ่าน `sandbox/fundamentals.py` cache 24 ชม. ต่อ ticker, badge "CACHED
+  (stale)" ถ้าเรียก API ใหม่ไม่สำเร็จและต้อง fallback ไปใช้ cache เก่า)
 - **Events** (`/events`) — manual event injection: เลือก ticker ก่อน แล้วเลือก scope B
   (หุ้นนี้เท่านั้น, Model B) หรือ C (ทุกหุ้น, Model C แยกตาม sector) เลือกวันที่ (จำกัดในช่วง
   ที่มีข้อมูลราคาจริง) พิมพ์ headline แล้ว "รันผ่านโมเดล" — ปุ่ม B จะ disable อัตโนมัติถ้า
