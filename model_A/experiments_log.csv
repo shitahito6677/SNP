@@ -1,0 +1,2 @@
+date,version,change,n_variants_this_version,n_variants_cumulative,notes
+2026-09-27,v0,data audit (no signal/backtest yet),0,0,"coverage audit only; no strategy variants tested"

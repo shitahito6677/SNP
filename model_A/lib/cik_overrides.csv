@@ -1,0 +1,31 @@
+ticker,spell_start,valid_from,valid_to,cik,confidence,evidence
+APA,1997-07-28,,2022-02-21,6769,high,Apache Corp; APA Corp holdco (1841666) first 10-K filed 2022-02-22 -> switch on that date
+APA,1997-07-28,2022-02-22,,1841666,high,APA Corp holdco first 10-K 2022-02-22 (SEC RSS)
+BBT,1997-12-04,,,92230,high,SEC formerNames of 92230 = BB&T CORP; current BBT ticker (1108134) = Beacon Financial (ex Berkshire Hills Bancorp) = unrelated
+BLK,2011-04-04,,2025-02-24,1364742,high,SEC formerNames of 1364742 = BlackRock Inc.; new holdco 2012383 first 10-K 2025-02-25
+BLK,2011-04-04,2025-02-25,,2012383,high,new BlackRock Inc. holdco first 10-K 2025-02-25 (SEC RSS)
+BRK.B,2010-02-16,,,1067983,high,XBRL prefix 'brk' belongs to BRK Inc./Gen 2 Technologies (1532926) = unrelated shell; Berkshire Hathaway = 1067983
+CI,1996-01-02,,2019-02-27,701221,high,SEC formerNames of 701221 = CIGNA CORP; new Cigna holdco 1739940 first 10-K 2019-02-28
+CI,1996-01-02,2019-02-28,,1739940,high,Cigna Group holdco first 10-K 2019-02-28 (SEC RSS)
+CPT,2022-04-04,,,906345,high,prefix 'cpt' also used by Copper Property CTL Pass Through Trust (1837671) = unrelated; Camden Property Trust = 906345
+CPWR,1999-01-04,,,859014,high,Compuware Corp = 859014; current CPWR ticker (827099) = Ocean Thermal Energy = unrelated
+DD,1996-01-02,,,30554,high,spell ends 2017-08-31 = E I du Pont (formerNames of 30554); DowDuPont/DuPont de Nemours (1666700) is the later DWDP/DD spells
+DIS,1996-01-02,,2019-11-19,1001039,high,SEC formerNames of 1001039 = WALT DISNEY CO/; new Disney holdco 1744489 first 10-K 2019-11-20
+DIS,1996-01-02,2019-11-20,,1744489,high,Walt Disney Co holdco first 10-K 2019-11-20 (SEC RSS)
+DOC,2024-03-04,,,765880,high,DOC since 2024-03 = Healthpeak (765880) after Physicians Realty merger; 1574540 = old Physicians Realty (DOC DR Holdco)
+EP,1999-10-26,,,1066107,high,El Paso Corp = 1066107 (formerNames); current EP ticker (887396) = Empire Petroleum = unrelated
+FTI,2009-06-05,,2017-01-12,1135152,high,FMC Technologies = 1135152; TechnipFMC (1681459) first 10-K 2017-01-13
+FTI,2009-06-05,2017-01-13,,1681459,high,TechnipFMC plc first 10-K 2017-01-13 (SEC RSS)
+GHC,2007-12-31,,,104889,high,Graham Holdings (formerNames WASHINGTON POST CO) = 104889; prefix 'ghc' also used by Grant Hartford Corp (1425392) = unrelated
+IR,2010-11-17,,2020-03-02,1466258,high,Ingersoll-Rand plc (now Trane Technologies) = 1466258; fja starts TT spell 2020-03-03
+IR,2010-11-17,2020-03-03,,1699150,medium,from 2020-03-03 IR ticker = Ingersoll Rand Inc (ex Gardner Denver 1699150); fja keeps IR spell continuous -> assumes same-day replacement
+JEF,2007-08-27,,,96223,medium,fja has no LUK spell -> JEF spell 2007-2019 treated as Leucadia/Jefferies Financial (96223); Jefferies Group (1084580) was the pre-2013 JEF ticker - ambiguous before 2013 (see v0 notebook)
+LDOS,2009-12-21,,,1336920,high,parent SAIC Inc./Leidos Holdings = 1336920 (formerNames SAIC Inc.); 353394 = operating subsidiary
+PARA,2022-02-17,,,813828,high,Paramount Global (formerNames ViacomCBS/CBS) = 813828; current PARA ticker (1826011) = Banzai International = unrelated
+PEG,1996-01-02,,,788784,high,parent Public Service Enterprise Group = 788784; 81033 = subsidiary PSE&G (combined filer)
+SUN,1996-01-02,,,95304,high,Sunoco Inc = 95304; current SUN ticker (1552275) = Sunoco LP = different entity
+XRX,1996-01-02,,2020-02-27,108772,high,Xerox Corp = 108772; Xerox Holdings (1770450) first 10-K 2020-02-28
+XRX,1996-01-02,2020-02-28,,1770450,high,Xerox Holdings Corp first 10-K 2020-02-28 (SEC RSS)
+ES,2009-03-17,,,72741,high,Eversource Energy (formerNames NORTHEAST UTILITIES until 2015-04-29) = 72741; prefix 'es' 2012-2015 = EnergySolutions Inc (1393744) = unrelated
+TFC,2019-12-09,,,92230,high,Truist (formerNames BB&T CORP) = 92230; prefix 'tfc' before 2020 = Thunder Energies Corp (1524872) = unrelated shell
+DD,2019-06-03,,,1666700,high,DD since 2019-06 = DuPont de Nemours (formerNames DowDuPont Inc. until 2019-05-31) = 1666700; 30554 = EIDP (E I du Pont) became Corteva subsidiary
