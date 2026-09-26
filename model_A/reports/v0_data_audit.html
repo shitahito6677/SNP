@@ -7796,7 +7796,7 @@ a.anchor-link {
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
 <main>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=5a4f7f29">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e83e10ed">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7821,7 +7821,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=59797a3c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=de7f3309">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7833,7 +7833,7 @@ a.anchor-link {
 <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span><span class="p">))</span>
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">)</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span><span class="o">,</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span><span class="o">,</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">lib</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_data</span><span class="p">,</span> <span class="n">constituents</span><span class="p">,</span> <span class="n">prices</span><span class="p">,</span> <span class="n">audit</span><span class="p">,</span> <span class="n">report</span><span class="p">,</span> <span class="n">cik_map</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lib</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_data</span><span class="p">,</span> <span class="n">constituents</span><span class="p">,</span> <span class="n">prices</span><span class="p">,</span> <span class="n">audit</span><span class="p">,</span> <span class="n">report</span><span class="p">,</span> <span class="n">cik_map</span><span class="p">,</span> <span class="n">checks</span><span class="p">,</span> <span class="n">fscore</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">lib.pit</span><span class="w"> </span><span class="kn">import</span> <span class="n">PIT</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">lib.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">INTERIM</span>
 <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
@@ -7859,16 +7859,16 @@ a.anchor-link {
 สัดส่วนที่ขาดหายวัดไว้ใน <code>v0_data_audit.ipynb</code></p>
 </blockquote>
 <blockquote>
-<p>⚠️ <strong>ข้อจำกัดของ held-out</strong>: ช่วง held-out (3 ปีสุดท้าย) มี rebalance เดือน มิ.ย. แค่ 2–3 รอบ
-(มิ.ย. 2024, มิ.ย. 2025 และ มิ.ย. 2026 ที่ถือได้แค่ ~3 เดือนถึงข้อมูลล่าสุด)
-ผลในช่วงนี้จึงมีความไม่แน่นอนสูงมาก ใช้เป็นการตรวจทิศทางเท่านั้น ไม่ใช่หลักฐานทางสถิติ</p>
+<p>⚠️ <strong>ข้อจำกัดของ held-out</strong>: held-out = rebalance มิ.ย. 2023, 2024, 2025 (3 รอบเต็ม) + มิ.ย. 2026 ที่ถือได้แค่ ~3 เดือน
+(รอบ 2026 เป็นข้อมูลประกอบ ไม่นับตัดสิน) — มีแค่ 2–3 รอบ rebalance ที่ใช้ตัดสิน ผลช่วงนี้จึงมีความไม่แน่นอนสูงมาก
+ใช้เป็นการตรวจทิศทางเท่านั้น ไม่ใช่หลักฐานทางสถิติ</p>
 </blockquote>
 </div>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=9c0f7f31">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f2c542f9">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7878,7 +7878,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ea64a8d2">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7e218b88">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7918,7 +7918,7 @@ a.anchor-link {
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>constituent rows: 2720 | spells: 1262 | cik segments: 922
-annual facts (long): 166622 | company-years: 13466 | companies: 812
+annual facts (long): 178703 | company-years: 13467 | companies: 812
 price matrix: (4887, 1150) 2008-01-01 → 2026-09-25
 </pre>
 </div>
@@ -7926,7 +7926,7 @@ price matrix: (4887, 1150) 2008-01-01 → 2026-09-25
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=dc6a4001">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=80dd236e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7936,7 +7936,7 @@ price matrix: (4887, 1150) 2008-01-01 → 2026-09-25
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=02183d62">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b2f9d4a6">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7994,7 +7994,7 @@ removed    28    16    19    18    19    14    27    27    28    24    29    20 
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=bd6331d7">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=2a422e2d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8006,7 +8006,7 @@ removed    28    16    19    18    19    14    27    27    28    24    29    20 
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c4c015e7">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1e33c756">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8039,7 +8039,7 @@ conflict กับ SEC ticker ปัจจุบัน: 20 spell
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=bd5aca2b">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=4eeede83">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8052,7 +8052,7 @@ conflict กับ SEC ticker ปัจจุบัน: 20 spell
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=41e718e9">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=28eddcdc">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8934,7 +8934,7 @@ unmatched: 61 spell (เรียงตามจำนวนวันที่�
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=846202f6">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=eb519584">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8944,7 +8944,7 @@ unmatched: 61 spell (เรียงตามจำนวนวันที่�
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=251d24bd">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=4c4e778a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9275,7 +9275,7 @@ unmatched: 61 spell (เรียงตามจำนวนวันที่�
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1196437c">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=6aa9731b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9285,7 +9285,7 @@ unmatched: 61 spell (เรียงตามจำนวนวันที่�
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=470ceb71">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3db81d23">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9404,7 +9404,7 @@ unmatched: 61 spell (เรียงตามจำนวนวันที่�
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=95d1311a">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=21c0490f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9414,7 +9414,7 @@ unmatched: 61 spell (เรียงตามจำนวนวันที่�
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3f214205">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3e87256a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9471,7 +9471,7 @@ period_end เก่าที่สุดของ total_assets: 2006-12-31
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=42b04d79">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f83fdfdd">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9483,7 +9483,7 @@ period_end เก่าที่สุดของ total_assets: 2006-12-31
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=f0197df1">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=20a0faee">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9507,32 +9507,32 @@ period_end เก่าที่สุดของ total_assets: 2006-12-31
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>count    13466.0
-mean       296.0
-std        349.0
+<pre>count    13467.0
+mean       308.0
+std        352.0
 min       -275.0
 5%          39.0
 25%         51.0
-50%         58.0
-75%        424.0
+50%         59.0
+75%        425.0
 95%       1145.0
 99%       1156.0
 max       1884.0
 
-% ที่ lag &gt; 90 วัน: 39.5%  |  &gt; 365 วัน (เป็นค่าที่มาจากงบปีถัดไป เพราะงบปีนั้นยังไม่เป็น XBRL): 38.2%
+% ที่ lag &gt; 90 วัน: 41.5%  |  &gt; 365 วัน (เป็นค่าที่มาจากงบปีถัดไป เพราะงบปีนั้นยังไม่เป็น XBRL): 40.1%
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedImage jp-OutputArea-output" tabindex="0">
-<img alt="No description has been provided for this image" class="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA0cAAAEpCAYAAABY21mAAAAAOXRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjkuNCwgaHR0cHM6Ly9tYXRwbG90bGliLm9yZy8ekN5oAAAACXBIWXMAAA9hAAAPYQGoP6dpAAA7hklEQVR4nO3dCbxN9f7/8Y/hOKYQQjKWMoREiUZkSG4T99btulKhuOomZeq6MlxXVyFF1CXq1yC6jcgQ0UQkylCalEpoMnMcrP/j/d3/tdt7n2kfzrDOOa/n47Fte+/v3nut9Vl7nfVZ3+/6rEKe53kGAAAAAAVc4dyeAAAAAAAIApIjAAAAACA5AgAAAIAQkiMAAAAAIDkCAAAAgBCSIwAAAAAgOQIAAACAEJIjAAAAACA5AgAAAIAQkiMgn5s5c6YVKlTIvvnmm1z5/n379lmlSpXs2WefzbDtzTffbLVq1bLctGDBAitdurT99NNPufL9q1evtgsvvNBKlSrl4rZu3TobPny4+38kLSctr6yi9UPfofUlr0ptOZ2orF7OWWnZsmVufnUfj7Fjx1q9evXs2LFjJ7QMMvu9+Wl9yCtyezsG5GUkRwCy1cSJE+2kk06yP//5z5YXXHHFFVanTh0bM2ZMjn93cnKy/elPf7Jff/3VJkyYYP/3f/9nNWvWzPHpQP6zZ88e+89//mODBg2ywoX503885s+f7xKu4/1tN2jQwCVrDz30UIrXlbAqea1du7YVL17cGjdubM8//3yqn/Xpp5+67ZSSn/Lly1u3bt1SJEG5uR0D8jq2kACyjXYIlBz17NnTihQpYnnF7bffbo8//rjt3bs3R7/3q6++sm+//dbuvfdeu+222+yvf/2rnXzyyTZ06FA7ePBgjk5LXsRyStuTTz5pR44csRtvvPGEP+vSSy91y1n3BS05GjFixHG999FHH7WtW7em+fo//vEPl7i2a9fOta1Ro4b95S9/sVmzZkW1+/77791y//LLL+3f//6321bMmzfPve/w4cOB2I4BeR3JEYBsM3fuXHdE8/rrr7e8pEuXLpaUlGRz5szJ0e/duXOnuy9XrlzU80WLFnVHk5G6/fv3u3uWU9pmzJhhV199dZYsH/U86XPogYr/dz1y5EiX/KTmhx9+sHHjxlnfvn3tiSeesF69etnrr79ul1xyiQ0YMMCOHj0abquESOv70qVL7e9//7vdd999Nnv2bPv4449TDInNre0YkNexZQMKoFdffdU6depkVatWtcTERDvjjDNs1KhRUX+EfZMnT7bTTz/dSpQoYc2bN7d33nnHWrVq5W4ZeeWVV9z5Cvr81F5r2LCh28nS/csvv5zqZ2gIis7BqVChgpuGZs2a2YsvvhjV5rLLLrNzzjkn1ffXrVvXOnToEH6sI7H6DA31K1OmjDVq1Mj1bkXSOVIa1qLllFN0TofmQzS0TsNv/GUc77kTu3btsn79+ln16tVdXDWsRkOpYs8xUTt9X9myZV0i1r17d/dcVvPPTXnhhRfcTlyVKlXcuVTaSf/uu+9StP/ggw/ccCBNV8mSJd3yeO+996La+Mti06ZN7si6etYuvvjiqNciqbdE67bWQS0TrY+aFu00RvI8z/71r39ZtWrV3He3bt3aNm7ceNzz/swzz7j1TOushj5pWGnsPCu+Wvc1L/o+fe9pp53mhlfFUo/Btdde65af1s+77747xTykZcuWLfbJJ59Y27ZtU7ymdUPrv34H+i2ecsopLgYffvhhmp+X2jlH/rysWbPG/V413xoiNnXq1GxfJ+Tdd9+1888/382DYq0ek3hpm6bfnHprtI7o96PlG9kLqd+LtoWi6fdv8Rg8eLDbDqknODXazqiX/W9/+1v4OX12nz59XNxXrFgRfv5///uf/eEPf3DT6lNczzrrLJck5fZ2DMgPiub2BADIeTrCqPHq/fv3d/c6Cjls2DB3XsKDDz4YbjdlyhS744473BFM7SzopH3toGmHVDuRGXn//fetadOmKZ5ftGiRO6qpMfgaE//LL7/YLbfckupnasdNO05du3Z1w0aU3GhHRr1SSvBEY+51tHXDhg1uBy2yuMHnn3/uhlvJ4sWL3bCiyy+/3CUN/vh97WzdddddUd+rHVslcBnRDmq8w1YqVqyY5msaAqMdYx0Z1hFh7ehVrlzZ4nXgwAG346ij0Pos7Txp+Q8ZMsR+/PFHe/jhh8NJwDXXXON2Jnv37m3169d3iakSpOwyevRot7OnI+c6iq5p0Q6dik1oJ1q0Dnbs2NEt9/vvv9/1Sqi3o02bNm7nVYl5JK0DZ555pltemqe0aEjnU089ZX/84x/tnnvucTvbWucU98iEXOu/kqMrr7zS3T766CNr3759iqFK8c7vP//5T9djqu9X76mGSmk41Nq1a6N6Bn/77Te389+5c2fXXom/lpOSFS0P0U661lkNy9K6oYMaOh9NyyweWg8ktd9ijx493PZA36VpVTKp5b1y5Uo777zzMjXfmhctO82HfmfaWdcOfrFixezWW2/NtnVi/fr1LlZK7JQgax7UPt7fj3pW9PvRtOogzKpVq1y8lJj4vS76TW3bts1tQ7Ts46XP0vqn31tayZTWCSWI+i1G8udPr+sAgH7bWlapxUVtNewvVrzbMQARPAD52owZM7Tn6G3ZsiX83IEDB1K0u/32272SJUt6hw4dco+TkpK8ChUqeOeff76XnJwcbjdz5kz3eZdddlm636v3FCpUyLvnnntSvNakSRPv1FNP9Xbt2hV+btGiRe5za9asGdU2dloPHz7sNWzY0GvTpk34OX1O8eLFvUGDBkW1/fvf/+6VKlXK27dvn3t81113eWXKlPGOHDniZeTf//63m54dO3bEtXzjuWXkrbfecu3mzJkT9fz999+f4v1aTt27dw8/HjVqlJvXzz//PKrd4MGDvSJFinhbt251j1955RX3WWPHjg230fK45JJL3POan6ziz89pp53m7dmzJ/z87Nmz3fMTJ050j48dO+adeeaZXocOHdz/I2Nfu3Ztr127dimWxY033pji+2KX07p169zjnj17RrW799573fNLly51j3fu3OkVK1bM69SpU9T333fffa5d5HLOyDfffOOW9+jRo6OeX79+vVe0aNGo5/Ub0uc//fTT4ef0u6tSpYrXpUuX8HMPP/ywa6fl5tu/f79Xp04d97yWc3qGDh3q2u3duzfqec2/ntfvJFbkcohd1/y4Rn6vPy/jxo2Lmhf91itVquR+t9m1Tlx77bXu9//tt9+Gn9u0aZOLQzy/u9S2h2PGjHHbr8jP7Nu3b1yf59N0N2/ePLyuahus9z/44INR7bTenX766SnerxirvX7Dsnr16hTri2/AgAHuNX/7ndntGIDfMawOKID8I7OiXo+ff/7Z9Q7p6Olnn33mntewGvXoqEdG53L41IOjnqOMqOKajujHtlUvho4Oq6dCQ2V8OqFYPUnpTauOTO/evdtNq47s+/Q56g1RdSe/F0FDBDV0xx+KJDpir/H6OvqbEX+6tWzSoyF7+rx4btlJR7i1XDTdmmb/pqPxWhZvv/22a6ejy4qnjpL7VCzjzjvvzLZpu+mm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PPLII67nRb8z9bRpOKteUxn/zNDwL/Xaar71e1evqoaxavnHnmuVleuEkrsFCxa4giTqCVaS5m9PUttOxPaqKWaKiT5bn6se69QOAPkJnrabSsiUWOn6VanRtid2++MPr9N0ab3waVuk4h8aQqjrHamMv5I9xUEHoyJ7v3VtKG3fFB9dfkDbS71Ppd9je7Azsx0DECGich2AAlLK+7333vNatGjhlShRwqtatao3cOBAb+HChamWBX7kkUdcKd/ExERXllbvbdasmXfFFVdk+N0q5VuxYkVXZjrW//73P69+/frucxs0aOC99NJLrlxwbCnv6dOnu5K+alevXj03P6mVtvapRLVeUwnbWC+++KLXvn17V1pYpZtr1KjhSpj/+OOPUe2mTJniyppHlhrOCSdSyltUqnnIkCGuxLPmT8v+wgsv9B566KFwKWX55ZdfvG7durmy5mXLlnX/X7t2bbaV8n7++efddGm5a51T6eLIEsk+TUPnzp1dCXnFW/N4/fXXe0uWLEmxLH766acU709tOamk/IgRI1z554SEBK969epuWmJLHh89etS1U4l5TWOrVq28DRs2pLqc46H1++KLL3bl1XXTuqtS0Js3b44qf3322WeneG9qvwMtr6uvvtqtl4qrytIvWLAgrlLeMn78eK906dIpylarjLtKS2v6tM6ccsopXseOHb01a9ZkupS35uXDDz/0WrZs6Upr632TJk3K9nVCli9f7rZLmgeVxZ46dWq624lIKvvdtm1bt3y0bHv16uV9/PHHKX4PWlZ33nmnW0Yq853ZXai0Snn765+2WZo/zYOW5TPPPJPq52i91HZM60K5cuW8rl27etu3b0/RLre2Y0BeV0j/RCZLAJAeHVnWkXYNH9KQu4yMGjXKnSOkI9NpnXyelTQcxr9gbWRp38xQD5SKDEyYMCHLp6+gnd+mI9w60h1Zhho5Tz2D6kEaO3asu/BrVtPvReWidW5Uelgncg7bMeD4cM4RgDSpPGzs8ROdK6ChafFWKFOioqEfs2bNsuymaZ0+fbobPnW8iZGG5yiR07AoIL/QtcBUyVBDsLKqIiWCi+0YcPw45whAmlauXOmSG53oq+IMKvet5EPnL6R28m9qVBHNv8ZOdtG5NTrfRuci6BybV1999bg/S+ddpHYCOLB9+/Z0X1fVtMgLGweNSlXrhvyP7Rhw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W+ddeeWVXo0aNbx9+/aF2/Tu3durXr26t2TJEu/DDz/0WrRo4V144YWZ2ubh+Lz22mvevHnzvM8//9zbvHmzd99997m/5YqXEJvgWLVqlVerVi2vcePG3l133RV+Pq/HqMAkR7G0A16oUCHv8OHD7vFjjz3mnXzyyV5SUlK4zaBBg7y6deuGH19//fVep06doj7nggsu8G6//fYcnPKCQQmOdhZ8xCcYtEORWnKkDVvhwoW97du3h5+bMmWKV6ZMmXDMBg4c6J199tlR77vhhhvcjgqyXvPmzb2+ffuGHx89etSrWrWqN2bMmFydroImNjk6duyYV6VKFe/BBx8MP7dr1y4vMTHRHfQRHTzQ+1avXh11EEl/s3744YccnoP8b+fOnW55L1++PBwP7YzPmTMn3ObTTz91bXSQNd5tHrKO/v5PmzaN2ATI3r17vTPPPNNbvHixd9lll4WTo/wQowIzrC52uMKzzz7rhgklJCS451asWGGXXnqpFStWLNyuQ4cOrqv9t99+C7fR8IdIaqPnkbV2795t5cuXDz8mPsGmZaxhjJEXaday37Nnj23cuDHchvjkDA1JXbNmTdTyLly4sHvM8s5dW7ZscRc2j4xN2bJl3bBHPza611C68847L9xG7RXDDz74IFemO7//vRH/b45+O8nJyVEx0nBtDc2PjFFG2zycuKNHj9qsWbNs//79bngdsQmOvn37umFxsX/X80OMClRyNGjQICtVqpQbA6mxjq+++mr4Nf2xigyS+I/1Wnpt/NeRNb788kt79NFH7fbbbw8/R3yC7UTio43hwYMHc3Bq87+ff/7Z7VTwewgef/mnFxvdawx+pKJFi7qdd+KXtY4dO+bOlbjooousYcOG7jktYx2Iiz2/MjZGGW3zcPzWr1/vzlXR+am9e/e2l19+2Ro0aEBsAmLWrFn20UcfufP3YuWHGOXp5Gjw4MHuJLD0bp999lm4vU72Wrt2rS1atMiKFCliN910kzsxFsGIj/zwww92xRVX2J/+9Cfr1atXrk17QXA88QGA/Hb0e8OGDW5nD8FRt25dW7dunesp7dOnj3Xv3t02bdqU25MFM/vuu+/srrvuciOwVOwnPypqedg999xjN998c7ptTj/99PD/K1as6G5nnXWW1a9f31U8W7lypeuqrVKlSopKGv5jvebfp9bGfx0nFh9VD2zdurUb7vjEE09EtSM+uR+f9GgZx1ZCizc+qkakil3IOtrO6QAQv4fg8Ze/YqFqdT49btKkSbjNzp07o96nKk4aEk78ss4dd9xhc+fOddUFq1WrFn5ey1hDU3ft2hV19Dvy9xPPNg/HTz0PqmgqzZo1s9WrV9vEiRPthhtuIDa5bM2aNW77pMqzPo1U0O9o0qRJtnDhwjwfozzdc3TKKae4cYzp3SLPUYntSpekpCR3rwRJgdU4Sd/ixYvd0YuTTz453GbJkiVRn6M2eh4nFh/1GLVq1cptBGfMmOHG1kciPsH6/cTSMtYwiMgdOi17JT4aCuG3IT45Q3HTbylyeWubp8cs79ylSxboj39kbDS0VEfI/djoXjsW2gnxLV261MVQ5ybhxGjEiBIjDdXSclVMIum3o/ORI2Ok81s1HD8yRhlt85B1tO5rf43Y5L7LL7/cLV/17Pk3nR+pSw/4/8/zMfIKAJVCVdlglQtUKW+VFlRJwTPOOMM7dOhQuLqGSkV369bNlYtUGVyVHY4tFV20aFHvoYcecpU37r//fkpFZ4Hvv//elam9/PLL3f9//PHH8M1HfHLXt99+634/I0aM8EqXLu3+r5uq1USW5Wzfvr0rjavy3KecckqqpbwHDBjg4jN58mRKeWcj/UZUAW3mzJmu+tltt93mSnlHVgdC9tDvwv+N6M+syuDr//od+aW8FQtVTf3kk0+8a665JtVS3ueee673wQcfeO+++66rCkUp76zRp08fV3Vz2bJlUX9vDhw4EFWKWOW9ly5d6koRx17+I55tHo7P4MGDXeXALVu2uN+HHqtS46JFi9zrxCZ4LouoVpcfYlQgkiP9uFq3bu2VL1/e7SyoJrsCpx3xSLrexMUXX+zanHbaae4PWKzZs2d7Z511lrt+iMoSqxY/Trw8tHYgUrtFIj65p3v37qnG56233gq30YGHjh07uutP6XoFuk5VcnJy1OeofZMmTVx8Tj/9dBd7ZB8dFNIfKC1vlfbWgSJkP63nqf1e9Dvyy3n/85//dAd8tD3TgSFdzyXSL7/84pIhHYxQedtbbrklfDACJyatvzeR2yMlqn/7299cCWkd1LnuuuuiDtjFu81D5t16661ezZo13XZLO8z6ffiJkRCb4CdHB/N4jArpn9zuvQIAAACA3JanzzkCAAAAgKxCcgQAAAAAJEcAAAAAEEJyBAAAAAAkRwAAAAAQQnIEAAAAACRHAAAAABBCcgQAAAAAJEcAAAAAEEJyBAAAAAAkRwAAAAAQQnIEAAAAwGD2/wCnCeHCqQvpwQAAAABJRU5ErkJggg=="/>
+<img alt="No description has been provided for this image" class="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA0cAAAEpCAYAAABY21mAAAAAOXRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjkuNCwgaHR0cHM6Ly9tYXRwbG90bGliLm9yZy8ekN5oAAAACXBIWXMAAA9hAAAPYQGoP6dpAAA7kklEQVR4nO3dCbxN9f7/8Y/hOKYQMmUsZQgJiUZkSG4T99btulKhuOomZeq6MtTlKqSIukT9GkS3ERkimohEGUqTUglNZo5p/R/v7/6vfffeZ9qHM6xzzuv5eGzb3vu7915rfdZeZ33W97s+q4DneZ4BAAAAQD5XMKcnAAAAAACCgOQIAAAAAEiOAAAAACCE5AgAAAAASI4AAAAAIITkCAAAAABIjgAAAAAghOQIAAAAAEiOAAAAACCE5AjI42bOnGkFChSwb7/9Nke+f9++fVahQgV77rnn0m178803W82aNS0nLViwwEqWLGk///xzjnz/6tWr7cILL7QSJUq4uK1bt86GDx/u/h9Jy0nLK7No/dB3aH3JrVJaTicrs5dzZlq2bJmbX93HY+zYsVa3bl07fvz4SS2DjH5vXlofcouc3o4BuRnJEYAsNXHiRDvllFPsz3/+s+UGV1xxhdWuXdtGjx6d7d995MgR+9Of/mS//fabTZgwwf7v//7PatSoke3Tgbxnz5499u9//9sGDRpkBQvyp/9EzJ8/3yVcJ/rbrl+/vkvWHn744WSvK2FV8lqrVi0rWrSoNWrUyF544YUUP+uzzz5z2yklP2XLlrVu3bolS4JycjsG5HZsIQFkGe0QKDnq2bOnFSpUyHKL22+/3Z544gnbu3dvtn7v119/bd99953de++9dtttt9lf//pXO/XUU23o0KF28ODBbJ2W3IjllLqnnnrKjh49ajfeeONJf9all17qlrPu81tyNGLEiBN672OPPWZbt25N9fV//OMfLnFt166da1u9enX7y1/+YrNmzYpq98MPP7jl/tVXX9m//vUvt62YN2+ee9/hw4cDsR0DcjuSIwBZZu7cue6I5vXXX2+5SZcuXSwpKcnmzJmTrd+7c+dOd1+mTJmo5wsXLuyOJiNl+/fvd/csp9TNmDHDrr766kxZPup50ufQAxX/73rkyJEu+UnJjz/+aOPGjbO+ffvak08+ab169bI33njDLrnkEhswYIAdO3Ys3FYJkdb3pUuX2t///ne77777bPbs2fbJJ58kGxKbU9sxILdjywbkQ6+99pp16tTJqlSpYomJiXbmmWfaqFGjov4I+yZPnmxnnHGGFStWzJo3b27vvvuutWrVyt3S8+qrr7rzFfT5Kb3WoEEDt5Ol+1deeSXFz9AQFJ2DU65cOTcNTZs2tZdeeimqzWWXXWbnnntuiu+vU6eOdejQIfxYR2L1GRrqV6pUKWvYsKHr3Yqkc6Q0rEXLKbvonA7Nh2honYbf+Ms43nMndu3aZf369bNq1aq5uGpYjYZSxZ5jonb6vtKlS7tErHv37u65zOafm/Liiy+6nbhKlSq5c6m0k/79998na//hhx+64UCaruLFi7vl8f7770e18ZfFpk2b3JF19axdfPHFUa9FUm+J1m2tg1omWh81LdppjOR5nj3wwANWtWpV992tW7e2jRs3nvC8P/vss2490zqroU8aVho7z4qv1n3Ni75P33v66ae74VWx1GNw7bXXuuWn9fPuu+9ONg+p2bJli3366afWtm3bZK9p3dD6r9+BfounnXaai8FHH32U6ueldM6RPy9r1qxxv1fNt4aITZ06NcvXCXnvvffs/PPPd/OgWKvHJF7apuk3p94arSP6/Wj5RvZC6veibaFo+v1bPAYPHuy2Q+oJTom2M+pl/9vf/hZ+Tp/dp08fF/cVK1aEn//vf/9rf/jDH9y0+hTXs88+2yVJOb0dA/KCwjk9AQCyn44warx6//793b2OQg4bNsydl/DQQw+F202ZMsXuuOMOdwRTOws6aV87aNoh1U5kej744ANr0qRJsucXLVrkjmpqDL7GxP/66692yy23pPiZ2nHTjlPXrl3dsBElN9qRUa+UEjzRmHsdbd2wYYPbQYssbvDFF1+44VayePFiN6zo8ssvd0mDP35fO1t33XVX1Pdqx1YJXHq0gxrvsJXy5cun+pqGwGjHWEeGdURYO3oVK1a0eB04cMDtOOootD5LO09a/kOGDLGffvrJHnnkkXAScM0117idyd69e1u9evVcYqoEKas8+OCDbmdPR851FF3Toh06FZvQTrRoHezYsaNb7vfff7/rlVBvR5s2bdzOqxLzSFoHzjrrLLe8NE+p0ZDOp59+2v74xz/aPffc43a2tc4p7pEJudZ/JUdXXnmlu3388cfWvn37ZEOV4p3ff/7zn67HVN+v3lMNldJwqLVr10b1DP7+++9u579z586uvRJ/LSclK1oeop10rbMalqV1Qwc1dD6allk8tB5ISr/FHj16uO2BvkvTqmRSy3vlypXWrFmzDM235kXLTvOh35l21rWDX6RIEbv11luzbJ1Yv369i5USOyXImge1j/f3o54V/X40rToIs2rVKhcvJSZ+r4t+U9u2bXPbEC37eOmztP7p95ZaMqV1QgmifouR/PnT6zoAoN+2llVKcVFbDfuLFe92DEAED0CeNmPGDO05elu2bAk/d+DAgWTtbr/9dq948eLeoUOH3OOkpCSvXLly3vnnn+8dOXIk3G7mzJnu8y677LI0v1fvKVCggHfPPfcke61x48Ze5cqVvV27doWfW7RokfvcGjVqRLWNndbDhw97DRo08Nq0aRN+Tp9TtGhRb9CgQVFt//73v3slSpTw9u3b5x7fddddXqlSpbyjR4966fnXv/7lpmfHjh1xLd94bul5++23Xbs5c+ZEPX///fcne7+WU/fu3cOPR40a5eb1iy++iGo3ePBgr1ChQt7WrVvd41dffdV91tixY8NttDwuueQS97zmJ7P483P66ad7e/bsCT8/e/Zs9/zEiRPd4+PHj3tnnXWW16FDB/f/yNjXqlXLa9euXbJlceONNyb7vtjltG7dOve4Z8+eUe3uvfde9/zSpUvd4507d3pFihTxOnXqFPX99913n2sXuZzT8+2337rl/eCDD0Y9v379eq9w4cJRz+s3pM9/5plnws/pd1epUiWvS5cu4eceeeQR107Lzbd//36vdu3a7nkt57QMHTrUtdu7d2/U85p/Pa/fSazI5RC7rvlxjfxef17GjRsXNS/6rVeoUMH9brNqnbj22mvd7/+7774LP7dp0yYXh3h+dyltD0ePHu22X5Gf2bdv37g+z6fpbt68eXhd1TZY73/ooYei2mm9O+OMM5K9XzFWe/2GZfXq1cnWF9+AAQPca/72O6PbMQD/w7A6IB/yj8yKej1++eUX1zuko6eff/65e17DatSjox4ZncvhUw+Oeo7So4prOqIf21a9GDo6rJ4KDZXx6YRi9SSlNa06Mr179243rTqy79PnqDdE1Z38XgQNEdTQHX8okuiIvcbr6+hvevzp1rJJi4bs6fPiuWUlHeHWctF0a5r9m47Ga1m88847rp2OLiueOkruU7GMO++8M8um7aab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smRJVJamc4latmzpHut+165drgqdb+nSpXb8+HF3bpLfRhXsIscG6shAnTp1UhxSBwAAAAAnK8PJka5HpMpxuvlFGPT/rVu3uuse9evXzx544AF7/fXXbf369XbTTTe5CnTXXnuta1+vXj274oorrFevXrZq1Sp7//337Y477nDFGtRO/vKXv7hiDLr+kUp+v/jiizZx4sSoYXMAAAAAkJkyPKzuo48+statW4cf+wlL9+7dbebMmTZw4EB3LSSV3FYP0cUXX+xKd+tirj6V6lZCdPnll7sqdV26dHHXRoqscKdCCn379rWmTZta+fLl3YVlKeMNAAAAIDDJUatWrdz1jFKj3qORI0e6W2pUme75559P83saNWpk7777bkYnDwAAAABOSKaecwQAAAAAuRXJEQAAAACQHAEAAABACMkRAAAAAJAcAQAAAEAIyREAAAAAkBwBAAAAQAjJEQAAAACQHAEAAABACMkRAAAAAJAcAQAAAEAIyREAAAAAkBwBAAAAQAjJEQAAAACQHAEAAABACMkRAAAAAJAcAQAAAEBI4f9/DwBApqk5eF5OTwIAABlGzxEAAAAAkBwBAAAAQAjJEQAAAACQHAEAAABACMkRAAAAAJAcAQAAAEAIyREAAAAAkBwBAAAAQAjJEQAAAACQHAEAAABACMkRAAAAAJAcAQAAAEAuSI4mT55sNWvWtKJFi9oFF1xgq1atyulJAgAAAJBHFbaAevHFF61///42depUlxg98sgj1qFDB9u8ebNVqFAhpycPAPKtmoPn5fQkAACQv5Kj8ePHW69eveyWW25xj5UkzZs3z5566ikbPHhwTk8eACAPJXPfjumULdMCAAi2QCZHhw8ftjVr1tiQIUPCzxUsWNDatm1rK1asSPE9SUlJ7ubbvXu3u//tt9/syJEjKb5Hzx84cMB+/fVXS0hIyPT5wMkhPsFHjPJnfAof3W95Te17Z6fb5sMhl2fqd+aV388Fo5dk+7LLLnklRnkV8cl5hdP5e1D4uGcHDhwPRIz27t3r7j3Py33J0S+//GLHjh2zihUrRj2vx59//nmK7xk9erSNGDEi2fO1atXKsukEAOQf5cfl9BTkXiw7IP/6iwWLkqTSpUvnruToRKiXSeco+Y4fP+56jcqVK2cFChRI8T179uyxatWq2ffff2+lSpXKxqlFPIhP8BGjYCM+wUZ8go8YBRvxCb49AYqReoyUGFWpUiXNdoFMjsqXL2+FChWyHTt2RD2vx5UqVUrxPYmJie4WqUyZMnF9n4KV0wFD6ohP8BGjYCM+wUZ8go8YBRvxCb5SAYlRWj1GgS7lXaRIEWvatKktWbIkqidIj1u2bJmj0wYAAAAgbwpkz5FoiFz37t2tWbNm1rx5c1fKe//+/eHqdQAAAACQL5KjG264wX7++WcbNmyYbd++3Ro3bmwLFixIVqThZGgY3v33359sOB6CgfgEHzEKNuITbMQn+IhRsBGf4EvMhTEq4KVXzw4AAAAA8oFAnnMEAAAAANmN5AgAAAAASI4AAAAAIITkCAAAAADyU3J09dVXW/Xq1a1o0aJWuXJl69atm23bti2qzaeffmqXXHKJa6Or+Y4dOzbZ58yZM8fq1q3r2jRs2NDmz5+fjXORN3377bfWo0cPq1WrlhUrVszOPPNMV9nk8OHDUe2IT8558MEH7cILL7TixYunenHlrVu3WqdOnVybChUq2IABA+zo0aNRbZYtW2ZNmjRxVWtq165tM2fOzKY5yJ8mT55sNWvWdL+HCy64wFatWpXTk5QvvPPOO3bVVVe5q7AXKFDAXn311ajXVQdJlVj1t0jbvLZt29qXX34Z1ea3336zrl27uosm6jenbeS+ffuyeU7yptGjR9v5559vp5xyittWXXvttbZ58+aoNocOHbK+fftauXLlrGTJktalS5dkF6aPZ5uHjJsyZYo1atQofNFQXd/yzTffDL9ObIJlzJgxbjvXr1+/vBMjL58YP368t2LFCu/bb7/13n//fa9ly5bu5tu9e7dXsWJFr2vXrt6GDRu8F154wStWrJj3xBNPhNvofYUKFfLGjh3rbdq0yRs6dKiXkJDgrV+/PofmKm948803vZtvvtlbuHCh9/XXX3uvvfaaV6FCBe+ee+4JtyE+OWvYsGHuN9S/f3+vdOnSyV4/evSo16BBA69t27be2rVrvfnz53vly5f3hgwZEm7zzTffeMWLF3efofg89thjLl4LFizI5rnJH2bNmuUVKVLEe+qpp7yNGzd6vXr18sqUKePt2LEjpyctz9P6/49//MN7+eWXVQ3We+WVV6JeHzNmjPsdvfrqq94nn3ziXX311V6tWrW8gwcPhttcccUV3rnnnuutXLnSe/fdd73atWt7N954Yw7MTd7ToUMHb8aMGe5vybp167wrr7zSq169urdv375wm969e3vVqlXzlixZ4n300UdeixYtvAsvvDBD2zycmNdff92bN2+e98UXX3ibN2/27rvvPve3XPESYhMcq1at8mrWrOk1atTIu+uuu8LP5/YY5ZvkKJZ2wAsUKOAdPnzYPX788ce9U0891UtKSgq3GTRokFenTp3w4+uvv97r1KlT1OdccMEF3u23356NU54/KMHRzoKP+ASDdihSSo60YStYsKC3ffv28HNTpkzxSpUqFY7ZwIEDvXPOOSfqfTfccIPbUUHma968ude3b9/w42PHjnlVqlTxRo8enaPTld/EJkfHjx/3KlWq5D300EPh53bt2uUlJia6gz6igwd63+rVq6MOIulv1o8//pjNc5D37dy50y3v5cuXh+OhnfE5c+aE23z22WeujQ6yxrvNQ+bR3/9p06YRmwDZu3evd9ZZZ3mLFy/2LrvssnBylBdilG+G1cUOV3juuefcMKGEhAT33IoVK+zSSy+1IkWKhNt16NDBdbX//vvv4TYa/hBJbfQ8Mtfu3butbNmy4cfEJ9i0jDWMMfIizVr2e/bssY0bN4bbEJ/soSGpa9asiVreBQsWdI9Z3jlry5Yt7sLmkbEpXbq0G/box0b3GkrXrFmzcBu1Vww//PDDHJnuvP73Rvy/OfrtHDlyJCpGGq6tofmRMUpvm4eTd+zYMZs1a5bt37/fDa8jNsHRt29fNywu9u96XohRvkqOBg0aZCVKlHBjIDXW8bXXXgu/pj9WkUES/7FeS6uN/zoyx1dffWWPPfaY3X777eHniE+wnUx8tDE8ePBgNk5t3vfLL7+4nQp+D8HjL/+0YqN7jcGPVLhwYbfzTvwy1/Hjx925EhdddJE1aNDAPadlrANxsedXxsYovW0eTtz69evduSo6P7V37972yiuvWP369YlNQMyaNcs+/vhjd/5erLwQo1ydHA0ePNidBJbW7fPPPw+318lea9eutUWLFlmhQoXspptucifGIhjxkR9//NGuuOIK+9Of/mS9evXKsWnPD04kPgCQ145+b9iwwe3sITjq1Klj69atcz2lffr0se7du9umTZtyerJgZt9//73dddddbgSWiv3kRYUtF7vnnnvs5ptvTrPNGWecEf5/+fLl3e3ss8+2evXquYpnK1eudF21lSpVSlZJw3+s1/z7lNr4r+Pk4qPqga1bt3bDHZ988smodsQn5+OTFi3j2Epo8cZH1YhUsQuZR9s5HQDi9xA8/vJXLFStzqfHjRs3DrfZuXNn1PtUxUlDwolf5rnjjjts7ty5rrpg1apVw89rGWto6q5du6KOfkf+fuLZ5uHEqedBFU2ladOmtnr1aps4caLdcMMNxCaHrVmzxm2fVHnWp5EK+h1NmjTJFi5cmOtjlKt7jk477TQ3jjGtW+Q5KrFd6ZKUlOTulSApsBon6Vu8eLE7enHqqaeG2yxZsiTqc9RGz+Pk4qMeo1atWrmN4IwZM9zY+kjEJ1i/n1haxhoGEblDp2WvxEdDIfw2xCd7KG76LUUub23z9JjlnbN0yQL98Y+MjYaW6gi5Hxvda8dCOyG+pUuXuhjq3CScHI0YUWKkoVparopJJP12dD5yZIx0fquG40fGKL1tHjKP1n3trxGbnHf55Ze75auePf+m8yN16QH//7k+Rl4+oFKoKhuscoEq5a3SgiopeOaZZ3qHDh0KV9dQqehu3bq5cpEqg6uyw7GlogsXLuw9/PDDrvLG/fffT6noTPDDDz+4MrWXX365+/9PP/0UvvmIT8767rvv3O9nxIgRXsmSJd3/dVO1msiynO3bt3elcVWe+7TTTkuxlPeAAQNcfCZPnkwp7yyk34gqoM2cOdNVP7vttttcKe/I6kDIGvpd+L8R/ZlVGXz9X78jv5S3YqGqqZ9++ql3zTXXpFjK+7zzzvM+/PBD77333nNVoSjlnTn69Onjqm4uW7Ys6u/NgQMHokoRq7z30qVLXSni2Mt/xLPNw4kZPHiwqxy4ZcsW9/vQY1VqXLRokXud2ATPZRHV6vJCjPJFcqQfV+vWrb2yZcu6nQXVZFfgtCMeSdebuPjii12b008/3f0BizV79mzv7LPPdtcPUVli1eLHyZeH1g5ESrdIxCfndO/ePcX4vP322+E2OvDQsWNHd/0pXa9A16k6cuRI1OeofePGjV18zjjjDBd7ZB0dFNIfKC1vlfbWgSJkPa3nKf1e9Dvyy3n/85//dAd8tD3TgSFdzyXSr7/+6pIhHYxQedtbbrklfDACJye1vzeR2yMlqn/7299cCWkd1LnuuuuiDtjFu81Dxt16661ejRo13HZLO8z6ffiJkRCb4CdHB3N5jAron5zuvQIAAACAnJarzzkCAAAAgMxCcgQAAAAAJEcAAAAAEEJyBAAAAAAkRwAAAAAQQnIEAAAAACRHAAAAABBCcgQAAAAAJEcAAAAAEEJyBAAAAAAkRwAAAAAQQnIEAAAAwGD2/wCAOunLtRt0gwAAAABJRU5ErkJggg=="/>
 </div>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=6d443bde">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=08c8d7e3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9542,7 +9542,7 @@ max       1884.0
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1b7fe553">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c4959c41">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9644,6 +9644,12 @@ max       1884.0
 <td>0.84</td>
 </tr>
 <tr>
+<th>interest_expense</th>
+<td>12081</td>
+<td>10.1</td>
+<td>1.50</td>
+</tr>
+<tr>
 <th>lt_debt</th>
 <td>15694</td>
 <td>7.7</td>
@@ -9687,7 +9693,7 @@ max       1884.0
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=47774418">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=b03894b2">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9698,7 +9704,7 @@ max       1884.0
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a911cd80">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=384951c2">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9741,7 +9747,7 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=326f93b1">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=07b11426">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9751,7 +9757,7 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=78c9eef7">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=96dc237d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9782,13 +9788,7 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>spell ที่ราคาเริ่มช้ากว่าวันเข้าดัชนี &gt; 30 วัน: 47 (สงสัย ticker reuse หรือ Yahoo เก็บไม่ครบ)</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>
+<pre>spell ที่ราคาเริ่มช้ากว่าวันเข้าดัชนี &gt; 30 วัน: 47 (สงสัย ticker reuse หรือ Yahoo เก็บไม่ครบ)
 </pre>
 </div>
 </div>
@@ -10107,7 +10107,7 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=5655bfa7">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3554067d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -10117,7 +10117,7 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b4f2b586">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=51359673">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -10275,7 +10275,7 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=cc11b43a">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=faa29fb0">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -10285,7 +10285,7 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b5ea2201">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b5fbb884">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -10425,7 +10425,7 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=845be9aa">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=b7011b5b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -10442,7 +10442,7 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5d55ec30">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1bdfbac2">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -10457,6 +10457,12 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 <span class="n">panel</span> <span class="o">=</span> <span class="n">audit</span><span class="o">.</span><span class="n">build_panel</span><span class="p">(</span><span class="n">hist</span><span class="p">,</span> <span class="n">segs</span><span class="p">,</span> <span class="n">pit</span><span class="p">,</span> <span class="n">adj</span><span class="p">,</span> <span class="n">close</span><span class="p">,</span> <span class="n">splits</span><span class="p">,</span> <span class="n">Rs</span><span class="p">,</span> <span class="n">constituents</span><span class="o">.</span><span class="n">to_yahoo</span><span class="p">,</span> <span class="n">sic_of</span><span class="p">,</span> <span class="n">cik_ticker</span><span class="p">,</span>
                           <span class="n">prices</span><span class="o">.</span><span class="n">split_factor_after</span><span class="p">)</span>
 <span class="n">panel</span><span class="p">[</span><span class="s2">"usable"</span><span class="p">]</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">has_cik</span> <span class="o">&amp;</span> <span class="n">panel</span><span class="o">.</span><span class="n">has_price_R</span> <span class="o">&amp;</span> <span class="n">panel</span><span class="o">.</span><span class="n">fscore_complete_ltd0</span> <span class="o">&amp;</span> <span class="n">panel</span><span class="o">.</span><span class="n">bm_complete</span>
+<span class="c1"># assertion กันบั๊กเงียบ (ผู้ใช้ขอหลัง v0 รอบแรก): จำนวนสมาชิกต่อรอบ และงบ/ราคาต้องไม่ตกผิดปกติตั้งแต่ 2012</span>
+<span class="n">checks</span><span class="o">.</span><span class="n">members_per_R</span><span class="p">(</span><span class="n">panel</span><span class="p">)</span>
+<span class="n">checks</span><span class="o">.</span><span class="n">no_sudden_drop</span><span class="p">(</span><span class="n">panel</span><span class="p">,</span> <span class="s2">"has_fy_t"</span><span class="p">,</span> <span class="n">mask</span><span class="o">=~</span><span class="n">panel</span><span class="o">.</span><span class="n">financial</span><span class="p">)</span>
+<span class="n">checks</span><span class="o">.</span><span class="n">no_sudden_drop</span><span class="p">(</span><span class="n">panel</span><span class="p">,</span> <span class="s2">"has_price_R"</span><span class="p">)</span>
+<span class="n">checks</span><span class="o">.</span><span class="n">no_sudden_drop</span><span class="p">(</span><span class="n">panel</span><span class="p">,</span> <span class="s2">"usable"</span><span class="p">,</span> <span class="n">mask</span><span class="o">=~</span><span class="n">panel</span><span class="o">.</span><span class="n">financial</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"assertions ผ่านทั้งหมด"</span><span class="p">)</span>
 <span class="n">panel</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">INTERIM</span> <span class="o">/</span> <span class="s2">"v0_panel.parquet"</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"has_cik"</span><span class="p">,</span><span class="s2">"has_price_R"</span><span class="p">,</span><span class="s2">"has_fy_t"</span><span class="p">,</span><span class="s2">"fscore_complete"</span><span class="p">,</span><span class="s2">"fscore_complete_ltd0"</span><span class="p">,</span><span class="s2">"bm_complete"</span><span class="p">,</span><span class="s2">"usable"</span><span class="p">]</span>
 <span class="n">cov</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"R"</span><span class="p">)[</span><span class="n">cols</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -10484,7 +10490,8 @@ mean   0.43   0.25   0.21   0.33   0.47   0.43   0.22   0.48   0.46   0.29   0.4
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>% ของสมาชิก ณ แต่ละรอบ rebalance (ทุก sector):
+<pre>assertions ผ่านทั้งหมด
+% ของสมาชิก ณ แต่ละรอบ rebalance (ทุก sector):
 </pre>
 </div>
 </div>
@@ -11162,7 +11169,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ca47657a">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0f11545d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -11364,7 +11371,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=27fbf1e2">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=8b8d6636">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -11374,7 +11381,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bfd14142">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=32f073da">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -11652,7 +11659,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=d4a5050f">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3c1931c1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -11662,7 +11669,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ec02e63c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c1d4cc24">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -11889,17 +11896,19 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1f36fb6f">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=427dbf5e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="8)-%E0%B8%9B%E0%B8%8F%E0%B8%B4%E0%B8%97%E0%B8%B4%E0%B8%99-rebalance-%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%8A%E0%B9%88%E0%B8%A7%E0%B8%87-held-out-(%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%A2%E0%B8%B7%E0%B8%99%E0%B8%A2%E0%B8%B1%E0%B8%99)">8) ปฏิทิน rebalance และช่วง held-out (ตามที่ผู้ใช้ยืนยัน)<a class="anchor-link" href="#8)-%E0%B8%9B%E0%B8%8F%E0%B8%B4%E0%B8%97%E0%B8%B4%E0%B8%99-rebalance-%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%8A%E0%B9%88%E0%B8%A7%E0%B8%87-held-out-(%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%A2%E0%B8%B7%E0%B8%99%E0%B8%A2%E0%B8%B1%E0%B8%99)">¶</a></h2><p>held-out = 3 ปีสุดท้าย (2023-10-01 → ข้อมูลล่าสุด) — ห้ามแตะจนกว่าจะสรุป</p>
+<h2 id="8)-%E0%B8%9B%E0%B8%8F%E0%B8%B4%E0%B8%97%E0%B8%B4%E0%B8%99-rebalance-%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%8A%E0%B9%88%E0%B8%A7%E0%B8%87-held-out-(%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%A2%E0%B8%B7%E0%B8%99%E0%B8%A2%E0%B8%B1%E0%B8%99%E0%B8%AB%E0%B8%A5%E0%B8%B1%E0%B8%87-v0-%E0%B8%A3%E0%B8%AD%E0%B8%9A%E0%B9%81%E0%B8%A3%E0%B8%81)">8) ปฏิทิน rebalance และช่วง held-out (ตามที่ผู้ใช้ยืนยันหลัง v0 รอบแรก)<a class="anchor-link" href="#8)-%E0%B8%9B%E0%B8%8F%E0%B8%B4%E0%B8%97%E0%B8%B4%E0%B8%99-rebalance-%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%8A%E0%B9%88%E0%B8%A7%E0%B8%87-held-out-(%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%A2%E0%B8%B7%E0%B8%99%E0%B8%A2%E0%B8%B1%E0%B8%99%E0%B8%AB%E0%B8%A5%E0%B8%B1%E0%B8%87-v0-%E0%B8%A3%E0%B8%AD%E0%B8%9A%E0%B9%81%E0%B8%A3%E0%B8%81)">¶</a></h2><p>held-out = rebalance ตั้งแต่ มิ.ย. 2023 (3 รอบเต็ม: 2023, 2024, 2025) — ห้ามแตะจนกว่าจะสรุป;
+รอบ มิ.ย. 2026 ถือได้แค่ถึงข้อมูลล่าสุด → รายงานเป็นข้อมูลประกอบ ไม่นับตัดสิน;
+ช่วงตัดสินผ่าน/ไม่ผ่าน in-sample = rebalance 2017–2022 (2011–2016 รายงานประกอบเท่านั้น เพราะ survivorship gap)</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=44c86e8b">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=adedc734">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -11907,9 +11916,11 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <div class="jp-InputPrompt jp-InputArea-prompt">In [19]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">HELDOUT_START</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">"2023-10-01"</span><span class="p">)</span>
-<span class="n">cal</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"R"</span><span class="p">:</span> <span class="n">Rs</span><span class="p">})</span>
-<span class="n">cal</span><span class="p">[</span><span class="s2">"segment"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">cal</span><span class="o">.</span><span class="n">R</span> <span class="o">&gt;=</span> <span class="n">HELDOUT_START</span><span class="p">,</span> <span class="s2">"held-out"</span><span class="p">,</span> <span class="s2">"in-sample"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">cal</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"R"</span><span class="p">:</span> <span class="n">Rs</span><span class="p">})</span>
+<span class="n">cal</span><span class="p">[</span><span class="s2">"segment"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">cal</span><span class="o">.</span><span class="n">R</span> <span class="o">&lt;</span> <span class="s2">"2011-01-01"</span><span class="p">,</span> <span class="n">cal</span><span class="o">.</span><span class="n">R</span> <span class="o">&lt;</span> <span class="s2">"2017-01-01"</span><span class="p">,</span> <span class="n">cal</span><span class="o">.</span><span class="n">R</span> <span class="o">&lt;</span> <span class="s2">"2023-01-01"</span><span class="p">,</span> <span class="n">cal</span><span class="o">.</span><span class="n">R</span> <span class="o">&lt;</span> <span class="s2">"2026-01-01"</span><span class="p">],</span>
+    <span class="p">[</span><span class="s2">"unusable (no XBRL history)"</span><span class="p">,</span> <span class="s2">"in-sample: info only"</span><span class="p">,</span> <span class="s2">"in-sample: decision"</span><span class="p">,</span> <span class="s2">"held-out: decision"</span><span class="p">],</span>
+    <span class="s2">"held-out: info only (partial year)"</span><span class="p">)</span>
 <span class="n">cal</span><span class="p">[</span><span class="s2">"hold_until"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">r</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">DateOffset</span><span class="p">(</span><span class="n">years</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">adj</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">max</span><span class="p">())</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">cal</span><span class="o">.</span><span class="n">R</span><span class="p">]</span>
 <span class="n">cal</span><span class="p">[</span><span class="s2">"hold_days"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[(</span><span class="n">adj</span><span class="p">[</span><span class="s2">"SPY"</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">r</span><span class="p">:</span><span class="n">h</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">h</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cal</span><span class="o">.</span><span class="n">R</span><span class="p">,</span> <span class="n">cal</span><span class="o">.</span><span class="n">hold_until</span><span class="p">)]</span>
 <span class="n">cal</span><span class="p">[</span><span class="s2">"usable_nonfin"</span><span class="p">]</span> <span class="o">=</span> <span class="n">cal</span><span class="o">.</span><span class="n">R</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">nf</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"R"</span><span class="p">)</span><span class="o">.</span><span class="n">usable</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
@@ -11956,7 +11967,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>0</th>
 <td>2009-06-30</td>
-<td>in-sample</td>
+<td>unusable (no XBRL history)</td>
 <td>2010-06-30</td>
 <td>253</td>
 <td>0</td>
@@ -11964,7 +11975,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>1</th>
 <td>2010-06-30</td>
-<td>in-sample</td>
+<td>unusable (no XBRL history)</td>
 <td>2011-06-30</td>
 <td>254</td>
 <td>4</td>
@@ -11972,7 +11983,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>2</th>
 <td>2011-06-30</td>
-<td>in-sample</td>
+<td>in-sample: info only</td>
 <td>2012-06-30</td>
 <td>253</td>
 <td>132</td>
@@ -11980,7 +11991,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>3</th>
 <td>2012-06-29</td>
-<td>in-sample</td>
+<td>in-sample: info only</td>
 <td>2013-06-29</td>
 <td>250</td>
 <td>190</td>
@@ -11988,7 +11999,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>4</th>
 <td>2013-06-28</td>
-<td>in-sample</td>
+<td>in-sample: info only</td>
 <td>2014-06-28</td>
 <td>252</td>
 <td>207</td>
@@ -11996,7 +12007,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>5</th>
 <td>2014-06-30</td>
-<td>in-sample</td>
+<td>in-sample: info only</td>
 <td>2015-06-30</td>
 <td>253</td>
 <td>208</td>
@@ -12004,7 +12015,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>6</th>
 <td>2015-06-30</td>
-<td>in-sample</td>
+<td>in-sample: info only</td>
 <td>2016-06-30</td>
 <td>254</td>
 <td>216</td>
@@ -12012,7 +12023,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>7</th>
 <td>2016-06-30</td>
-<td>in-sample</td>
+<td>in-sample: info only</td>
 <td>2017-06-30</td>
 <td>253</td>
 <td>231</td>
@@ -12020,7 +12031,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>8</th>
 <td>2017-06-30</td>
-<td>in-sample</td>
+<td>in-sample: decision</td>
 <td>2018-06-30</td>
 <td>252</td>
 <td>238</td>
@@ -12028,7 +12039,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>9</th>
 <td>2018-06-29</td>
-<td>in-sample</td>
+<td>in-sample: decision</td>
 <td>2019-06-29</td>
 <td>251</td>
 <td>247</td>
@@ -12036,7 +12047,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>10</th>
 <td>2019-06-28</td>
-<td>in-sample</td>
+<td>in-sample: decision</td>
 <td>2020-06-28</td>
 <td>252</td>
 <td>232</td>
@@ -12044,7 +12055,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>11</th>
 <td>2020-06-30</td>
-<td>in-sample</td>
+<td>in-sample: decision</td>
 <td>2021-06-30</td>
 <td>253</td>
 <td>251</td>
@@ -12052,7 +12063,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>12</th>
 <td>2021-06-30</td>
-<td>in-sample</td>
+<td>in-sample: decision</td>
 <td>2022-06-30</td>
 <td>253</td>
 <td>270</td>
@@ -12060,7 +12071,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>13</th>
 <td>2022-06-30</td>
-<td>in-sample</td>
+<td>in-sample: decision</td>
 <td>2023-06-30</td>
 <td>252</td>
 <td>275</td>
@@ -12068,7 +12079,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>14</th>
 <td>2023-06-30</td>
-<td>in-sample</td>
+<td>held-out: decision</td>
 <td>2024-06-30</td>
 <td>251</td>
 <td>287</td>
@@ -12076,7 +12087,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>15</th>
 <td>2024-06-28</td>
-<td>held-out</td>
+<td>held-out: decision</td>
 <td>2025-06-28</td>
 <td>250</td>
 <td>288</td>
@@ -12084,7 +12095,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>16</th>
 <td>2025-06-30</td>
-<td>held-out</td>
+<td>held-out: decision</td>
 <td>2026-06-30</td>
 <td>252</td>
 <td>287</td>
@@ -12092,7 +12103,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 <tr>
 <th>17</th>
 <td>2026-06-30</td>
-<td>held-out</td>
+<td>held-out: info only (partial year)</td>
 <td>2026-09-25</td>
 <td>62</td>
 <td>292</td>
@@ -12105,7 +12116,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=d745c850">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=30225271">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -12117,7 +12128,7 @@ penny_* / mcap_small_* = ราคาน่าจะเป็นของบร�
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7c87568d">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d4fb1102">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -12159,7 +12170,1368 @@ rebalance: min/median usable% non-fin    0.0 / 58.0
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=27546f50">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=8e71bd7c">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="10)-%E0%B8%AA%E0%B9%88%E0%B8%A7%E0%B8%99%E0%B9%80%E0%B8%9E%E0%B8%B4%E0%B9%88%E0%B8%A1%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%84%E0%B8%B3%E0%B8%82%E0%B8%AD%E0%B8%AB%E0%B8%A5%E0%B8%B1%E0%B8%87-v0-%E0%B8%A3%E0%B8%AD%E0%B8%9A%E0%B9%81%E0%B8%A3%E0%B8%81-(%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%81%E0%B8%B3%E0%B8%AB%E0%B8%99%E0%B8%94-PREREG-%E0%B8%82%E0%B8%AD%E0%B8%87-v1-%E2%80%94-%E0%B8%A2%E0%B8%B1%E0%B8%87%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%94%E0%B8%B9%E0%B8%9C%E0%B8%A5%E0%B8%95%E0%B8%AD%E0%B8%9A%E0%B9%81%E0%B8%97%E0%B8%99%E0%B9%83%E0%B8%94-%E0%B9%86)">10) ส่วนเพิ่มตามคำขอหลัง v0 รอบแรก (ใช้กำหนด PREREG ของ v1 — ยังไม่ได้ดูผลตอบแทนใด ๆ)<a class="anchor-link" href="#10)-%E0%B8%AA%E0%B9%88%E0%B8%A7%E0%B8%99%E0%B9%80%E0%B8%9E%E0%B8%B4%E0%B9%88%E0%B8%A1%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%84%E0%B8%B3%E0%B8%82%E0%B8%AD%E0%B8%AB%E0%B8%A5%E0%B8%B1%E0%B8%87-v0-%E0%B8%A3%E0%B8%AD%E0%B8%9A%E0%B9%81%E0%B8%A3%E0%B8%81-(%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%81%E0%B8%B3%E0%B8%AB%E0%B8%99%E0%B8%94-PREREG-%E0%B8%82%E0%B8%AD%E0%B8%87-v1-%E2%80%94-%E0%B8%A2%E0%B8%B1%E0%B8%87%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%94%E0%B8%B9%E0%B8%9C%E0%B8%A5%E0%B8%95%E0%B8%AD%E0%B8%9A%E0%B9%81%E0%B8%97%E0%B8%99%E0%B9%83%E0%B8%94-%E0%B9%86)">¶</a></h2><p><strong>10.1 ความพร้อมของสัญญาณ F-score รายข้อ</strong> (non-financial ที่มีงบปี t, นโยบายหนี้หลัก = <code>evidence</code>) — จาก <code>lib/fscore.py</code></p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=18b785d4">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [21]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">av</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">panel</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"av_"</span><span class="p">)]</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">nf</span><span class="p">[</span><span class="n">nf</span><span class="o">.</span><span class="n">has_fy_t</span><span class="p">]</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"R"</span><span class="p">)[</span><span class="n">av</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">date</span>
+<span class="n">display</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>av_F_ROA</th>
+<th>av_F_CFO</th>
+<th>av_F_dROA</th>
+<th>av_F_ACCRUAL</th>
+<th>av_F_dLEVER</th>
+<th>av_F_dLIQUID</th>
+<th>av_F_EQ</th>
+<th>av_F_dMARGIN</th>
+<th>av_F_dTURN</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>2009-06-30</th>
+<td>100.0</td>
+<td>100.0</td>
+<td>0.0</td>
+<td>100.0</td>
+<td>0.0</td>
+<td>100.0</td>
+<td>100.0</td>
+<td>100.0</td>
+<td>0.0</td>
+</tr>
+<tr>
+<th>2010-06-30</th>
+<td>99.6</td>
+<td>100.0</td>
+<td>2.3</td>
+<td>99.6</td>
+<td>1.5</td>
+<td>97.7</td>
+<td>75.3</td>
+<td>69.6</td>
+<td>2.3</td>
+</tr>
+<tr>
+<th>2011-06-30</th>
+<td>99.5</td>
+<td>99.5</td>
+<td>71.4</td>
+<td>99.2</td>
+<td>59.8</td>
+<td>97.1</td>
+<td>92.6</td>
+<td>72.0</td>
+<td>67.5</td>
+</tr>
+<tr>
+<th>2012-06-29</th>
+<td>99.2</td>
+<td>99.5</td>
+<td>93.7</td>
+<td>99.2</td>
+<td>78.8</td>
+<td>97.2</td>
+<td>96.5</td>
+<td>73.0</td>
+<td>89.4</td>
+</tr>
+<tr>
+<th>2013-06-28</th>
+<td>98.8</td>
+<td>99.0</td>
+<td>97.0</td>
+<td>98.8</td>
+<td>83.6</td>
+<td>97.0</td>
+<td>97.0</td>
+<td>72.6</td>
+<td>93.0</td>
+</tr>
+<tr>
+<th>2014-06-30</th>
+<td>99.3</td>
+<td>99.8</td>
+<td>97.5</td>
+<td>99.3</td>
+<td>86.1</td>
+<td>97.3</td>
+<td>97.0</td>
+<td>72.0</td>
+<td>94.0</td>
+</tr>
+<tr>
+<th>2015-06-30</th>
+<td>100.0</td>
+<td>100.0</td>
+<td>98.3</td>
+<td>100.0</td>
+<td>87.3</td>
+<td>97.5</td>
+<td>97.5</td>
+<td>72.1</td>
+<td>95.0</td>
+</tr>
+<tr>
+<th>2016-06-30</th>
+<td>99.5</td>
+<td>99.5</td>
+<td>97.8</td>
+<td>99.5</td>
+<td>87.7</td>
+<td>97.3</td>
+<td>96.5</td>
+<td>71.6</td>
+<td>94.6</td>
+</tr>
+<tr>
+<th>2017-06-30</th>
+<td>99.5</td>
+<td>99.5</td>
+<td>98.5</td>
+<td>99.3</td>
+<td>89.8</td>
+<td>97.3</td>
+<td>96.5</td>
+<td>72.3</td>
+<td>95.3</td>
+</tr>
+<tr>
+<th>2018-06-29</th>
+<td>99.5</td>
+<td>99.2</td>
+<td>99.0</td>
+<td>99.2</td>
+<td>89.7</td>
+<td>97.0</td>
+<td>96.7</td>
+<td>72.7</td>
+<td>95.2</td>
+</tr>
+<tr>
+<th>2019-06-28</th>
+<td>98.2</td>
+<td>98.0</td>
+<td>94.5</td>
+<td>98.0</td>
+<td>84.7</td>
+<td>95.0</td>
+<td>97.5</td>
+<td>68.9</td>
+<td>93.0</td>
+</tr>
+<tr>
+<th>2020-06-30</th>
+<td>98.5</td>
+<td>98.3</td>
+<td>92.6</td>
+<td>98.3</td>
+<td>83.2</td>
+<td>93.8</td>
+<td>96.8</td>
+<td>72.3</td>
+<td>91.8</td>
+</tr>
+<tr>
+<th>2021-06-30</th>
+<td>99.3</td>
+<td>99.0</td>
+<td>96.8</td>
+<td>99.0</td>
+<td>87.7</td>
+<td>97.3</td>
+<td>96.3</td>
+<td>75.0</td>
+<td>96.3</td>
+</tr>
+<tr>
+<th>2022-06-30</th>
+<td>99.8</td>
+<td>99.8</td>
+<td>98.5</td>
+<td>99.8</td>
+<td>88.6</td>
+<td>97.8</td>
+<td>98.0</td>
+<td>74.2</td>
+<td>97.8</td>
+</tr>
+<tr>
+<th>2023-06-30</th>
+<td>100.0</td>
+<td>100.0</td>
+<td>99.5</td>
+<td>100.0</td>
+<td>90.9</td>
+<td>98.0</td>
+<td>98.3</td>
+<td>74.4</td>
+<td>98.5</td>
+</tr>
+<tr>
+<th>2024-06-28</th>
+<td>99.8</td>
+<td>99.8</td>
+<td>99.3</td>
+<td>99.8</td>
+<td>90.4</td>
+<td>97.8</td>
+<td>98.0</td>
+<td>74.6</td>
+<td>98.5</td>
+</tr>
+<tr>
+<th>2025-06-30</th>
+<td>100.0</td>
+<td>100.0</td>
+<td>99.0</td>
+<td>100.0</td>
+<td>88.9</td>
+<td>98.0</td>
+<td>97.8</td>
+<td>75.1</td>
+<td>98.3</td>
+</tr>
+<tr>
+<th>2026-06-30</th>
+<td>99.8</td>
+<td>99.8</td>
+<td>99.3</td>
+<td>99.8</td>
+<td>88.6</td>
+<td>98.0</td>
+<td>97.8</td>
+<td>74.4</td>
+<td>98.3</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=ab1aeb42">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>10.2 gross margin ขาดกระจุกที่กลุ่มไหน</strong> — ใช้กลุ่มจาก SIC ของ SEC (SEC ไม่มี GICS ย้อนหลัง จึงเป็น proxy) นับเป็น firm-year
+(non-financial ที่มีงบปี t, รอบ 2011–2026 และแยกช่วงตัดสิน 2017+)</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=86f2f9e1">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [22]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">nf</span><span class="p">[</span><span class="n">nf</span><span class="o">.</span><span class="n">has_fy_t</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">nf</span><span class="o">.</span><span class="n">R</span> <span class="o">&gt;=</span> <span class="s2">"2011-01-01"</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">g</span><span class="p">[</span><span class="s2">"sic_group"</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">sic</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">audit</span><span class="o">.</span><span class="n">sic_group</span><span class="p">)</span>
+<span class="n">g</span><span class="p">[</span><span class="s2">"gm_missing"</span><span class="p">]</span> <span class="o">=</span> <span class="o">~</span><span class="n">g</span><span class="o">.</span><span class="n">av_F_dMARGIN</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">conc</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"sic_group"</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">firm_years</span><span class="o">=</span><span class="p">(</span><span class="s2">"gm_missing"</span><span class="p">,</span><span class="s2">"size"</span><span class="p">),</span> <span class="n">gm_missing</span><span class="o">=</span><span class="p">(</span><span class="s2">"gm_missing"</span><span class="p">,</span><span class="s2">"sum"</span><span class="p">))</span>
+    <span class="n">t</span><span class="p">[</span><span class="s2">"pct_missing_in_group"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">gm_missing</span> <span class="o">/</span> <span class="n">t</span><span class="o">.</span><span class="n">firm_years</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">t</span><span class="p">[</span><span class="s2">"share_of_all_missing_%"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">gm_missing</span> <span class="o">/</span> <span class="n">t</span><span class="o">.</span><span class="n">gm_missing</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"gm_missing"</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ทั้งหมด 2011–2026: firm-year </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span><span class="si">}</span><span class="s2">, gm ขาด </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">gm_missing</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">g</span><span class="o">.</span><span class="n">gm_missing</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.1%</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">conc</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
+<span class="n">g17</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="n">g</span><span class="o">.</span><span class="n">R</span> <span class="o">&gt;=</span> <span class="s2">"2017-01-01"</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"เฉพาะช่วงตัดสิน 2017+: firm-year </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">g17</span><span class="p">)</span><span class="si">}</span><span class="s2">, gm ขาด </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">g17</span><span class="o">.</span><span class="n">gm_missing</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">g17</span><span class="o">.</span><span class="n">gm_missing</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.1%</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">conc</span><span class="p">(</span><span class="n">g17</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>ทั้งหมด 2011–2026: firm-year 6420, gm ขาด 1736 (27.0%)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>firm_years</th>
+<th>gm_missing</th>
+<th>pct_missing_in_group</th>
+<th>share_of_all_missing_%</th>
+</tr>
+<tr>
+<th>sic_group</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>Utilities</th>
+<td>564</td>
+<td>387</td>
+<td>68.6</td>
+<td>22.3</td>
+</tr>
+<tr>
+<th>Oil &amp; gas extraction</th>
+<td>270</td>
+<td>233</td>
+<td>86.3</td>
+<td>13.4</td>
+</tr>
+<tr>
+<th>Transportation</th>
+<td>266</td>
+<td>207</td>
+<td>77.8</td>
+<td>11.9</td>
+</tr>
+<tr>
+<th>Business services &amp; software</th>
+<td>763</td>
+<td>159</td>
+<td>20.8</td>
+<td>9.2</td>
+</tr>
+<tr>
+<th>Communications</th>
+<td>205</td>
+<td>110</td>
+<td>53.7</td>
+<td>6.3</td>
+</tr>
+<tr>
+<th>Services (hotels/personal)</th>
+<td>95</td>
+<td>85</td>
+<td>89.5</td>
+<td>4.9</td>
+</tr>
+<tr>
+<th>Petroleum refining</th>
+<td>121</td>
+<td>79</td>
+<td>65.3</td>
+<td>4.6</td>
+</tr>
+<tr>
+<th>Retail</th>
+<td>572</td>
+<td>60</td>
+<td>10.5</td>
+<td>3.5</td>
+</tr>
+<tr>
+<th>Construction</th>
+<td>97</td>
+<td>55</td>
+<td>56.7</td>
+<td>3.2</td>
+</tr>
+<tr>
+<th>Machinery &amp; computers</th>
+<td>457</td>
+<td>55</td>
+<td>12.0</td>
+<td>3.2</td>
+</tr>
+<tr>
+<th>Health services</th>
+<td>79</td>
+<td>47</td>
+<td>59.5</td>
+<td>2.7</td>
+</tr>
+<tr>
+<th>Transport equipment</th>
+<td>222</td>
+<td>45</td>
+<td>20.3</td>
+<td>2.6</td>
+</tr>
+<tr>
+<th>Other manufacturing</th>
+<td>511</td>
+<td>44</td>
+<td>8.6</td>
+<td>2.5</td>
+</tr>
+<tr>
+<th>Chemicals &amp; pharma</th>
+<td>425</td>
+<td>43</td>
+<td>10.1</td>
+<td>2.5</td>
+</tr>
+<tr>
+<th>Instruments &amp; medical devices</th>
+<td>558</td>
+<td>37</td>
+<td>6.6</td>
+<td>2.1</td>
+</tr>
+<tr>
+<th>Services (professional)</th>
+<td>58</td>
+<td>24</td>
+<td>41.4</td>
+<td>1.4</td>
+</tr>
+<tr>
+<th>Services (other)</th>
+<td>38</td>
+<td>17</td>
+<td>44.7</td>
+<td>1.0</td>
+</tr>
+<tr>
+<th>Chemicals (other)</th>
+<td>185</td>
+<td>14</td>
+<td>7.6</td>
+<td>0.8</td>
+</tr>
+<tr>
+<th>Electronics &amp; semis</th>
+<td>382</td>
+<td>13</td>
+<td>3.4</td>
+<td>0.7</td>
+</tr>
+<tr>
+<th>Mining (metals/coal)</th>
+<td>35</td>
+<td>13</td>
+<td>37.1</td>
+<td>0.7</td>
+</tr>
+<tr>
+<th>Wholesale</th>
+<td>163</td>
+<td>6</td>
+<td>3.7</td>
+<td>0.3</td>
+</tr>
+<tr>
+<th>Food &amp; beverage mfg</th>
+<td>326</td>
+<td>3</td>
+<td>0.9</td>
+<td>0.2</td>
+</tr>
+<tr>
+<th>Mining (other)</th>
+<td>28</td>
+<td>0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>เฉพาะช่วงตัดสิน 2017+: firm-year 4033, gm ขาด 1073 (26.6%)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>firm_years</th>
+<th>gm_missing</th>
+<th>pct_missing_in_group</th>
+<th>share_of_all_missing_%</th>
+</tr>
+<tr>
+<th>sic_group</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>Utilities</th>
+<td>347</td>
+<td>222</td>
+<td>64.0</td>
+<td>20.7</td>
+</tr>
+<tr>
+<th>Transportation</th>
+<td>186</td>
+<td>150</td>
+<td>80.6</td>
+<td>14.0</td>
+</tr>
+<tr>
+<th>Oil &amp; gas extraction</th>
+<td>119</td>
+<td>100</td>
+<td>84.0</td>
+<td>9.3</td>
+</tr>
+<tr>
+<th>Business services &amp; software</th>
+<td>538</td>
+<td>99</td>
+<td>18.4</td>
+<td>9.2</td>
+</tr>
+<tr>
+<th>Communications</th>
+<td>106</td>
+<td>76</td>
+<td>71.7</td>
+<td>7.1</td>
+</tr>
+<tr>
+<th>Services (hotels/personal)</th>
+<td>67</td>
+<td>63</td>
+<td>94.0</td>
+<td>5.9</td>
+</tr>
+<tr>
+<th>Machinery &amp; computers</th>
+<td>286</td>
+<td>46</td>
+<td>16.1</td>
+<td>4.3</td>
+</tr>
+<tr>
+<th>Retail</th>
+<td>329</td>
+<td>40</td>
+<td>12.2</td>
+<td>3.7</td>
+</tr>
+<tr>
+<th>Transport equipment</th>
+<td>146</td>
+<td>39</td>
+<td>26.7</td>
+<td>3.6</td>
+</tr>
+<tr>
+<th>Other manufacturing</th>
+<td>301</td>
+<td>38</td>
+<td>12.6</td>
+<td>3.5</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3fabfb65">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>10.3 หนี้ระยะยาว (long-term debt) ที่ไม่มี tag</strong> — กฎที่ผู้ใช้กำหนด: = 0 ได้เฉพาะเมื่อมีหลักฐาน (interest expense ถูกรายงานและ = 0)
+นอกนั้น = ไม่ทราบ; ตารางนับ firm-year ตามสถานะหนี้ของงบปี t (non-financial ที่มีงบปี t)</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=66049f49">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [23]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">h</span> <span class="o">=</span> <span class="n">nf</span><span class="p">[</span><span class="n">nf</span><span class="o">.</span><span class="n">has_fy_t</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">nf</span><span class="o">.</span><span class="n">R</span> <span class="o">&gt;=</span> <span class="s2">"2011-01-01"</span><span class="p">)]</span>
+<span class="n">ct_</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">crosstab</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">R</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">year</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">ltd_status_t</span><span class="p">,</span> <span class="n">margins</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">margins_name</span><span class="o">=</span><span class="s2">"รวม"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">ct_</span><span class="p">)</span>
+<span class="n">aff</span> <span class="o">=</span> <span class="n">h</span><span class="p">[(</span><span class="n">h</span><span class="o">.</span><span class="n">ltd_status_t</span> <span class="o">!=</span> <span class="s2">"reported"</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">ltd_status_t1</span> <span class="o">!=</span> <span class="s2">"reported"</span><span class="p">)]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"firm-year ที่กระทบ (ปี t หรือ t-1 ไม่มี tag หนี้): </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">aff</span><span class="p">)</span><span class="si">}</span><span class="s2"> จาก </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">aff</span><span class="p">)</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">)</span><span class="si">:</span><span class="s2">.1%</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  ในนั้นมีหลักฐานว่าไม่มีหนี้ (zero_by_evidence ในปี t): </span><span class="si">{</span><span class="nb">int</span><span class="p">((</span><span class="n">h</span><span class="o">.</span><span class="n">ltd_status_t</span><span class="o">==</span><span class="s1">'zero_by_evidence'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  ช่วงตัดสิน 2017+: กระทบ </span><span class="si">{</span><span class="nb">int</span><span class="p">((</span><span class="n">aff</span><span class="o">.</span><span class="n">R</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="s1">'2017-01-01'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">}</span><span class="s2"> จาก </span><span class="si">{</span><span class="nb">int</span><span class="p">((</span><span class="n">h</span><span class="o">.</span><span class="n">R</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="s1">'2017-01-01'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="n">elig</span> <span class="o">=</span> <span class="n">nf</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">main</span><span class="o">=</span><span class="n">nf</span><span class="o">.</span><span class="n">has_price_R</span> <span class="o">&amp;</span> <span class="n">nf</span><span class="o">.</span><span class="n">bm_complete</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">nf</span><span class="o">.</span><span class="n">n_sig_evidence</span> <span class="o">&gt;=</span> <span class="n">fscore</span><span class="o">.</span><span class="n">MIN_AVAILABLE</span><span class="p">),</span>
+                 <span class="n">ltd_zero</span><span class="o">=</span><span class="n">nf</span><span class="o">.</span><span class="n">has_price_R</span> <span class="o">&amp;</span> <span class="n">nf</span><span class="o">.</span><span class="n">bm_complete</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">nf</span><span class="o">.</span><span class="n">n_sig_zero</span> <span class="o">&gt;=</span> <span class="n">fscore</span><span class="o">.</span><span class="n">MIN_AVAILABLE</span><span class="p">))</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">elig</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"R"</span><span class="p">)[[</span><span class="s2">"main"</span><span class="p">,</span><span class="s2">"ltd_zero"</span><span class="p">]]</span><span class="o">.</span><span class="n">sum</span><span class="p">();</span> <span class="n">e</span><span class="p">[</span><span class="s2">"diff"</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">ltd_zero</span> <span class="o">-</span> <span class="n">e</span><span class="o">.</span><span class="n">main</span><span class="p">;</span> <span class="n">e</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">date</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">จำนวนหุ้นที่เข้าเกณฑ์ใช้ใน v1 (มีราคา + BM + สัญญาณ &gt;= 8/9): นโยบายหลัก vs หนี้ที่ขาด = 0"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th>ltd_status_t</th>
+<th>reported</th>
+<th>unknown_has_interest</th>
+<th>unknown_no_interest_tag</th>
+<th>zero_by_evidence</th>
+<th>รวม</th>
+</tr>
+<tr>
+<th>R</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>2011</th>
+<td>312</td>
+<td>40</td>
+<td>26</td>
+<td>0</td>
+<td>378</td>
+</tr>
+<tr>
+<th>2012</th>
+<td>337</td>
+<td>39</td>
+<td>20</td>
+<td>1</td>
+<td>397</td>
+</tr>
+<tr>
+<th>2013</th>
+<td>346</td>
+<td>35</td>
+<td>20</td>
+<td>1</td>
+<td>402</td>
+</tr>
+<tr>
+<th>2014</th>
+<td>354</td>
+<td>30</td>
+<td>19</td>
+<td>0</td>
+<td>403</td>
+</tr>
+<tr>
+<th>2015</th>
+<td>357</td>
+<td>28</td>
+<td>16</td>
+<td>1</td>
+<td>402</td>
+</tr>
+<tr>
+<th>2016</th>
+<td>363</td>
+<td>23</td>
+<td>18</td>
+<td>1</td>
+<td>405</td>
+</tr>
+<tr>
+<th>2017</th>
+<td>364</td>
+<td>21</td>
+<td>16</td>
+<td>0</td>
+<td>401</td>
+</tr>
+<tr>
+<th>2018</th>
+<td>362</td>
+<td>18</td>
+<td>19</td>
+<td>0</td>
+<td>399</td>
+</tr>
+<tr>
+<th>2019</th>
+<td>357</td>
+<td>22</td>
+<td>19</td>
+<td>1</td>
+<td>399</td>
+</tr>
+<tr>
+<th>2020</th>
+<td>366</td>
+<td>21</td>
+<td>17</td>
+<td>0</td>
+<td>404</td>
+</tr>
+<tr>
+<th>2021</th>
+<td>371</td>
+<td>19</td>
+<td>18</td>
+<td>0</td>
+<td>408</td>
+</tr>
+<tr>
+<th>2022</th>
+<td>365</td>
+<td>18</td>
+<td>20</td>
+<td>0</td>
+<td>403</td>
+</tr>
+<tr>
+<th>2023</th>
+<td>371</td>
+<td>17</td>
+<td>18</td>
+<td>0</td>
+<td>406</td>
+</tr>
+<tr>
+<th>2024</th>
+<td>370</td>
+<td>16</td>
+<td>20</td>
+<td>0</td>
+<td>406</td>
+</tr>
+<tr>
+<th>2025</th>
+<td>364</td>
+<td>20</td>
+<td>21</td>
+<td>0</td>
+<td>405</td>
+</tr>
+<tr>
+<th>2026</th>
+<td>359</td>
+<td>21</td>
+<td>22</td>
+<td>0</td>
+<td>402</td>
+</tr>
+<tr>
+<th>รวม</th>
+<td>5718</td>
+<td>388</td>
+<td>309</td>
+<td>5</td>
+<td>6420</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>firm-year ที่กระทบ (ปี t หรือ t-1 ไม่มี tag หนี้): 757 จาก 6420 (11.8%)
+  ในนั้นมีหลักฐานว่าไม่มีหนี้ (zero_by_evidence ในปี t): 5
+  ช่วงตัดสิน 2017+: กระทบ 423 จาก 4033
+
+จำนวนหุ้นที่เข้าเกณฑ์ใช้ใน v1 (มีราคา + BM + สัญญาณ &gt;= 8/9): นโยบายหลัก vs หนี้ที่ขาด = 0
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>main</th>
+<th>ltd_zero</th>
+<th>diff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>2009-06-30</th>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<th>2010-06-30</th>
+<td>4</td>
+<td>4</td>
+<td>0</td>
+</tr>
+<tr>
+<th>2011-06-30</th>
+<td>168</td>
+<td>173</td>
+<td>5</td>
+</tr>
+<tr>
+<th>2012-06-29</th>
+<td>237</td>
+<td>245</td>
+<td>8</td>
+</tr>
+<tr>
+<th>2013-06-28</th>
+<td>257</td>
+<td>265</td>
+<td>8</td>
+</tr>
+<tr>
+<th>2014-06-30</th>
+<td>266</td>
+<td>272</td>
+<td>6</td>
+</tr>
+<tr>
+<th>2015-06-30</th>
+<td>275</td>
+<td>280</td>
+<td>5</td>
+</tr>
+<tr>
+<th>2016-06-30</th>
+<td>292</td>
+<td>299</td>
+<td>7</td>
+</tr>
+<tr>
+<th>2017-06-30</th>
+<td>299</td>
+<td>305</td>
+<td>6</td>
+</tr>
+<tr>
+<th>2018-06-29</th>
+<td>308</td>
+<td>315</td>
+<td>7</td>
+</tr>
+<tr>
+<th>2019-06-28</th>
+<td>303</td>
+<td>315</td>
+<td>12</td>
+</tr>
+<tr>
+<th>2020-06-30</th>
+<td>314</td>
+<td>324</td>
+<td>10</td>
+</tr>
+<tr>
+<th>2021-06-30</th>
+<td>339</td>
+<td>346</td>
+<td>7</td>
+</tr>
+<tr>
+<th>2022-06-30</th>
+<td>354</td>
+<td>359</td>
+<td>5</td>
+</tr>
+<tr>
+<th>2023-06-30</th>
+<td>368</td>
+<td>373</td>
+<td>5</td>
+</tr>
+<tr>
+<th>2024-06-28</th>
+<td>368</td>
+<td>373</td>
+<td>5</td>
+</tr>
+<tr>
+<th>2025-06-30</th>
+<td>370</td>
+<td>377</td>
+<td>7</td>
+</tr>
+<tr>
+<th>2026-06-30</th>
+<td>375</td>
+<td>383</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=730391ec">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>10.4 IR และ JEF (override ความมั่นใจ medium)</strong> — firm-year ที่กระทบ (จะรัน sensitivity ตัดออกใน v1 ตาม PREREG)</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=f4fa8dae">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [24]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">ij</span> <span class="o">=</span> <span class="n">elig</span><span class="p">[</span><span class="n">elig</span><span class="o">.</span><span class="n">ticker</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">"IR"</span><span class="p">,</span> <span class="s2">"JEF"</span><span class="p">])</span> <span class="o">&amp;</span> <span class="n">elig</span><span class="o">.</span><span class="n">main</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"firm-year ของ IR/JEF ที่เข้าเกณฑ์ใช้ใน v1: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ij</span><span class="p">)</span><span class="si">}</span><span class="s2"> (IR </span><span class="si">{</span><span class="nb">int</span><span class="p">((</span><span class="n">ij</span><span class="o">.</span><span class="n">ticker</span><span class="o">==</span><span class="s1">'IR'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">}</span><span class="s2">, JEF </span><span class="si">{</span><span class="nb">int</span><span class="p">((</span><span class="n">ij</span><span class="o">.</span><span class="n">ticker</span><span class="o">==</span><span class="s1">'JEF'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">}</span><span class="s2">)"</span>
+      <span class="sa">f</span><span class="s2">" จากทั้งหมด </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">elig</span><span class="o">.</span><span class="n">main</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ij</span><span class="p">)</span><span class="o">/</span><span class="n">elig</span><span class="o">.</span><span class="n">main</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">ij</span><span class="p">[[</span><span class="s2">"R"</span><span class="p">,</span><span class="s2">"ticker"</span><span class="p">,</span><span class="s2">"cik"</span><span class="p">]]</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">R</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="n">R</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>firm-year ของ IR/JEF ที่เข้าเกณฑ์ใช้ใน v1: 16 (IR 16, JEF 0) จากทั้งหมด 4897 (0.33%)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>R</th>
+<th>ticker</th>
+<th>cik</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>2011-06-30</td>
+<td>IR</td>
+<td>1466258.0</td>
+</tr>
+<tr>
+<th>1</th>
+<td>2012-06-29</td>
+<td>IR</td>
+<td>1466258.0</td>
+</tr>
+<tr>
+<th>2</th>
+<td>2013-06-28</td>
+<td>IR</td>
+<td>1466258.0</td>
+</tr>
+<tr>
+<th>3</th>
+<td>2014-06-30</td>
+<td>IR</td>
+<td>1466258.0</td>
+</tr>
+<tr>
+<th>4</th>
+<td>2015-06-30</td>
+<td>IR</td>
+<td>1466258.0</td>
+</tr>
+<tr>
+<th>5</th>
+<td>2016-06-30</td>
+<td>IR</td>
+<td>1466258.0</td>
+</tr>
+<tr>
+<th>6</th>
+<td>2017-06-30</td>
+<td>IR</td>
+<td>1466258.0</td>
+</tr>
+<tr>
+<th>7</th>
+<td>2018-06-29</td>
+<td>IR</td>
+<td>1466258.0</td>
+</tr>
+<tr>
+<th>8</th>
+<td>2019-06-28</td>
+<td>IR</td>
+<td>1466258.0</td>
+</tr>
+<tr>
+<th>9</th>
+<td>2020-06-30</td>
+<td>IR</td>
+<td>1699150.0</td>
+</tr>
+<tr>
+<th>10</th>
+<td>2021-06-30</td>
+<td>IR</td>
+<td>1699150.0</td>
+</tr>
+<tr>
+<th>11</th>
+<td>2022-06-30</td>
+<td>IR</td>
+<td>1699150.0</td>
+</tr>
+<tr>
+<th>12</th>
+<td>2023-06-30</td>
+<td>IR</td>
+<td>1699150.0</td>
+</tr>
+<tr>
+<th>13</th>
+<td>2024-06-28</td>
+<td>IR</td>
+<td>1699150.0</td>
+</tr>
+<tr>
+<th>14</th>
+<td>2025-06-30</td>
+<td>IR</td>
+<td>1699150.0</td>
+</tr>
+<tr>
+<th>15</th>
+<td>2026-06-30</td>
+<td>IR</td>
+<td>1699150.0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=cce86109">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>10.5 ปีเริ่มต้นของราคา benchmark และช่วงที่เทียบได้</strong> (ผู้ใช้ขอให้เทียบเฉพาะช่วงที่มีข้อมูลจริง)</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8cc9c87b">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [25]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">first_R</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">Rs</span> <span class="k">if</span> <span class="n">nf</span><span class="p">[</span><span class="n">nf</span><span class="o">.</span><span class="n">R</span> <span class="o">==</span> <span class="n">r</span><span class="p">]</span><span class="o">.</span><span class="n">usable</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">r</span> <span class="o">&gt;=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">"2011-01-01"</span><span class="p">))</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">bm</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">b</span><span class="p">[</span><span class="s2">"first"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">"first"</span><span class="p">])</span>
+<span class="n">b</span><span class="p">[</span><span class="s2">"covers_2011_06"</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="s2">"first"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">"2011-06-30"</span><span class="p">)</span>
+<span class="n">b</span><span class="p">[</span><span class="s2">"covers_2017_06"</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="s2">"first"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">"2017-06-30"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">b</span><span class="p">[[</span><span class="s2">"ticker"</span><span class="p">,</span><span class="s2">"currency"</span><span class="p">,</span><span class="s2">"first"</span><span class="p">,</span><span class="s2">"last"</span><span class="p">,</span><span class="s2">"n_days"</span><span class="p">,</span><span class="s2">"covers_2011_06"</span><span class="p">,</span><span class="s2">"covers_2017_06"</span><span class="p">]])</span>
+<span class="n">usable_b</span> <span class="o">=</span> <span class="n">b</span><span class="p">[(</span><span class="n">b</span><span class="o">.</span><span class="n">n_days</span> <span class="o">&gt;</span> <span class="mi">250</span><span class="p">)]</span>
+<span class="n">common_start</span> <span class="o">=</span> <span class="n">usable_b</span><span class="p">[</span><span class="s2">"first"</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">();</span> <span class="n">common_end</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">usable_b</span><span class="p">[</span><span class="s2">"last"</span><span class="p">])</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"benchmark ที่ใช้ได้ (มีข้อมูล &gt; 250 วัน): </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">usable_b</span><span class="o">.</span><span class="n">ticker</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ช่วงที่ทุกตัวมีข้อมูลร่วมกัน: </span><span class="si">{</span><span class="n">common_start</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span><span class="s2"> → </span><span class="si">{</span><span class="n">common_end</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>ticker</th>
+<th>currency</th>
+<th>first</th>
+<th>last</th>
+<th>n_days</th>
+<th>covers_2011_06</th>
+<th>covers_2017_06</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>SPY</td>
+<td>USD</td>
+<td>2008-01-02</td>
+<td>2026-09-25</td>
+<td>4713</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<th>1</th>
+<td>RSP</td>
+<td>USD</td>
+<td>2008-01-02</td>
+<td>2026-09-25</td>
+<td>4713</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<th>2</th>
+<td>^GSPC</td>
+<td>USD (index pts)</td>
+<td>2008-01-02</td>
+<td>2026-09-25</td>
+<td>4713</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<th>3</th>
+<td>^DJI</td>
+<td>USD (index pts)</td>
+<td>2008-01-02</td>
+<td>2026-09-25</td>
+<td>4713</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<th>4</th>
+<td>^SET.BK</td>
+<td>THB (index pts)</td>
+<td>2026-09-25</td>
+<td>2026-09-25</td>
+<td>1</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<th>5</th>
+<td>TDEX.BK</td>
+<td>THB</td>
+<td>2008-01-02</td>
+<td>2026-09-24</td>
+<td>4565</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<th>6</th>
+<td>THD</td>
+<td>USD</td>
+<td>2008-04-01</td>
+<td>2026-09-25</td>
+<td>4652</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<th>7</th>
+<td>THB=X</td>
+<td>THB per USD</td>
+<td>2008-01-01</td>
+<td>2026-09-25</td>
+<td>4859</td>
+<td>True</td>
+<td>True</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>benchmark ที่ใช้ได้ (มีข้อมูล &gt; 250 วัน): ['SPY', 'RSP', '^GSPC', '^DJI', 'TDEX.BK', 'THD', 'THB=X']
+ช่วงที่ทุกตัวมีข้อมูลร่วมกัน: 2008-04-01 → 2026-09-24
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=24d9dd8d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -12217,10 +13589,21 @@ rebalance: min/median usable% non-fin    0.0 / 58.0
 <li>จำนวนหุ้นจาก SEC มีข้อมูลผิดบ้าง (scale ผิด, BRK รายงานเป็น Class A equivalent) — 0–3 ตัวต่อรอบถูก flag และไม่ใช้คำนวณ market cap</li>
 <li>การจับคู่ CIK ใช้ heuristic + override: override ระดับ <code>medium</code> 2 รายการ (IR หลัง 2020-03, JEF 2007–2019) ยังไม่มั่นใจเต็มร้อย</li>
 <li>AGN รอบ มิ.ย. 2015 ยังใช้งบของ Allergan Inc (ถูกซื้อไปเมื่อ มี.ค. 2015) — ความคลาดเคลื่อนระดับ 1 บริษัท-ปี</li>
-<li>Held-out: rebalance มิ.ย. 2023 (in-sample) ถือยาวถึง มิ.ย. 2024 ซึ่งทับช่วง held-out ที่เริ่ม 2023-10-01 → ต้องตัดสินใจก่อน v1</li>
+<li>Held-out มีแค่ 3 รอบเต็ม (มิ.ย. 2023, 2024, 2025) + รอบ 2026 ที่ถือได้ 62 วันทำการ → ความไม่แน่นอนสูง</li>
+</ul>
+<p><strong>6. ส่วนเพิ่มหลัง v0 รอบแรก (หัวข้อ 10)</strong></p>
+<ul>
+<li>gross margin ขาด 27.0% ของ firm-year (2011–2026; 26.6% ในช่วง 2017+) กระจุกที่ Utilities (22.3% ของที่ขาดทั้งหมด), Oil &amp; gas extraction (13.4%),
+Transportation (11.9%), Business services &amp; software (9.2%) — ภายในกลุ่ม utilities ขาด 68.6%, oil &amp; gas 86.3% (จัดกลุ่มด้วย SIC ไม่ใช่ GICS)</li>
+<li>หนี้ระยะยาว: firm-year ที่ปี t หรือ t-1 ไม่มี tag หนี้ = 757/6,420 (11.8%) แต่มีหลักฐานว่าไม่มีหนี้จริง (interest expense = 0) แค่ 5 firm-year
+ที่เหลือส่วนใหญ่ยังรายงาน interest expense &gt; 0 (388) → น่าจะมีหนี้แต่ใช้ tag อื่น → "ไม่ทราบ" ตามกฎ</li>
+<li>หุ้นที่เข้าเกณฑ์ v1 (ราคา + BM + สัญญาณ ≥ 8/9, non-financial): 168 (2011) → 299 (2017) → 375 (2026); ถ้าถือหนี้ที่ขาด = 0 เพิ่มได้ 5–12 ตัวต่อรอบ</li>
+<li>IR/JEF: กระทบ 16 firm-year (0.33%) ทั้งหมดเป็น IR; JEF ไม่อยู่ใน universe เพราะ SIC เป็นกลุ่มการเงิน</li>
+<li>benchmark ทุกตัว (ยกเว้น ^SET.BK) มีข้อมูลตั้งแต่ก่อน มิ.ย. 2011 — ช่วงร่วมกัน 2008-04-01 → 2026-09-24</li>
+<li>assertion กันบั๊กเงียบ (<code>lib/checks.py</code>) ผ่านทั้งหมด และทดสอบแล้วว่าจับหลุมแบบบั๊ก 2018 ที่จำลองขึ้นได้</li>
 </ul>
 <p><strong>ทดสอบแล้ว (รันจริงใน notebook นี้)</strong>: ความครอบคลุมทุกส่วนข้างบน, การจับคู่ CIK (สุ่มตรวจ + ตรวจขนาดบริษัท), ตรวจ ticker reuse ด้วยราคาจริง, สถิติ restatement
-<strong>ยังเป็นแค่ไอเดีย (ยังไม่ได้ทำ)</strong>: หาแหล่งราคาหุ้นที่ delist แล้ว, การเติม gross margin/หนี้ที่ขาด (ต้องให้ผู้ใช้ตัดสิน), การคำนวณ F-score และ backtest (v1)</p>
+<strong>ยังเป็นแค่ไอเดีย (ยังไม่ได้ทำ)</strong>: หาแหล่งราคาหุ้นที่ delist แล้ว, การคำนวณ F-score/BM จริงและ backtest ทุกแบบ รวมถึง sensitivity (ล็อกไว้ใน <code>PREREG.md</code> สำหรับ v1)</p>
 </div>
 </div>
 </div>

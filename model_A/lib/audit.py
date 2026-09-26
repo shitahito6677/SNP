@@ -12,6 +12,8 @@ import re
 import numpy as np
 import pandas as pd
 
+from lib import fscore
+
 # ข้อมูลที่ต้องมีเพื่อคำนวณ F-score ครบ 9 ข้อ (t = ปีล่าสุด, t1 = ปีก่อน, t2 = สองปีก่อน)
 FSCORE_NEEDS = {
     "net_income": ["t", "t1"],
@@ -91,6 +93,18 @@ def build_panel(hist, segs, pit, adj, close, splits, Rs, to_yahoo, sic_of: dict,
             if rs["t"] is not None and rs["t1"] is not None:
                 ok_ltd0["lt_debt"] = True  # สมมติ: ไม่มี tag หนี้ระยะยาว = ไม่มีหนี้ (ต้องให้ผู้ใช้ตัดสิน)
             row["fscore_complete_ltd0"] = all(ok_ltd0.values())
+            # ความพร้อมของสัญญาณ F-score รายข้อ ภายใต้นโยบายหนี้ 2 แบบ (ดู lib/fscore.py) — ไม่ได้ใช้ผลตอบแทน
+            if rs["t"] is not None and rs["t1"] is not None and pr["yahoo"]:
+                sf = split_factor_between(splits, pr["yahoo"], rs["t1"].name, rs["t"].name)
+            else:
+                sf = 1.0
+            for pol in ("evidence", "zero"):
+                sg = fscore.signals(rs, sf, ltd_policy=pol)
+                _, n_av = fscore.score(sg, "rescale")
+                row[f"n_sig_{pol}"] = n_av if rs["t"] is not None else 0
+                if pol == "evidence":
+                    row.update({f"av_{k}": pd.notna(sg[k]) for k in fscore.SIGNALS})
+                    row["ltd_status_t"], row["ltd_status_t1"] = sg["ltd_status_t"], sg["ltd_status_t1"]
             row["bm_complete"] = all(field_ok(rs, BM_NEEDS).values()) and pd.notna(row["mcap_R"])
             rows.append(row)
     return pd.DataFrame(rows)
@@ -140,3 +154,33 @@ def choose_price(t, cik, R, shares, shares_ratio, adj, close, splits, cik_ticker
         if result["price_flag"] == "no_price":
             result.update(price_flag=reject, raw_price=raw, mcap_R=mcap)
     return result
+
+
+def split_factor_between(splits: pd.DataFrame, yahoo: str, d0, d1) -> float:
+    """ผลคูณ split ratio ที่เกิดในช่วง (d0, d1] — ใช้ปรับจำนวนหุ้นปีก่อนให้เทียบกับปีนี้ได้ (F_EQ)"""
+    s = splits[(splits["yahoo"] == yahoo) & (splits["date"] > d0) & (splits["date"] <= d1)]
+    return float(s["ratio"].prod()) if len(s) else 1.0
+
+
+# กลุ่มอุตสาหกรรมจาก SIC (SEC ไม่มี GICS ย้อนหลัง — ใช้ SIC ของ SEC เป็น proxy และระบุไว้ทุกครั้งที่รายงาน)
+SIC_GROUPS = [
+    ((100, 999), "Agriculture"), ((1000, 1299), "Mining (metals/coal)"), ((1300, 1399), "Oil & gas extraction"),
+    ((1400, 1499), "Mining (other)"), ((1500, 1799), "Construction"), ((2000, 2099), "Food & beverage mfg"),
+    ((2800, 2836), "Chemicals & pharma"), ((2837, 2899), "Chemicals (other)"), ((2900, 2999), "Petroleum refining"),
+    ((3500, 3599), "Machinery & computers"), ((3600, 3699), "Electronics & semis"), ((3700, 3799), "Transport equipment"),
+    ((3800, 3899), "Instruments & medical devices"), ((2100, 3999), "Other manufacturing"),
+    ((4000, 4799), "Transportation"), ((4800, 4899), "Communications"), ((4900, 4999), "Utilities"),
+    ((5000, 5199), "Wholesale"), ((5200, 5999), "Retail"), ((6000, 6799), "Finance/insurance/REIT"),
+    ((7000, 7299), "Services (hotels/personal)"), ((7300, 7399), "Business services & software"),
+    ((7400, 7999), "Services (other)"), ((8000, 8099), "Health services"), ((8100, 8999), "Services (professional)"),
+]
+
+
+def sic_group(sic) -> str:
+    if pd.isna(sic):
+        return "unknown SIC"
+    s = int(sic)
+    for (lo, hi), name in SIC_GROUPS:
+        if lo <= s <= hi:
+            return name
+    return "other"

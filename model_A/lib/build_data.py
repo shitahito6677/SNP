@@ -15,7 +15,7 @@ Pipeline เตรียมข้อมูลของ Model A (idempotent — �
 import pandas as pd
 import requests
 
-from lib import cik_map, constituents, prices, sec_facts, sec_rss
+from lib import checks, cik_map, constituents, prices, sec_facts, sec_rss
 from lib.paths import INTERIM, SEC_USER_AGENT
 
 WINDOW_START = "2009-01-01"  # XBRL เริ่มบังคับใช้กลางปี 2009 → ก่อนหน้านี้ไม่มีงบให้ใช้
@@ -93,11 +93,17 @@ def build_prices(spells: pd.DataFrame) -> None:
 
 def run():
     spells = build_spells()
-    sec_rss.fetch_all()
+    checks.nonempty(spells, "spells", 1000)
+    checks.nonempty(sec_rss.fetch_all(), "SEC RSS filings", 100_000)
     build_cik_map(spells)
     segs = build_segments(spells)
-    build_facts(segs)
+    checks.nonempty(segs, "cik_segments", 800)
+    checks.segments_valid(segs)
+    long, wide = build_facts(segs)
+    checks.nonempty(long, "annual_long", 100_000)
+    checks.unique_keys(wide, ["cik", "period_end"], "annual_wide")
     build_prices(spells)
+    checks.nonempty(prices.load_adj_close(), "prices", 4000)
 
 
 if __name__ == "__main__":

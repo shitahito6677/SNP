@@ -41,6 +41,9 @@ FIELDS = {
     "equity": ("instant", ["StockholdersEquity",
                            "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"]),
     "shares_out": ("instant", ["CommonStockSharesOutstanding"]),
+    # ใช้เป็นหลักฐานว่า "ไม่มีหนี้" เมื่อไม่มี tag หนี้ระยะยาว (ผู้ใช้กำหนดหลัง v0: หนี้ = 0 ได้เฉพาะเมื่อมีหลักฐาน)
+    "interest_expense": ("duration", ["InterestExpense", "InterestExpenseNonoperating", "InterestExpenseDebt",
+                                      "InterestAndDebtExpense"]),
     # fallback จำนวนหุ้น: บริษัทหลาย class (เช่น META, BRK) รายงานหุ้นคงเหลือแยกตาม class ซึ่ง companyfacts ไม่รวม
     "shares_wavg": ("duration", ["WeightedAverageNumberOfSharesOutstandingBasic"]),
 }
