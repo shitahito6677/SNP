@@ -925,3 +925,39 @@ sidebar (`fundamentals-panel`), และ script prefetch `sandbox/scripts/fetch
 (Piotroski) หรือไม่ เมื่อเริ่มเขียน inference จริงของ Model A (3) เก็บ Alpha Vantage free-tier
 quota ไว้ (25 req/day รวมทุก endpoint ของ key เดียวกับที่ `collect_alpha_vantage.py` ใช้) —
 ถ้าจะรัน `fetch_fundamentals.py` บ่อยๆ ควรเพิ่ม TTL หรือแยก API key
+
+---
+## model_A_v0_data_audit — 2026-09-27 02:56 (+0700)
+
+**วิธีที่ใช้:** เริ่ม Model A ใหม่ทั้งหมด (branch `feature/model-a-rebuild`, ตาม `model_A/SPEC.md` Phase 1) — ยังไม่มีสัญญาณ/backtest
+เป็นการตรวจความครอบคลุมของข้อมูลเท่านั้น: สร้าง pipeline ใน `model_A/lib/` (constituents point-in-time จาก fja05680/sp500,
+SEC XBRL RSS รายเดือน → จับคู่ ticker→CIK แบบรู้เวลา + override ที่มีหลักฐาน, SEC companyfacts ใช้ค่าที่ filed ครั้งแรก,
+PIT accessor เลือก tag ทีละ field เฉพาะที่ filed แล้ว, ราคา yfinance + ตรวจ ticker reuse ด้วยราคาจริงย้อน split/market cap)
+แล้ววัด % สมาชิกที่ข้อมูลครบต่อรอบ rebalance สิ้น มิ.ย. 2009–2026 — notebook: `model_A/notebooks/v0_data_audit.ipynb`,
+report: `model_A/reports/v0_data_audit.html`
+
+**ข้อมูลที่ใช้:** fja05680/sp500 `S&P 500 Historical Components & Changes (Updated).csv` @ commit a2430f2af0 (2,720 แถว,
+1996-01-02→2026-08-18); SEC XBRL RSS 210 เดือน (2009-04→2026-09); SEC companyfacts 937 CIK → annual facts 166,622 แถว
+(13,466 บริษัท-ปี, 812 บริษัท); yfinance ราคารายวัน 2008-01→2026-09 (1,150 ticker ที่ลองดึง, 916 มีข้อมูล) + split history
+(ข้อมูลดิบทั้งหมดอยู่ใน `model_A/data/` ซึ่ง gitignore ไว้ regenerate ได้ด้วย `python3 -m lib.build_data`)
+
+**ผลลัพธ์:**
+- สมาชิกตั้งแต่ 2009: 869 ticker / 894 spell; จับคู่ CIK ได้ 833/894 spell (93.2%); override 30 segment (28 high, 2 medium)
+- XBRL 10-K ฉบับแรก filed 2009-05-29; บริษัทเริ่มยื่น XBRL รายปีครั้งแรกปี 2010 = 377, 2011 = 227
+- ราคา (ticker ตาม fja): 74.9% ของ spell มีราคา; หุ้นที่ยังเป็นสมาชิก 100%, หุ้นที่ออกจากดัชนีแล้ว 42.7%
+- % สมาชิกที่ `usable` (มี CIK + ราคา ณ R + F-score ครบแบบถือว่าไม่มี tag หนี้ = 0 + BM ครบ): 2009 0.0, 2010 0.8,
+  2011 27.2, 2012 39.4, 2015 44.9, 2018 51.0, 2020 52.5, 2023 59.8, 2026 60.4
+- non-financial usable: 2011 32.1%, 2012 46.1%, 2015 52.7%, 2020 61.5%, 2026 72.1%; financial (SIC 6000–6799) F-score ครบ 3.5–14.7%
+- สาเหตุหลัก (non-financial): ไม่มีราคา 127 ตัว (2011) → 1 ตัว (2026); gross margin ขาด 24.9–30.8% ของหุ้นที่มีงบ; long-term debt ขาด 8.6–19.0%
+- ค่าที่ถูกแก้ย้อนหลัง (ค่าล่าสุด ≠ ค่า filed ครั้งแรก): 6.2% (shares_out) – 18.3% (gross_profit)
+- Benchmark: SPY/RSP/^GSPC/^DJI ครบ 2008-01-02→2026-09-25 (USD); ^SET.BK มีแค่ 1 วัน → proxy TDEX.BK (THB, 4,565 วัน), THD (USD, 4,652 วัน)
+
+**มุมมอง/การตีความ:** ข้อมูลพอสำหรับ v1 ตั้งแต่รอบ มิ.ย. 2011/2012 เป็นต้นไป แต่ช่วงต้น (2011–2016) ขาดราคาของหุ้น
+20–31% ของสมาชิก non-financial ซึ่งเกือบทั้งหมดเป็นหุ้นที่ภายหลังถูกซื้อกิจการ/ล้มละลาย → survivorship bias สูงสุดในช่วงนี้
+และทำให้ผลตอบแทนย้อนหลังน่าจะสูงเกินจริง; ตัวจำกัดอันดับสองคือ gross margin ที่บริษัท ~1 ใน 4 ไม่รายงาน ทำให้ F-score 9 ข้อ
+คำนวณครบได้แค่ ~55–62% — ระหว่างทางพบและแก้บั๊ก 3 จุด (tag priority ทำให้งบปี 2017 หายในรอบ 2018, namespace ของ SEC RSS
+เปลี่ยนปลายปี 2019 ทำให้ parse ได้ 0 แถว, การจับคู่ CIK แบบ majority ผิดกับบริษัทที่ปรับโครงสร้าง/บริษัทลูก utility)
+
+**ขั้นต่อไปที่ควรลอง:** รอผู้ใช้ตัดสินใจ (1) รับ survivorship gap ช่วง 2011–2016 หรือหาแหล่งราคาหุ้น delist
+(2) วิธีจัดการ gross margin/หนี้ที่ขาด (3) ช่วง held-out เทียบกับ rebalance มิ.ย. 2023 (4) proxy ของ SET — แล้วเขียน PREREG v1
+---
