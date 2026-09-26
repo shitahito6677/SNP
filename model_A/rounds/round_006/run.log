@@ -1,0 +1,6 @@
+F_GBM done
+F_TREE2 done
+        trial_id  dec_sharpe  dec_sharpe_ew  dec_sharpe_spy  dec_cagr  dec_cagr_ew  dec_maxdd  dec_maxdd_ew  S1_10  S1_25  S2_share    DSR  S6_avg_n  S6_min_n  info_sharpe  info_sharpe_ew
+91    r006_F_GBM       0.636           0.64           0.681     0.129        0.125     -0.373        -0.376  False  False     0.297  0.013    99.083        57        0.976           1.137
+92  r006_F_TREE2       0.526           0.64           0.681     0.103        0.125     -0.394        -0.376  False  False     0.108  0.000    99.083        57        1.133           1.137
+CANDIDATES: []

@@ -47,7 +47,9 @@ def _read_monthly(name: str) -> pd.DataFrame:
             break
     df = pd.DataFrame([r[1:len(header) + 1] for r in rows], columns=header,
                       index=pd.to_datetime([r[0] for r in rows], format="%Y%m") + pd.offsets.MonthEnd(0))
-    df = df.apply(pd.to_numeric, errors="coerce") / 100
+    df = df.apply(pd.to_numeric, errors="coerce")
+    df = df.mask(df <= -99.99)  # ไฟล์ของ Ken French ใช้ -99.99 / -999 แทน "ไม่มีข้อมูล" (พบใน Emerging)
+    df = df / 100
     return guard.clip(df)
 
 
