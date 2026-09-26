@@ -1180,3 +1180,23 @@ QVI) × {overall, sector-neutral}; top 20% ขั้นต่ำ 50, EW, rebalan
 
 **ขั้นต่อไปที่ควรลอง:** round 005 ตระกูล E (trend filter, vol targeting, drawdown stop) + S5 บนดัชนี 6 ชุด
 ---
+
+---
+## model_A_autorun_round_005_overlays — 2026-09-27 (+0700)
+
+**วิธีที่ใช้:** AUTORUN round 005 ตระกูล E: overlay ระดับตลาด 3 แบบ (trend 10 เดือน, vol target 15%/63 วัน, drawdown stop −15% + trend) บน SPY และ EW(U)
+รายเดือน, ตัดสินสิ้นเดือน, เงินสดได้ ^IRX, ต้นทุน 10/25 bps × |Δw|; S5 บนดัชนี ^GSPC 1970–2010, ^N225, ^FTSE, ^GDAXI, ^HSI, ^STI —
+สเปก `model_A/rounds/round_005/HYPOTHESIS.md` (commit 80d136f ก่อนรัน)
+
+**ข้อมูลที่ใช้:** SPY Adj Close, NAV ของ EW(U) รายเดือน, ดัชนีต่างประเทศ (price index) ถึง 2023-06-30
+
+**ผลลัพธ์:**
+- 6 trial → สะสม 91; ผู้เข้ารอบ 0
+- ช่วงตัดสิน Sharpe: trend SPY 0.457, voltarget SPY 0.592, ddstop SPY 0.486, trend EW 0.369, voltarget EW 0.451, ddstop EW 0.347 (SPY 0.681, EW 0.614)
+- MaxDD trend SPY −24.9%, trend EW −23.5% (EW −38.4%); ถือเงินสด 100%: trend SPY 17.4% ของเดือน → ตก S6
+- S5 (ดีกว่า buy-and-hold): trend 4/6, voltarget 5/6, ddstop 5/6 (เช่น ^GSPC 1970–2010 trend 0.600 vs 0.456)
+
+**มุมมอง/การตีความ:** overlay ช่วยในประวัติยาวหลายตลาด แต่ในช่วง 2017–2022 ออกช้าเข้าช้า → แพ้ buy-and-hold ชัดเจน; ไม่ใช่เครื่องมือชนะตลาดตาม S1
+
+**ขั้นต่อไปที่ควรลอง:** round 006 ตระกูล F (ML baseline แบบ walk-forward)
+---
