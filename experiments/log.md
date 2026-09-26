@@ -1139,3 +1139,24 @@ QVI) × {overall, sector-neutral}; top 20% ขั้นต่ำ 50, EW, rebalan
 
 **ขั้นต่อไปที่ควรลอง:** round 003 ตระกูล C (momentum/low vol/trend และพื้นฐาน×ราคา) บน panel รายเดือน
 ---
+
+---
+## model_A_autorun_round_003_price_signals — 2026-09-27 (+0700)
+
+**วิธีที่ใช้:** AUTORUN round 003 ตระกูล C: สัญญาณราคา (momentum 12-1, low vol 252 วัน, trend 200 วัน, ใกล้ high 52 สัปดาห์) และผสมพื้นฐาน×ราคา
+(quality+mom, shareholder yield+quality+mom, quality+low vol, value+mom) × {overall, sector}; rebalance รายเดือน 144 รอบ, top 20% ขั้นต่ำ 50, EW,
+10/25 bps, benchmark EW(U) รายเดือน — สเปก `model_A/rounds/round_003/HYPOTHESIS.md` (commit 1dacf71 ก่อนรัน)
+รันครั้งแรกพบบั๊กปฏิทิน (ตารางราคามีวันหยุดสหรัฐจาก TDEX.BK/THB=X → momentum หาย 6 เดือน, พอร์ต 0 ตัว) → แก้ให้ใช้ปฏิทิน SPY และรันใหม่สเปกเดิม
+
+**ข้อมูลที่ใช้:** panel รายเดือน 72,334 แถว (U 255–385 หุ้นต่อเดือน), สัญญาณราคาจาก Adj Close ถึง 2023-06-30
+
+**ผลลัพธ์:**
+- 16 trial → สะสม 73; ผู้เข้ารอบ 0; ไม่มีตัวไหนผ่าน S1 (ต้อง ≥ 0.831; EW รายเดือน 0.614, SPY 0.681)
+- ใกล้สุด C_SHYQMOM_overall 0.824 (CAGR 15.6% vs 12.2%, S2 100%, DSR 0.301, ช่วงประกอบ 1.182 vs 1.093); C_QMOM_overall 0.793
+- momentum เดี่ยว 0.626–0.627; low vol 0.605–0.677 (ช่วงประกอบ 1.451–1.633); value+mom 0.550–0.563
+- ก่อนแก้บั๊ก: C_MOM_overall 0.558, C_SHYQMOM_overall 0.787 (ไม่มีผู้เข้ารอบเช่นกัน)
+
+**มุมมอง/การตีความ:** สัญญาณราคาเดี่ยวไม่เด่นในหุ้นใหญ่ช่วงนี้; แกน shareholder yield + quality ยังสม่ำเสมอที่สุดแต่ต่ำกว่า S1 เล็กน้อย
+
+**ขั้นต่อไปที่ควรลอง:** round 004 ตระกูล D (น้ำหนัก, ความถี่, sector cap, turnover buffer) บนฐานที่เลือกด้วยกฎประกาศล่วงหน้า
+---
