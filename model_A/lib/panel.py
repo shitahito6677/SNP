@@ -49,7 +49,7 @@ def _rows_from_wide(w: pd.DataFrame, R: pd.Timestamp) -> dict:
     out["t"] = w.loc[pe].rename(pe)
     for k, yrs in (("t1", 1), ("t2", 2)):
         lo, hi = pe - pd.Timedelta(days=365 * yrs + 40), pe - pd.Timedelta(days=365 * yrs - 40)
-        c = w[(w.index >= lo) & (w.index <= hi)]
+        c = w[(w.index >= lo) & (w.index <= hi) & w["total_assets"].notna()]  # ดู lib/pit.py
         if len(c):
             out[k] = c.iloc[-1].rename(c.index[-1])
     return out

@@ -30,7 +30,7 @@ def annual_rows(w: pd.DataFrame, t_end) -> pd.DataFrame:
     ref = t_end
     for _ in range(4):
         lo, hi = ref - pd.Timedelta(days=365 + 40), ref - pd.Timedelta(days=365 - 40)
-        c = w[(w.index >= lo) & (w.index <= hi)]
+        c = w[(w.index >= lo) & (w.index <= hi) & w["total_assets"].notna()]  # ดู lib/pit.py
         if c.empty:
             break
         ref = c.index[-1]

@@ -87,7 +87,9 @@ class PIT:
         out["t"] = w.loc[pe].rename(pe)
         for k, yrs in (("t1", 1), ("t2", 2)):
             lo, hi = pe - pd.Timedelta(days=365 * yrs + 40), pe - pd.Timedelta(days=365 * yrs - 40)
-            cand = w[(w.index >= lo) & (w.index <= hi)]
+            # เฉพาะแถวที่มี total assets จริง — บั๊กที่พบใน AUTORUN round 001: แถวว่าง ณ วันเริ่มใช้มาตรฐานบัญชี
+            # (เช่น 2018-01-01 จาก ASC 606 ที่มีแค่ equity/retained earnings) ถูกหยิบเป็นงบปีก่อน → สัญญาณที่ต้องใช้ t-1 หาย
+            cand = w[(w.index >= lo) & (w.index <= hi) & w["total_assets"].notna()]
             if len(cand):
                 out[k] = cand.iloc[-1].rename(cand.index[-1])
         return out
