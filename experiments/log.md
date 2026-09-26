@@ -963,7 +963,7 @@ report: `model_A/reports/v0_data_audit.html`
 ---
 
 ---
-## model_A_v0_addendum_missing_data — 2026-09-27 03:22 (+0700)
+## model_A_v0_addendum_missing_data — 2026-09-27 03:17 (+0700)
 
 **วิธีที่ใช้:** ต่อจาก v0 data audit ตามคำขอของผู้ใช้ (ยังไม่มีสัญญาณ/ผลตอบแทนใด ๆ): เพิ่ม `lib/fscore.py` (สัญญาณ F-score 9 ข้อ
 พร้อมสถานะ "คำนวณได้ไหม" และนโยบายข้อมูลขาด), field interest expense เป็นหลักฐานของหนี้ = 0, `lib/checks.py` (assertion กันบั๊กเงียบ:
