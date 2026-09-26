@@ -1,10 +1,10 @@
 # AUTORUN STATE (อ่านไฟล์นี้ก่อนทำงานทุกครั้ง)
 
-- อัปเดตล่าสุด: 2026-09-27 — จบ round 004
+- อัปเดตล่าสุด: 2026-09-27 — จบ round 005
 - branch: feature/model-a-rebuild (push เฉพาะ branch นี้; ปิดบัง token ใน output ของ git)
 - เกณฑ์ล็อกใน: `model_A/PREREG_AUTORUN.md` (ห้ามแก้) — ความเบี่ยงเบน: `autorun/DEVIATIONS.md`
 - held-out lock: `lib/guard.py` (cutoff 2023-06-30; FINAL_EVAL=1 เฉพาะขั้น Final)
-- trial สะสม: **85** (v1 12 + r001 33 + r002 12 + r003 16 + r004 12) — `model_A/trials.csv`
+- trial สะสม: **91** (v1 12 + r001 33 + r002 12 + r003 16 + r004 12 + r005 6) — `model_A/trials.csv`
 - ผู้เข้ารอบ (ผ่าน S1+S2+S3+S6): **ยังไม่มี** — ใกล้สุด `r001_Q_LOWACC_overall` (ผ่าน S1/S2/S6, DSR 0.860), `r002_B_SHYQ_overall` (0.821), `r003_C_SHYQMOM_overall` (0.824) — เกณฑ์ S1 = 0.831; round 004: 5 variant ผ่าน S1 แต่ DSR ≤ 0.687
 - ตระกูลที่ held-out ถูกใช้แล้ว: ยังไม่มี
 - โครงสร้างโค้ด: `lib/panel.py` (panel หุ้น×วัน, cache `data/interim/panel_<tag>.parquet`), `lib/strategy.py` (เลือกหุ้น/รัน/บันทึก),
@@ -17,8 +17,8 @@
 | 002 | B คะแนนรวม | ✅ เสร็จ — ไม่มีผู้เข้ารอบ |
 | 003 | C สัญญาณราคา + พื้นฐาน×ราคา (monthly) | ✅ เสร็จ — ไม่มีผู้เข้ารอบ (มีบั๊กปฏิทิน แก้และรันใหม่) |
 | 004 | D การสร้างพอร์ต | ✅ เสร็จ — ไม่มีผู้เข้ารอบ (S1 ผ่าน 5 แต่ตก S3 ทั้งหมด) |
-| 005 | E ตัวคุมความเสี่ยงระดับตลาด | ถัดไป |
+| 005 | E ตัวคุมความเสี่ยงระดับตลาด | ✅ เสร็จ — ไม่มีผู้เข้ารอบ (แพ้ SPY/EW ในช่วงตัดสิน; S5 ผ่าน 4–5/6) |
 | 006 | F ML baseline | รอ |
 
 ## สิ่งที่ต้องทำต่อ
-1. เขียน `rounds/round_005/HYPOTHESIS.md` → commit → รัน
+1. เขียน `rounds/round_006/HYPOTHESIS.md` → commit → รัน
