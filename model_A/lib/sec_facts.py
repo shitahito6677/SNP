@@ -202,4 +202,5 @@ def public_float(cik: int) -> pd.DataFrame:
         return df
     df = df[df["form"].isin(ANNUAL_FORMS)].copy()
     df["end"] = pd.to_datetime(df["end"])
-    return df.sort_values("filed").groupby("end", as_index=False).first()[["end", "val"]].assign(cik=cik)
+    df["filed"] = pd.to_datetime(df["filed"])
+    return df.sort_values("filed").groupby("end", as_index=False).first()[["end", "val", "filed"]].assign(cik=cik)

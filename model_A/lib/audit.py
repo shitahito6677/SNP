@@ -125,7 +125,7 @@ def common_ticker(tickers) -> str:
 
 
 def choose_price(t, cik, R, shares, shares_ratio, adj, close, splits, cik_ticker: dict, to_yahoo, split_factor_after,
-                 shares_date=None):
+                 shares_date=None, min_mcap: float = None):
     """เลือกแหล่งราคา ณ วัน R จาก 2 ผู้สมัคร: ticker ตาม fja (ชื่อ ณ เวลานั้น) และ ticker ปัจจุบันของ CIK (กรณีเปลี่ยนชื่อ)
     ราคาต้องมีค่าภายใน 5 วันทำการก่อน R และต้องไม่ใช่ "บริษัทอื่นที่ใช้ ticker ซ้ำ" ซึ่งตัดสินจาก
       (ก) ราคาจริง (ย้อน split) < MIN_PRICE → หุ้นเพนนี ไม่ใช่สมาชิก S&P 500
@@ -153,10 +153,10 @@ def choose_price(t, cik, R, shares, shares_ratio, adj, close, splits, cik_ticker
         mcap = raw * sh if pd.notna(sh) and sh > 0 else np.nan
         if raw < MIN_PRICE:
             reject = f"penny_{src}"
-        elif pd.notna(mcap) and mcap < MIN_MCAP and consistent:
+        elif pd.notna(mcap) and mcap < (MIN_MCAP if min_mcap is None else min_mcap) and consistent:
             reject = f"mcap_small_{src}"
         else:
-            flag = "ok" if pd.notna(mcap) and (consistent or pd.isna(shares_ratio)) and mcap >= MIN_MCAP else \
+            flag = "ok" if pd.notna(mcap) and (consistent or pd.isna(shares_ratio)) and mcap >= (MIN_MCAP if min_mcap is None else min_mcap) else \
                    ("ok_no_shares" if pd.isna(mcap) else "ok_shares_suspect")
             return {"price_src": src, "yahoo": y, "raw_price": raw,
                     "mcap_R": mcap if flag == "ok" else np.nan, "price_flag": flag}
