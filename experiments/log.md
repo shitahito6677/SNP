@@ -1200,3 +1200,27 @@ QVI) × {overall, sector-neutral}; top 20% ขั้นต่ำ 50, EW, rebalan
 
 **ขั้นต่อไปที่ควรลอง:** round 006 ตระกูล F (ML baseline แบบ walk-forward)
 ---
+
+---
+## model_A_autorun_round_006_ml_and_final_report — 2026-09-27 (+0700)
+
+**วิธีที่ใช้:** AUTORUN round 006 ตระกูล F: HistGradientBoosting (19 feature เป็น percentile rank, label = อันดับผลตอบแทน 12 เดือนข้างหน้า,
+walk-forward expanding เทรนเฉพาะ label ที่รู้ผลแล้ว, ค่าตายตัว) และ DecisionTree ลึก 2 เป็นกฎ; rebalance รายปี top 20% ขั้นต่ำ 50 —
+สเปก `model_A/rounds/round_006/HYPOTHESIS.md` (commit 344be1e ก่อนรัน) จากนั้นเขียนรายงานฉบับสมบูรณ์ (`model_A/README.md`, `REPORT.md`)
+และตาราง S5 ระดับ factor อ้างอิง (พบและแก้ค่า missing −99.99 ในไฟล์ Ken French)
+
+**ข้อมูลที่ใช้:** panel รายเดือน + สัญญาณราคา (label ถึง 2023-06-30), Ken French factor 6 ชุด (ถึง 2023-06)
+
+**ผลลัพธ์:**
+- round 006: 2 trial → สะสม 93; GBM Sharpe 0.636 (EW 0.640, SPY 0.681), tree 0.526; ผู้เข้ารอบ 0
+- tree 10 ปี: feature แบ่งชั้นแรก V_FCFP 4 ปี ที่เหลือเปลี่ยนทุกปี
+- สรุปทั้ง AUTORUN: ผ่าน S1 6 trial, ผ่าน S1+S2+S6 6 trial (กลุ่ม low accruals 5 + SHY+quality+mom cap-weight 1), ผ่าน S3 = 0; DSR สูงสุด ณ N = 93 = 0.613
+- corr(Sharpe เหนือ EW ช่วงประกอบ, ช่วงตัดสิน) ทุก trial = −0.074
+- S5 factor อ้างอิง: HML, RMW, CMA, MOM และ combo เป็นบวก 6/6 ชุด (หลังแก้ค่า missing)
+- held-out ไม่ถูกใช้ (ไม่มีกฎที่ freeze); ไม่มี adapter (ทำเฉพาะกฎ freeze ตาม AUTORUN ข้อ 7)
+
+**มุมมอง/การตีความ:** ไม่มีกฎ "ชนะขาดรอย" — ทุกกฎระดับ C; factor คลาสสิกมีอยู่จริงในระยะยาว/หลายตลาด แต่ในหุ้นใหญ่ S&P 500 ช่วง 2017–2022
+ไม่แรงพอจะผ่านการปรับจำนวนการลอง และไม่เสถียรข้ามช่วงเวลา
+
+**ขั้นต่อไปที่ควรลอง:** ต้องให้ผู้ใช้ตัดสิน (ข้อมูลหุ้นที่ delist แบบเสียเงิน, ขยาย universe เป็นข้อมูลอิสระ) — ห้ามลดเกณฑ์
+---
