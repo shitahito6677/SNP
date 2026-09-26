@@ -28,7 +28,7 @@ class PIT:
         prio = {f: {t: i for i, t in enumerate(tags)} for f, (_, tags) in FIELDS.items()}
         x = long[long["field"] != "shares_cover"][["cik", "field", "tag", "period_end", "val", "filed"]].copy()
         x["prio"] = [prio[f].get(t, 99) for f, t in zip(x["field"], x["tag"])]
-        cover = long[long["field"] == "shares_cover"][["cik", "val", "filed"]]
+        cover = long[long["field"] == "shares_cover"][["cik", "val", "filed", "period_end"]]
         self._by_cik = {c: g.sort_values(["field", "period_end", "prio"]) for c, g in x.groupby("cik")}
         self._cover = {c: g.sort_values("filed") for c, g in cover.groupby("cik")}
 
@@ -46,12 +46,14 @@ class PIT:
         # จำนวนหุ้นจากหน้าปกงบ (dei) — ผูกกับงวดบัญชีที่ filing นั้นรายงาน (filed ภายใน 200 วันหลังสิ้นงวด)
         c = self._cover.get(cik)
         w["shares_cover"] = np.nan
+        w["shares_cover_date"] = pd.NaT
         if c is not None:
             c = c[c["filed"] <= cutoff]
             for pe in w.index:
                 m = c[(c["filed"] > pe) & (c["filed"] <= pe + pd.Timedelta(days=200))]
                 if len(m):
                     w.at[pe, "shares_cover"] = m["val"].iloc[0]
+                    w.at[pe, "shares_cover_date"] = m["period_end"].iloc[0]  # วันที่นับหุ้นบนหน้าปก
         for col in list(FIELDS):
             if col not in w:
                 w[col] = np.nan
@@ -61,6 +63,10 @@ class PIT:
         for c_ in ("shares_cover", "shares_out", "shares_wavg"):
             w[c_] = w[c_].where(w[c_] >= 1e6)
         w["shares"] = w["shares_cover"].combine_first(w["shares_out"]).combine_first(w["shares_wavg"])
+        # วันที่ที่จำนวนหุ้นนั้นใช้อ้างอิง — ต้องใช้ปรับ split ที่เกิด "หลังวันนับหุ้น แต่ก่อนวันที่ใช้"
+        # (บั๊ก v1 รอบสอง: AMZN split 20:1 มิ.ย. 2022 แต่หุ้นจากหน้าปก ม.ค. 2022 → market cap เล็กไป 20 เท่า)
+        pe_idx = pd.Series(w.index, index=w.index)
+        w["shares_date"] = pd.Series(w["shares_cover_date"], index=w.index).where(w["shares_cover"].notna(), pe_idx)
         # ตรวจความสอดคล้อง: เทียบแหล่งหลักกับแหล่งสำรองตัวแรกที่มี
         alt = w["shares_out"].where(w["shares_cover"].notna(), w["shares_wavg"])
         w["shares_ratio"] = alt / w["shares"]

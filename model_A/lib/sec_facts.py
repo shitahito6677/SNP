@@ -170,3 +170,17 @@ def tenk_profile(cik: int) -> tuple:
     fil = fil.sort_values("filed").reset_index(drop=True)
     a = pd.to_numeric(df.loc[df["tag"] == "Assets", "val"], errors="coerce").median()
     return fil, (None if pd.isna(a) else float(a))
+
+
+def public_float(cik: int) -> pd.DataFrame:
+    """dei:EntityPublicFloat (มูลค่าหุ้นที่ถือโดยคนนอก ณ วันทำการสุดท้ายของไตรมาส 2 ของบริษัท) — ใช้ "ตรวจ" market cap
+    ที่เราคำนวณเท่านั้น ไม่ใช้ตัดสินใจลงทุน (ค่านี้เปิดเผยทีหลังในงบปีถัดไป)"""
+    facts = load_raw(cik)
+    if facts is None:
+        return pd.DataFrame()
+    df = _records(facts, "dei", "EntityPublicFloat", "USD")
+    if df.empty:
+        return df
+    df = df[df["form"].isin(ANNUAL_FORMS)].copy()
+    df["end"] = pd.to_datetime(df["end"])
+    return df.sort_values("filed").groupby("end", as_index=False).first()[["end", "val"]].assign(cik=cik)

@@ -53,7 +53,7 @@ def _div(a, b):
 
 
 def signals(rs: dict, split_factor: float = 1.0, ltd_policy: str = "evidence") -> dict:
-    """rs = {"t","t1","t2"} จาก PIT.rows_asof ; split_factor = ผลคูณ split ระหว่าง period_end ของ t1 กับ t"""
+    """rs = {"t","t1","t2"} จาก PIT.rows_asof ; split_factor = ผลคูณ split ระหว่างวันนับหุ้น (shares_date) ของ t1 กับ t"""
     t, t1, t2 = rs.get("t"), rs.get("t1"), rs.get("t2")
     ta_t, ta_1, ta_2 = _g(t, "total_assets"), _g(t1, "total_assets"), _g(t2, "total_assets")
     roa_t = _div(_g(t, "net_income"), ta_1)

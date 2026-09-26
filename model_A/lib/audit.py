@@ -73,7 +73,9 @@ def build_panel(hist, segs, pit, adj, close, splits, Rs, to_yahoo, sic_of: dict,
             rs = pit.rows_asof(cik, R) if cik is not None else {"t": None, "t1": None, "t2": None}
             shares = rs["t"].get("shares", np.nan) if rs["t"] is not None else np.nan
             sratio = rs["t"].get("shares_ratio", np.nan) if rs["t"] is not None else np.nan
-            pr = choose_price(t, cik, R, shares, sratio, adj, close, splits, cik_ticker, to_yahoo, split_factor_after)
+            sdate = rs["t"].get("shares_date", None) if rs["t"] is not None else None
+            pr = choose_price(t, cik, R, shares, sratio, adj, close, splits, cik_ticker, to_yahoo, split_factor_after,
+                              sdate)
             fwd = adj[pr["yahoo"]].loc[R:R1] if pr["yahoo"] else None
             row = {"R": R, "ticker": t, "cik": cik, "sic": sic,
                    "financial": is_financial(sic),
@@ -95,7 +97,7 @@ def build_panel(hist, segs, pit, adj, close, splits, Rs, to_yahoo, sic_of: dict,
             row["fscore_complete_ltd0"] = all(ok_ltd0.values())
             # ความพร้อมของสัญญาณ F-score รายข้อ ภายใต้นโยบายหนี้ 2 แบบ (ดู lib/fscore.py) — ไม่ได้ใช้ผลตอบแทน
             if rs["t"] is not None and rs["t1"] is not None and pr["yahoo"]:
-                sf = split_factor_between(splits, pr["yahoo"], rs["t1"].name, rs["t"].name)
+                sf = split_factor_between(splits, pr["yahoo"], rs["t1"]["shares_date"], rs["t"]["shares_date"])
             else:
                 sf = 1.0
             for pol in ("evidence", "zero"):
@@ -122,16 +124,20 @@ def common_ticker(tickers) -> str:
     return (ok or [None])[0]
 
 
-def choose_price(t, cik, R, shares, shares_ratio, adj, close, splits, cik_ticker: dict, to_yahoo, split_factor_after):
+def choose_price(t, cik, R, shares, shares_ratio, adj, close, splits, cik_ticker: dict, to_yahoo, split_factor_after,
+                 shares_date=None):
     """เลือกแหล่งราคา ณ วัน R จาก 2 ผู้สมัคร: ticker ตาม fja (ชื่อ ณ เวลานั้น) และ ticker ปัจจุบันของ CIK (กรณีเปลี่ยนชื่อ)
     ราคาต้องมีค่าภายใน 5 วันทำการก่อน R และต้องไม่ใช่ "บริษัทอื่นที่ใช้ ticker ซ้ำ" ซึ่งตัดสินจาก
       (ก) ราคาจริง (ย้อน split) < MIN_PRICE → หุ้นเพนนี ไม่ใช่สมาชิก S&P 500
       (ข) market cap < MIN_MCAP โดยที่จำนวนหุ้นจาก 2 แหล่ง (dei, us-gaap) สอดคล้องกัน (ต่างกันไม่เกิน 2 เท่า)
     ถ้าจำนวนหุ้น 2 แหล่งขัดกัน → ไม่ใช้ market cap ตัดสิน แต่ flag ไว้ (shares_suspect)"""
-    cands = [("fja", to_yahoo(t))]
+    # ลำดับ: ticker ปัจจุบันของ CIK ก่อน (CIK = ตัวตนของบริษัท) แล้วค่อย ticker ตาม fja
+    # บทเรียน v1: ราคา Yahoo ของ "IR" ปี 2017-2019 เป็นของ Gardner Denver (เจ้าของ ticker ปัจจุบัน) ไม่ใช่
+    # Ingersoll-Rand plc (สมาชิกจริง, ปัจจุบันคือ TT) และ market cap ยังเกิน $1B จึงหลุดการตรวจ mcap
+    fja_y = to_yahoo(t)
     ct = cik_ticker.get(cik) if cik is not None else None
-    if ct and to_yahoo(ct) != cands[0][1]:
-        cands.append(("cik", to_yahoo(ct)))
+    cands = [("cik", to_yahoo(ct))] if ct and to_yahoo(ct) != fja_y else []
+    cands.append(("fja", fja_y))
     consistent = pd.notna(shares_ratio) and 0.5 <= shares_ratio <= 2
     result = {"price_src": None, "yahoo": None, "raw_price": np.nan, "mcap_R": np.nan, "price_flag": "no_price"}
     for src, y in cands:
@@ -141,7 +147,10 @@ def choose_price(t, cik, R, shares, shares_ratio, adj, close, splits, cik_ticker
         if px.empty:
             continue
         raw = float(px.iloc[-1]) * split_factor_after(splits, y, px.index[-1])
-        mcap = raw * shares if pd.notna(shares) and shares > 0 else np.nan
+        sh = shares
+        if pd.notna(sh) and shares_date is not None and pd.notna(shares_date):
+            sh = sh * split_factor_between(splits, y, shares_date, px.index[-1])  # split หลังวันนับหุ้น ถึงวันราคา
+        mcap = raw * sh if pd.notna(sh) and sh > 0 else np.nan
         if raw < MIN_PRICE:
             reject = f"penny_{src}"
         elif pd.notna(mcap) and mcap < MIN_MCAP and consistent:
