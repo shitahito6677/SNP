@@ -22,8 +22,13 @@ def run(holdings: dict, adj: pd.DataFrame, end: pd.Timestamp, cost: float = COST
     for k, R in enumerate(Rs):
         stop = Rs[k + 1] if k + 1 < len(Rs) else end
         names = holdings[R]
+        if isinstance(names, dict):  # น้ำหนักกำหนดเอง {yahoo: weight} (normalize ให้รวม = 1)
+            tot = sum(names.values())
+            w_new = {y: v / tot for y, v in names.items() if v > 0}
+            names = list(w_new)
+        else:
+            w_new = {y: 1.0 / len(names) for y in names} if names else {}
         n = len(names)
-        w_new = {y: 1.0 / n for y in names} if n else {}
         turnover = sum(abs(w_new.get(y, 0) - w_old.get(y, 0)) for y in set(w_new) | set(w_old))
         if not w_old:
             turnover = sum(w_new.values())  # ซื้อครั้งแรกจากเงินสด
@@ -39,10 +44,11 @@ def run(holdings: dict, adj: pd.DataFrame, end: pd.Timestamp, cost: float = COST
         px = adj.loc[R:stop, names].ffill()
         px.loc[R] = entry  # กรณี R ไม่มีข้อมูลของบางตัว (ใช้ราคาล่าสุด ≤ R)
         rel = px / entry
-        path = value * rel.mean(axis=1)
+        wv = pd.Series(w_new)[names]
+        path = value * (rel * wv).sum(axis=1)
         nav_parts.append(path)
         end_rel = rel.iloc[-1]
-        w_old = (end_rel / end_rel.sum()).to_dict()
+        w_old = (end_rel * wv / (end_rel * wv).sum()).to_dict()
         fwd_rows += [{"R": R, "yahoo": y, "fwd": float(end_rel[y] - 1)} for y in names]
         value = float(path.iloc[-1])
         stats.append({"R": R, "n": n, "turnover": turnover})
