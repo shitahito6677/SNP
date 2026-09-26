@@ -1120,3 +1120,22 @@ top 20% ขั้นต่ำ 50 ตัว, EW, rebalance มิ.ย. 2011–202
 
 **ขั้นต่อไปที่ควรลอง:** round 002 ตระกูล B (คะแนนรวม quality+value/QARP/quality composite) ตาม `model_A/autorun/STATE.md`
 ---
+
+---
+## model_A_autorun_round_002_composites — 2026-09-27 (+0700)
+
+**วิธีที่ใช้:** AUTORUN round 002 ตระกูล B: คะแนนรวมน้ำหนักเท่ากัน 6 สูตร (QV, QUAL=profitability+safety, QARP, F+value, shareholder yield+quality,
+QVI) × {overall, sector-neutral}; top 20% ขั้นต่ำ 50, EW, rebalance มิ.ย. 2011–2022, 10/25 bps — สเปก `model_A/rounds/round_002/HYPOTHESIS.md` (commit 9f26090 ก่อนรัน)
+
+**ข้อมูลที่ใช้:** panel รายปีเดียวกับ round 001 (6,023 แถว)
+
+**ผลลัพธ์:**
+- 12 trial → สะสม 57; ผู้เข้ารอบ 0; ไม่มีตัวไหนผ่าน S1 (ต้อง Sharpe ≥ 0.831)
+- ใกล้สุด B_SHYQ_overall: Sharpe 0.821, CAGR 17.6% (EW 12.5%), S2 100%, DSR 0.703, ช่วงประกอบ 1.211 (EW 1.137)
+- B_QUAL_overall 0.755 (MDD −32.3% vs EW −37.6%); สูตรที่มี value: 0.489–0.628 (แพ้ EW ทั้งหมด)
+- walk-forward: corr(ส่วนเกินช่วงประกอบ, ช่วงตัดสิน) = −0.037
+
+**มุมมอง/การตีความ:** value ถ่วงผลทุกสูตรในช่วงตัดสิน; shareholder yield + quality สม่ำเสมอที่สุดแต่ไม่ถึงเกณฑ์
+
+**ขั้นต่อไปที่ควรลอง:** round 003 ตระกูล C (momentum/low vol/trend และพื้นฐาน×ราคา) บน panel รายเดือน
+---
