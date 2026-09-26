@@ -51,6 +51,18 @@ FIELDS = {
     "debt_current": ("instant", ["DebtCurrent", "LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent"]),
     "short_borrowings": ("instant", ["ShortTermBorrowings", "CommercialPaper"]),
     "capex": ("duration", ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"]),
+    # เพิ่มสำหรับ AUTORUN (Altman Z, Beneish M, shareholder yield, G-score)
+    "liabilities": ("instant", ["Liabilities"]),
+    "retained_earnings": ("instant", ["RetainedEarningsAccumulatedDeficit"]),
+    "receivables": ("instant", ["AccountsReceivableNetCurrent"]),
+    "ppe": ("instant", ["PropertyPlantAndEquipmentNet"]),
+    "depreciation": ("duration", ["DepreciationDepletionAndAmortization", "DepreciationAndAmortization", "Depreciation"]),
+    "sga": ("duration", ["SellingGeneralAndAdministrativeExpense"]),
+    "rnd": ("duration", ["ResearchAndDevelopmentExpense"]),
+    "advertising": ("duration", ["AdvertisingExpense"]),
+    "dividends_paid": ("duration", ["PaymentsOfDividendsCommonStock", "PaymentsOfDividends"]),
+    "buybacks": ("duration", ["PaymentsForRepurchaseOfCommonStock"]),
+    "stock_issued": ("duration", ["ProceedsFromIssuanceOfCommonStock"]),
     # fallback จำนวนหุ้น: บริษัทหลาย class (เช่น META, BRK) รายงานหุ้นคงเหลือแยกตาม class ซึ่ง companyfacts ไม่รวม
     "shares_wavg": ("duration", ["WeightedAverageNumberOfSharesOutstandingBasic"]),
 }

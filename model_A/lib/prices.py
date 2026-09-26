@@ -11,6 +11,7 @@ import time
 import pandas as pd
 import yfinance as yf
 
+from lib import guard
 from lib.paths import PRICES_DIR
 
 CLOSE_FILE = PRICES_DIR / "close.parquet"
@@ -41,12 +42,15 @@ def download(yahoo_tickers, start="2008-01-01", end=None, batch=50) -> None:
         time.sleep(1)
 
 
-def load_adj_close() -> pd.DataFrame:
-    return pd.read_parquet(ADJ_FILE).sort_index()
+def load_adj_close(end=None) -> pd.DataFrame:
+    """ถูกล็อก held-out: คืนข้อมูลถึง guard.CUTOFF เท่านั้น (เว้นแต่ FINAL_EVAL=1)"""
+    guard.check_end(end)
+    return guard.clip(pd.read_parquet(ADJ_FILE).sort_index()).loc[:end]
 
 
-def load_close() -> pd.DataFrame:
-    return pd.read_parquet(CLOSE_FILE).sort_index()
+def load_close(end=None) -> pd.DataFrame:
+    guard.check_end(end)
+    return guard.clip(pd.read_parquet(CLOSE_FILE).sort_index()).loc[:end]
 
 
 def load_status() -> pd.DataFrame:
@@ -89,3 +93,11 @@ def split_factor_after(splits: pd.DataFrame, yahoo: str, date: pd.Timestamp) -> 
     """ผลคูณของ split ratio ที่เกิด "หลัง" date — ราคาจริง ณ date = Close(split-adjusted) × factor นี้"""
     s = splits[(splits["yahoo"] == yahoo) & (splits["date"] > date)]
     return float(s["ratio"].prod()) if len(s) else 1.0
+
+
+INTL_FILE = PRICES_DIR / "intl_index_close.parquet"
+
+
+def load_intl_index() -> pd.DataFrame:
+    """ดัชนีต่างประเทศ (price index, ไม่รวมปันผล) — ถูกล็อก held-out เช่นเดียวกัน"""
+    return guard.clip(pd.read_parquet(INTL_FILE).sort_index())
