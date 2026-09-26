@@ -1160,3 +1160,23 @@ QVI) × {overall, sector-neutral}; top 20% ขั้นต่ำ 50, EW, rebalan
 
 **ขั้นต่อไปที่ควรลอง:** round 004 ตระกูล D (น้ำหนัก, ความถี่, sector cap, turnover buffer) บนฐานที่เลือกด้วยกฎประกาศล่วงหน้า
 ---
+
+---
+## model_A_autorun_round_004_construction — 2026-09-27 (+0700)
+
+**วิธีที่ใช้:** AUTORUN round 004 ตระกูล D: เปลี่ยนการสร้างพอร์ตทีละมิติ (inverse-vol, cap-weight, ความถี่ 2 แบบ, sector cap 25%, turnover buffer top 30%)
+บนฐาน 2 ตัวที่เลือกด้วยกฎประกาศล่วงหน้า (Sharpe สูงสุดที่ผ่าน S2/S6: r001_Q_LOWACC_overall, r003_C_SHYQMOM_overall) — สเปก
+`model_A/rounds/round_004/HYPOTHESIS.md` (commit 044c41c ก่อนรัน); เพิ่มน้ำหนักแบบกำหนดเองใน `lib/backtest.py` (ทดสอบ unit แล้ว)
+
+**ข้อมูลที่ใช้:** panel รายเดือน (subset ตามความถี่), สัญญาณราคา, market cap จาก panel
+
+**ผลลัพธ์:**
+- 12 trial → สะสม 85; ผู้เข้ารอบ 0
+- ผ่าน S1 ทั้ง 10/25 bps 5 ตัว: Q_LOWACC W_IV 0.842, W_CAP 0.929, SECCAP 0.863, BUFFER 0.872; SHYQMOM W_CAP 0.923 (EW 0.640/0.614, SPY 0.681)
+- DSR ทุกตัว 0.011–0.687 (< 0.95); cap-weighted DSR 0.125–0.189
+- ฐาน Q_LOWACC ทุก variant แพ้ EW ในช่วงประกอบ (0.770–1.020 vs 1.108–1.137)
+
+**มุมมอง/การตีความ:** การจัดพอร์ตช่วยผ่าน S1 ได้ แต่ส่วนเกินเทียบ EW ไม่แรงพอหลังปรับจำนวน trial และผูกกับช่วงเวลา; cap-weighting ได้ผลจาก mega-cap tilt
+
+**ขั้นต่อไปที่ควรลอง:** round 005 ตระกูล E (trend filter, vol targeting, drawdown stop) + S5 บนดัชนี 6 ชุด
+---
