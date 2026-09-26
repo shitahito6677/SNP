@@ -1093,3 +1093,30 @@ universe ที่เข้าเกณฑ์ (main) 168 หุ้น (2011) →
 
 **ขั้นต่อไปที่ควรลอง:** ผู้ใช้ตรวจ PREREG v2 (ส่วน "v2" ใน `model_A/PREREG.md`, สถานะ DRAFT) ก่อนรัน
 ---
+
+---
+## model_A_autorun_round_001_single_signals — 2026-09-27 (+0700)
+
+**วิธีที่ใช้:** เริ่มโหมด AUTORUN (`model_A/AUTORUN.md`): ล็อกเกณฑ์ S1–S7 ใน `model_A/PREREG_AUTORUN.md` (commit d7acc72 ก่อนประเมินใด ๆ),
+ล็อก held-out ทางเทคนิค (`lib/guard.py`), นับ trial ใน `model_A/trials.csv` (เริ่ม 12 จาก v1) แล้วรัน round 001 = ตระกูล A สัญญาณเดี่ยว
+15 ตัว (quality/value/investment/F/G/Altman Z/shareholder yield/stability/leverage) × {overall, sector-neutral} + ตัวกรอง Altman/Beneish 3 แบบ;
+top 20% ขั้นต่ำ 50 ตัว, EW, rebalance มิ.ย. 2011–2022, ต้นทุน 10/25 bps — สเปกใน `model_A/rounds/round_001/HYPOTHESIS.md` (commit 5763358 ก่อนรัน)
+ก่อนรันพบและแก้บั๊กงบปีก่อน (t−1) ใน PIT (แถวว่าง ณ วันเริ่มใช้ ASC 606) → v1 รันใหม่: Sharpe P3/EW 0.4115/0.6308 → 0.4097/0.6298 (C1 ยังไม่ผ่าน)
+
+**ข้อมูลที่ใช้:** panel รายปี `data/interim/panel_annual.parquet` 6,023 แถว (universe U 255–376 หุ้นต่อรอบ); annual facts 325,690 แถว
+(เพิ่ม field liabilities, retained earnings, receivables, PP&E, depreciation, SG&A, R&D, advertising, dividends, buybacks, stock issued)
+
+**ผลลัพธ์:**
+- trial รอบนี้ 33 → สะสม 45; **ผู้เข้ารอบ (S1+S2+S3+S6) = 0**
+- benchmark ช่วงตัดสิน: EW(U) Sharpe 0.640, SPY 0.681 → S1 ต้อง ≥ 0.831
+- ผ่าน S1 ตัวเดียว: Q_LOWACC_overall Sharpe 0.863 (25 bps ผ่านด้วย), CAGR 18.6% vs EW 12.5%, S2 100%, S6 63/51 แต่ **DSR 0.860 < 0.95**;
+  ช่วงประกอบ 2011–2016 Sharpe 0.787 แพ้ EW 1.137
+- quality อื่น: ROIC 0.817, G-score 0.793, Altman Z 0.783, GP/A 0.775 (overall) — ชนะ EW แต่ไม่ถึง S1
+- value: BM 0.484, E/P 0.475, EBIT/EV 0.553, FCF/P 0.629 (overall) — แพ้ EW
+- walk-forward: corr(Sharpe ส่วนเกินช่วงประกอบ, ช่วงตัดสิน) = −0.247; ตัวที่ดีที่สุดช่วงประกอบ (A_STAB_sector +0.285) ได้ −0.030 ในช่วงตัดสิน
+
+**มุมมอง/การตีความ:** quality ดีกว่า value ในช่วง 2017–2022 แต่ความได้เปรียบไม่เสถียรข้ามช่วงเวลาและไม่ผ่านการปรับ multiple testing
+→ ไม่มีสัญญาณเดี่ยวที่ "ชนะขาดรอย"; ไม่ลดเกณฑ์
+
+**ขั้นต่อไปที่ควรลอง:** round 002 ตระกูล B (คะแนนรวม quality+value/QARP/quality composite) ตาม `model_A/autorun/STATE.md`
+---
