@@ -1,11 +1,11 @@
 # AUTORUN STATE (อ่านไฟล์นี้ก่อนทำงานทุกครั้ง)
 
-- อัปเดตล่าสุด: 2026-09-27 — จบ round 002
+- อัปเดตล่าสุด: 2026-09-27 — จบ round 003
 - branch: feature/model-a-rebuild (push เฉพาะ branch นี้; ปิดบัง token ใน output ของ git)
 - เกณฑ์ล็อกใน: `model_A/PREREG_AUTORUN.md` (ห้ามแก้) — ความเบี่ยงเบน: `autorun/DEVIATIONS.md`
 - held-out lock: `lib/guard.py` (cutoff 2023-06-30; FINAL_EVAL=1 เฉพาะขั้น Final)
-- trial สะสม: **57** (v1 12 + r001 33 + r002 12) — `model_A/trials.csv`
-- ผู้เข้ารอบ (ผ่าน S1+S2+S3+S6): **ยังไม่มี** — ใกล้สุด `r001_Q_LOWACC_overall` (ผ่าน S1/S2/S6, DSR 0.860), `r002_B_SHYQ_overall` (Sharpe 0.821 < 0.831)
+- trial สะสม: **73** (v1 12 + r001 33 + r002 12 + r003 16) — `model_A/trials.csv`
+- ผู้เข้ารอบ (ผ่าน S1+S2+S3+S6): **ยังไม่มี** — ใกล้สุด `r001_Q_LOWACC_overall` (ผ่าน S1/S2/S6, DSR 0.860), `r002_B_SHYQ_overall` (0.821), `r003_C_SHYQMOM_overall` (0.824) — เกณฑ์ S1 = 0.831
 - ตระกูลที่ held-out ถูกใช้แล้ว: ยังไม่มี
 - โครงสร้างโค้ด: `lib/panel.py` (panel หุ้น×วัน, cache `data/interim/panel_<tag>.parquet`), `lib/strategy.py` (เลือกหุ้น/รัน/บันทึก),
   `lib/criteria.py` (S1/S2/S3/S6, DSR), `lib/reporting.py` (LEADERBOARD + กราฟ), runner ต่อ round: `rounds/round_NNN/run.py`
@@ -15,10 +15,10 @@
 |---|---|---|
 | 001 | A สัญญาณเดี่ยว | ✅ เสร็จ — ไม่มีผู้เข้ารอบ (RESULTS.md) |
 | 002 | B คะแนนรวม | ✅ เสร็จ — ไม่มีผู้เข้ารอบ |
-| 003 | C สัญญาณราคา + พื้นฐาน×ราคา (monthly panel) | ถัดไป — panel รายเดือนกำลังสร้าง (`data/interim/panel_monthly.log`) |
-| 004 | D การสร้างพอร์ต | รอ |
+| 003 | C สัญญาณราคา + พื้นฐาน×ราคา (monthly) | ✅ เสร็จ — ไม่มีผู้เข้ารอบ (มีบั๊กปฏิทิน แก้และรันใหม่) |
+| 004 | D การสร้างพอร์ต (ฐาน 2 ตัวที่ประกาศกฎคัดเลือกล่วงหน้า) | ถัดไป |
 | 005 | E ตัวคุมความเสี่ยงระดับตลาด | รอ |
 | 006 | F ML baseline | รอ |
 
 ## สิ่งที่ต้องทำต่อ
-1. รอ panel รายเดือน → เขียน `rounds/round_003/HYPOTHESIS.md` → commit → รัน
+1. เขียน `rounds/round_004/HYPOTHESIS.md` → commit → รัน (panel รายเดือน/รายปีพร้อมแล้วใน data/interim)

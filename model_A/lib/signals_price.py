@@ -13,7 +13,10 @@ import pandas as pd
 
 
 def compute(adj: pd.DataFrame, dates, tickers) -> pd.DataFrame:
-    px = adj[[t for t in sorted(set(tickers)) if t in adj.columns]]
+    # ใช้เฉพาะวันซื้อขายของตลาดสหรัฐ (ปฏิทิน SPY) — บั๊กที่พบใน round 003: ตารางราคามีวันของ TDEX.BK/THB=X ที่ตลาดสหรัฐปิด
+    # เมื่อ lag 21/252 วันไปตกวันหยุดสหรัฐ ราคาทุกตัวเป็น NaN → momentum หายทั้งเดือน (6 เดือน)
+    us_days = adj["SPY"].dropna().index
+    px = adj.loc[us_days, [t for t in sorted(set(tickers)) if t in adj.columns]]
     ret = px.pct_change(fill_method=None)
     rows = []
     idx = px.index
