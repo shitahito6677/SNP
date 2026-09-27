@@ -17,6 +17,7 @@ import uuid
 from datetime import datetime, timezone
 from functools import lru_cache
 
+import numpy as np
 import pandas as pd
 
 from sandbox.v2 import config as cfg, prices
@@ -171,14 +172,28 @@ def add(item: dict) -> dict:
     sentiment = item.get("sentiment", "neutral")
     if sentiment not in ("positive", "neutral", "negative"):
         raise ValueError("sentiment ต้องเป็น positive / neutral / negative")
-    date = str(pd.Timestamp(item["date"]).date())
+    score = {"positive": 1.0, "neutral": 0.0, "negative": -1.0}[sentiment]
+    if isinstance(item.get("score"), (int, float)) and -1 <= item["score"] <= 1 \
+            and np.sign(item["score"]) == np.sign(score):  # score ละเอียดจาก CSV (เช่น -1 บนสเกล ±2 → -0.5) ต้องทิศเดียวกับ sentiment
+        score = float(item["score"])
+    if not item.get("date"):
+        raise ValueError("ต้องมีวันที่")
+    try:
+        date = str(pd.Timestamp(item["date"]).date())
+    except (ValueError, TypeError, OverflowError):
+        raise ValueError(f"วันที่อ่านไม่ได้: {item['date']!r}") from None
     info = trading_day_info(date)
     eff = item.get("effective_date") or info["next_trading_day"]
     row = {"id": str(uuid.uuid4()), "created_at": _now(), "source": "manual", "headline": headline[:500],
-           "body": (item.get("body") or "")[:4000], "date": date, "effective_date": str(pd.Timestamp(eff).date()),
+           "body": (item.get("body") or "")[:BODY_MAX], "date": date, "effective_date": str(pd.Timestamp(eff).date()),
            "kind": "company" if tickers else "macro", "tickers": tickers, "sectors": sectors,
-           "sentiment": sentiment, "score": {"positive": 1.0, "neutral": 0.0, "negative": -1.0}[sentiment],
+           "sentiment": sentiment, "score": score,
            "detected_by": item.get("detected_by") or {}, "deleted": False}
+    if item.get("label_raw") is not None:  # ค่า label ดิบจาก CSV (เช่น -2..+2) — เก็บไว้ไม่ทิ้ง
+        row["label_raw"] = item["label_raw"]
+        row["label_scale"] = item.get("label_scale")
+    if item.get("extra"):  # column ที่ระบบไม่รู้จัก (source_url, label_reason, …) → metadata ต่อแถว
+        row["extra"] = {str(k)[:100]: str(v)[:BODY_MAX] for k, v in dict(item["extra"]).items()}
     rows = _load()
     rows.append(row)
     _write(rows)
@@ -197,44 +212,176 @@ def delete(nid: str) -> bool:
 
 
 # ---------------------------------------------------------------- CSV
-COLMAP = {
-    "date": ["date", "published", "published_at", "datetime", "time", "วันที่"],
-    "headline": ["headline", "title", "หัวข้อ", "ข่าว", "text"],
-    "body": ["body", "summary", "content", "description", "เนื้อหา"],
-    "ticker": ["ticker", "tickers", "symbol", "symbols", "หุ้น"],
-    "sentiment": ["sentiment", "label", "polarity"],
+# จับคู่ column ด้วย keyword ที่อยู่ "ในชื่อ" (ไม่สนวงเล็บ/คำไทยนำหน้า) เช่น "ข่าวแบบย่อ (short_news)" → headline
+# (keyword, คะแนน) — คะแนนสูง = เจาะจงกว่า; จับคู่แบบ greedy คะแนนสูงก่อน, 1 column ใช้ได้กับ field เดียว
+FIELD_KEYWORDS = {
+    "ticker": [("ticker", 10), ("symbol", 10), ("สัญลักษณ์", 8)],
+    "date": [("publish_date", 10), ("วันที่", 9), ("date", 8), ("published", 7), ("datetime", 7), ("time", 3)],
+    "headline": [("headline", 10), ("short_news", 10), ("ข่าวแบบย่อ", 10), ("หัวข่าว", 9), ("title", 9), ("หัวข้อ", 9),
+                 ("text", 2), ("ข่าว", 1)],
+    "body": [("full_news", 10), ("ข่าวแบบเต็ม", 10), ("body", 9), ("content", 8), ("เนื้อหา", 8), ("summary", 7),
+             ("description", 6)],
+    "sentiment": [("sentiment", 10), ("label", 8), ("polarity", 8)],
 }
+FIELD_EXCLUDE = {"sentiment": ("reason", "เหตุผล", "explain")}  # "เหตุผลของ label (label_reason)" ไม่ใช่ label
+FIELD_TH = {"ticker": "ticker", "date": "วันที่", "headline": "หัวข่าว (headline)", "body": "เนื้อข่าว (body)",
+            "sentiment": "label/sentiment"}
+NAME_HINT = ("stock", "company", "หุ้น", "บริษัท")  # column ชื่อบริษัท → ใช้ช่วยตรวจจับ ticker เมื่อไม่มี column ticker
+TEXT_LABELS = {"positive": "positive", "pos": "positive", "bullish": "positive", "บวก": "positive",
+               "negative": "negative", "neg": "negative", "bearish": "negative", "ลบ": "negative",
+               "neutral": "neutral", "neu": "neutral", "กลาง": "neutral"}
+BODY_MAX = 20000
 
 
-def csv_preview(text: str, limit=500) -> dict:
-    rd = csv.DictReader(io.StringIO(text.lstrip("﻿")))
-    cols = rd.fieldnames or []
-    low = {c.lower().strip(): c for c in cols}
-    mapping = {k: next((low[a] for a in al if a in low), None) for k, al in COLMAP.items()}
-    if not mapping["headline"]:
-        raise ValueError(f"หา column headline ไม่เจอ (มี: {cols})")
-    rows = []
-    for i, r in enumerate(rd):
-        if i >= limit:
-            break
-        h = (r.get(mapping["headline"]) or "").strip()
-        det = detect(h + " " + (r.get(mapping["body"]) or "" if mapping["body"] else ""))
-        if mapping["ticker"] and r.get(mapping["ticker"]):
-            tick = [t.strip().upper().replace(".", "-") for t in re.split(r"[,;| ]+", r[mapping["ticker"]]) if t.strip()]
-            src = "column"
-        else:
-            tick = [m["ticker"] for m in det["mentions"]]
-            src = "detected"
-        date = (r.get(mapping["date"]) or "").strip() if mapping["date"] else ""
+def _col_score(col: str, field: str) -> int:
+    low = col.lower().strip()
+    if any(x in low for x in FIELD_EXCLUDE.get(field, ())):
+        return 0
+    inner = {x.strip() for x in re.findall(r"\(([^)]*)\)", low)} | {low}
+    best = 0
+    for kw, sc in FIELD_KEYWORDS[field]:
+        if kw in inner:
+            best = max(best, sc + 5)  # ชื่อตรงตัว หรือตรงกับส่วนในวงเล็บ
+        elif kw in low:
+            best = max(best, sc)
+    return best
+
+
+def guess_mapping(cols: list) -> dict:
+    pairs = sorted(((_col_score(c, f), -i, f, c) for i, c in enumerate(cols) for f in FIELD_KEYWORDS), reverse=True)
+    out, used = {f: None for f in FIELD_KEYWORDS}, set()
+    for sc, _, f, c in pairs:
+        if sc > 0 and out[f] is None and c not in used:
+            out[f] = c
+            used.add(c)
+    return out
+
+
+def label_scale(col: str | None, values: list):
+    """สเกลของ label ตัวเลข: จากหัว column เช่น "(-2..+2)" ถ้ามี ไม่งั้นใช้ค่าสัมบูรณ์สูงสุดที่เจอในไฟล์ (ปัดขึ้น)"""
+    if col:
+        m = re.search(r"(-?\d+(?:\.\d+)?)\s*(?:\.\.|to|–|~)\s*\+?(\d+(?:\.\d+)?)", col)
+        if m and float(m.group(2)) > 0:
+            return float(m.group(2))
+    nums = []
+    for v in values:
         try:
-            dinfo = trading_day_info(str(pd.Timestamp(date).date())) if date else None
-        except (ValueError, TypeError):
-            dinfo = None
-        s = (r.get(mapping["sentiment"]) or "neutral").strip().lower() if mapping["sentiment"] else "neutral"
-        s = {"pos": "positive", "neg": "negative", "neu": "neutral"}.get(s[:3], s) if s else "neutral"
-        rows.append({"row": i + 1, "headline": h, "body": (r.get(mapping["body"]) or "") if mapping["body"] else "",
-                     "date": dinfo["date"] if dinfo else date, "effective_date": dinfo["next_trading_day"] if dinfo else None,
+            nums.append(abs(float(str(v).strip().replace("+", ""))))
+        except ValueError:
+            pass
+    return float(np.ceil(max(nums))) if nums and max(nums) > 0 else None
+
+
+def parse_label(v, scale):
+    """label → (sentiment, score ∈ [-1, 1], ค่าดิบ, error)
+    ตัวเลข: >0 positive, <0 negative, 0 neutral; score = ค่า/สเกล (เช่น -2 บนสเกล ±2 → -1.0 = แย่สุดของระบบ)
+    ข้อความ: positive/negative/neutral (+ คำพ้อง) → score ±1/0 เหมือนข่าวที่พิมพ์เอง"""
+    s = ("" if v is None else str(v)).strip()
+    if not s:
+        return "neutral", 0.0, None, None
+    try:
+        x = float(s.replace("+", ""))
+    except ValueError:
+        k = s.lower()
+        lab = TEXT_LABELS.get(k) or TEXT_LABELS.get(k[:3])
+        if lab is None:
+            return None, None, s, f"label อ่านไม่ได้: '{s[:30]}' (รองรับตัวเลข หรือ positive/neutral/negative)"
+        return lab, {"positive": 1.0, "neutral": 0.0, "negative": -1.0}[lab], s, None
+    if not np.isfinite(x) or not scale or abs(x) > scale:
+        return None, None, s, f"label {s} อยู่นอกสเกล ±{scale:g}" if scale else f"label {s} อ่านไม่ได้"
+    raw = int(x) if float(x).is_integer() else x
+    return ("positive" if x > 0 else "negative" if x < 0 else "neutral"), x / scale, raw, None
+
+
+def _parse_tickers(raw: str, man) -> tuple:
+    out, bad = [], []
+    for t in re.split(r"[,;| ]+", raw or ""):
+        t = t.strip().lstrip("$@").upper().replace(".", "-")
+        if not t:
+            continue
+        (out if t in man and man[t].get("kind") == "stock" else bad).append(t)
+    return sorted(set(out)), bad
+
+
+def csv_preview(text: str, mapping: dict | None = None, limit=2000) -> dict:
+    """อ่าน CSV → mapping ที่เดา (หรือที่ผู้ใช้เลือกเอง) + ทุกแถวพร้อมเหตุผลถ้าข้าม — ไม่บันทึกอะไร
+    raise ValueError (ข้อความไทย) เฉพาะกรณีอ่านไฟล์ไม่ได้เลย; ปัญหารายแถว/ไม่มี column → แสดงใน preview"""
+    text = (text or "").lstrip("﻿")
+    if not text.strip():
+        raise ValueError("อ่านไฟล์ไม่ได้: ไฟล์ว่างเปล่า")
+    if "�" in text[:2000]:
+        raise ValueError("อ่านไฟล์ไม่ได้: encoding ไม่ใช่ UTF-8 (ลอง Save As → CSV UTF-8)")
+    try:
+        rd = csv.DictReader(io.StringIO(text, newline=""))
+        cols = [c for c in (rd.fieldnames or []) if c is not None]
+        data = list(rd)
+    except csv.Error as e:
+        raise ValueError(f"อ่านไฟล์ไม่ได้: รูปแบบ CSV ผิด ({e})") from None
+    if not cols or not any(c.strip() for c in cols):
+        raise ValueError("อ่านไฟล์ไม่ได้: ไม่พบแถวหัวตาราง (ชื่อ column)")
+    if len(set(cols)) != len(cols):
+        raise ValueError(f"อ่านไฟล์ไม่ได้: ชื่อ column ซ้ำกัน {sorted({c for c in cols if cols.count(c) > 1})}")
+    guessed = guess_mapping(cols)
+    if mapping:
+        bad = [v for v in mapping.values() if v and v not in cols]
+        if bad:
+            raise ValueError(f"mapping อ้างถึง column ที่ไม่มีในไฟล์: {bad}")
+        mapping = {f: (mapping.get(f) or None) for f in FIELD_KEYWORDS}
+    else:
+        mapping = guessed
+    problems = []
+    if not mapping["headline"] and not mapping["body"]:
+        problems.append("ไม่พบ column หัวข่าว/เนื้อข่าว (เช่น headline, title, short_news, ข่าวแบบย่อ) — เลือก mapping เองด้านบน")
+    if not mapping["date"]:
+        problems.append("ไม่พบ column วันที่ (เช่น date, publish_date, วันที่) — เลือก mapping เองด้านบน")
+    if not mapping["ticker"]:
+        problems.append("ไม่พบ column ticker — จะตรวจจับชื่อหุ้นจากข้อความแทน (ตรวจผลก่อนบันทึก)")
+    used = {v for v in mapping.values() if v}
+    extra_cols = [c for c in cols if c not in used]
+    scale = label_scale(mapping["sentiment"], [r.get(mapping["sentiment"]) for r in data]) if mapping["sentiment"] else None
+    man = prices.manifest()["tickers"]
+    get = lambda r, f: (r.get(mapping[f]) or "") if mapping[f] else ""  # noqa: E731
+    rows = []
+    for i, r in enumerate(data[:limit]):
+        skip = []
+        headline = get(r, "headline").strip()
+        body = get(r, "body")
+        if not headline and body.strip():
+            headline = re.split(r"(?<=[.!?])\s", body.strip(), maxsplit=1)[0][:300]  # ไม่มีหัวข่าว → ประโยคแรกของเนื้อข่าว
+        if not headline:
+            skip.append("ไม่มีหัวข่าว")
+        date_raw = get(r, "date").strip()
+        dinfo = None
+        if date_raw:
+            try:
+                dinfo = trading_day_info(str(pd.Timestamp(date_raw).date()))
+            except (ValueError, TypeError, OverflowError):
+                skip.append(f"วันที่อ่านไม่ได้: '{date_raw[:30]}'")
+        else:
+            skip.append("ไม่มีวันที่")
+        extra = {c: r.get(c) for c in extra_cols if (r.get(c) or "").strip()}
+        det = detect(" ".join([headline, body] + [v for c, v in extra.items() if any(h in c.lower() for h in NAME_HINT)]))
+        warn = []
+        if mapping["ticker"] and get(r, "ticker").strip():
+            tick, bad = _parse_tickers(get(r, "ticker"), man)
+            src = "column"
+            if bad:
+                (skip if not tick else warn).append(f"ไม่พบ ticker ในระบบ: {bad}")
+        else:
+            tick, src = [m["ticker"] for m in det["mentions"]], "detected"
+        if not tick and not det["macro"]["suggest"] and not any("ticker" in x for x in skip):
+            skip.append("ไม่มี ticker และไม่พบคำที่บ่งว่าเป็นข่าวมหภาค")
+        sent, score, raw, lerr = parse_label(get(r, "sentiment"), scale) if mapping["sentiment"] else ("neutral", 0.0, None, None)
+        if lerr:
+            skip.append(lerr)
+        if len(body) > BODY_MAX:
+            warn.append(f"เนื้อข่าวยาว {len(body):,} ตัวอักษร เกิน {BODY_MAX:,} — จะถูกตัด")
+        rows.append({"row": i + 1, "headline": headline, "body": body,
+                     "date": dinfo["date"] if dinfo else date_raw, "effective_date": dinfo["next_trading_day"] if dinfo else None,
                      "date_ok": bool(dinfo), "tickers": tick, "ticker_source": src,
-                     "sentiment": s if s in ("positive", "neutral", "negative") else "neutral",
-                     "macro": det["macro"], "include": bool(h and dinfo and (tick or det["macro"]["suggest"]))})
-    return {"mapping": mapping, "columns": cols, "rows": rows}
+                     "sentiment": sent or "neutral", "score": score, "label_raw": raw,
+                     "label_scale": f"±{scale:g}" if scale and isinstance(raw, (int, float)) else None,
+                     "macro": det["macro"], "extra": extra, "warnings": warn, "skip_reasons": skip, "include": not skip})
+    return {"mapping": mapping, "guessed": guessed, "columns": cols, "extra_columns": extra_cols, "fields": [[f, FIELD_TH[f]] for f in FIELD_KEYWORDS],
+            "label_scale": scale, "problems": problems, "rows": rows, "total_rows": len(data),
+            "truncated": len(data) > limit, "n_include": sum(r["include"] for r in rows)}

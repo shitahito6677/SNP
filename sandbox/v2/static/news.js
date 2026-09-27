@@ -6,7 +6,7 @@ const NEWS = { charts: {} };  // chart object นอก Alpine reactive state
 function news() {
   return {
     headline: "", body: "", date: "", sentiment: "neutral", tickers: [], ignored: [], sectors: [], macroOn: false,
-    det: null, dateInfo: null, mq: null, mStart: 0, mi: 0, list: [], csv: null, csvErr: "", dragOver: false, _t: null,
+    det: null, dateInfo: null, mq: null, mStart: 0, mi: 0, list: [], csv: null, csvErr: "", csvText: "", csvName: "", dragOver: false, _t: null,
 
     init() {
       const go = () => { if (Alpine.store("app").route.name === "news") this.load(); };
@@ -108,16 +108,29 @@ function news() {
       const rd = new FileReader();
       rd.onload = async () => {
         this.csvErr = ""; this.csv = null;
-        try { this.csv = await api("/api/news/csv/preview", { method: "POST", body: { text: rd.result } }); } catch (e) { this.csvErr = e.message; }
+        // UTF-8 ก่อน (ตัด BOM ที่ server) — ไม่ใช่ UTF-8 จริง ๆ → ลอง Windows-874 (ไฟล์ภาษาไทยจาก Excel รุ่นเก่า)
+        let text;
+        try { text = new TextDecoder("utf-8", { fatal: true }).decode(rd.result); }
+        catch (e) { text = new TextDecoder("windows-874").decode(rd.result); }
+        this.csvText = text; this.csvName = f.name;
+        await this.previewCsv(null);
       };
-      rd.readAsText(f);
+      rd.onerror = () => { this.csvErr = "อ่านไฟล์ไม่ได้: เบราว์เซอร์เปิดไฟล์นี้ไม่ได้"; };
+      rd.readAsArrayBuffer(f);
     },
+    async previewCsv(mapping) {
+      try { this.csv = await api("/api/news/csv/preview", { method: "POST", body: { text: this.csvText, mapping } }); this.csvErr = ""; }
+      catch (e) { this.csvErr = e.message; }
+    },
+    remap(field, col) { this.previewCsv({ ...this.csv.mapping, [field]: col || null }); },
     async commitCsv() {
       const rows = this.csv.rows.map((r) => ({ ...r, sectors: !r.tickers.length && r.macro.suggest ? this.etfs() : [] }));
-      const res = await api("/api/news/csv/commit", { method: "POST", body: { rows } });
-      Alpine.store("app").toast(`บันทึก ${res.saved} ข่าว` + (res.errors.length ? ` · ผิดพลาด ${res.errors.length}` : ""), res.errors.length ? "err" : "ok", 6000);
-      if (res.errors.length) this.csvErr = res.errors.map((x) => `แถว ${x.row}: ${x.error}`).join(" · ");
-      else this.csv = null;
+      try {
+        const res = await api("/api/news/csv/commit", { method: "POST", body: { rows } });
+        Alpine.store("app").toast(`บันทึก ${res.saved} ข่าว` + (res.errors.length ? ` · ผิดพลาด ${res.errors.length}` : ""), res.errors.length ? "err" : "ok", 6000);
+        if (res.errors.length) this.csvErr = res.errors.map((x) => `แถว ${x.row}: ${x.error}`).join(" · ");
+        else this.csv = null;
+      } catch (e) { this.csvErr = "บันทึกไม่สำเร็จ: " + e.message; }
       this.list = await api("/api/news");
     },
   };

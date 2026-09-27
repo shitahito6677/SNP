@@ -490,20 +490,38 @@
       <h2>นำเข้า CSV</h2>
       <div class="dropzone" :class="{over: dragOver}" @dragover.prevent="dragOver=true" @dragleave="dragOver=false" @drop.prevent="drop($event)">
         ลากไฟล์ .csv มาวาง หรือ <label style="color:var(--a2);cursor:pointer">เลือกไฟล์<input type="file" accept=".csv,text/csv" style="display:none" @change="file($event.target.files[0])"></label>
-        <div class="dim" style="font-size:12px;margin-top:6px">column ที่รู้จัก: date, headline/title, body/summary, ticker/symbol, sentiment — ไม่มี ticker = ตรวจจากหัวข่าวให้</div>
+        <div class="dim" style="font-size:12px;margin-top:6px">จับคู่ column จากคำในชื่อ (มีวงเล็บ/คำไทยนำหน้าได้): date/วันที่, headline/title/short_news/ข่าวแบบย่อ, full_news/body/ข่าวแบบเต็ม, ticker/symbol, label/sentiment (ตัวเลข เช่น -2..+2 หรือ positive/neutral/negative) — column อื่นเก็บเป็น metadata · ไม่มี ticker = ตรวจจากข้อความให้</div>
       </div>
       <template x-if="csvErr"><div class="warn red"><b>CSV</b><span x-text="csvErr"></span></div></template>
       <template x-if="csv">
         <div class="stack">
-          <div class="dim mono" style="font-size:12px" x-text="'mapping: ' + JSON.stringify(csv.mapping)"></div>
+          <div class="csv-map">
+            <div class="dim" style="font-size:12px;margin-bottom:4px"><span class="mono" x-text="csvName"></span> · <span x-text="csv.total_rows"></span> แถว — ระบบเดา mapping ไว้ ตรวจ/แก้ก่อนบันทึก</div>
+            <div class="grid g2" style="gap:6px 12px">
+              <template x-for="[f, label] in csv.fields" :key="f">
+                <label class="row" style="gap:6px;font-size:12.5px"><span style="width:120px" x-text="label"></span>
+                  <select :data-map="f" style="flex:1;padding:3px 6px" @change="remap(f, $event.target.value)">
+                    <option value="" :selected="!csv.mapping[f]">— ไม่ใช้ —</option>
+                    <template x-for="c in csv.columns" :key="c"><option :value="c" :selected="csv.mapping[f]===c" x-text="c"></option></template>
+                  </select></label>
+              </template>
+            </div>
+            <div class="dim" style="font-size:12px;margin-top:4px" x-show="csv.extra_columns.length" x-text="'เก็บเป็น metadata ต่อแถว: ' + csv.extra_columns.join(', ')"></div>
+            <div class="dim" style="font-size:12px" x-show="csv.label_scale" x-text="`label ตัวเลขสเกล ±${csv.label_scale}: >0 = positive, 0 = neutral, <0 = negative · score = label/${csv.label_scale} (เก็บค่าดิบไว้ด้วย)`"></div>
+          </div>
+          <template x-for="p in csv.problems"><div class="warn orange"><b>MAPPING</b><span x-text="p"></span></div></template>
+          <template x-if="csv.rows.some(r=>r.skip_reasons.length)">
+            <div class="warn"><b>ข้าม</b><div><template x-for="r in csv.rows.filter(r=>r.skip_reasons.length)"><div x-text="`แถว ${r.row}: ${r.skip_reasons.join(' · ')}`"></div></template></div></div>
+          </template>
           <div class="scroll" style="max-height:380px"><table class="t">
             <thead><tr><th></th><th>วันที่</th><th>headline</th><th>หุ้น</th><th>sentiment</th></tr></thead>
-            <tbody><template x-for="r in csv.rows" :key="r.row"><tr>
+            <tbody><template x-for="r in csv.rows" :key="r.row"><tr :class="r.skip_reasons.length ? 'dim' : ''" :title="r.skip_reasons.join(' · ')">
               <td><input type="checkbox" x-model="r.include"></td>
               <td><input type="date" x-model="r.date" style="width:140px"><div class="dim" style="font-size:11px" x-show="r.effective_date && r.effective_date!==r.date" x-text="'มีผล ' + r.effective_date"></div></td>
               <td x-text="r.headline"></td>
               <td><input :value="r.tickers.join(', ')" @change="r.tickers = $event.target.value.split(/[ ,;]+/).filter(Boolean).map(x=>x.toUpperCase())" style="width:120px"><div class="dim" style="font-size:11px" x-text="r.ticker_source + (r.macro.suggest ? ' · มหภาค?' : '')"></div></td>
-              <td><select x-model="r.sentiment"><option>positive</option><option>neutral</option><option>negative</option></select></td>
+              <td><select x-model="r.sentiment" @change="r.score = null"><option>positive</option><option>neutral</option><option>negative</option></select>
+                <div class="dim mono" style="font-size:11px" x-show="r.label_raw !== null && r.label_raw !== undefined" x-text="'label ' + r.label_raw + (r.score !== null ? ' → ' + fmtNum(r.score) : '')"></div></td>
             </tr></template></tbody></table></div>
           <div class="row" style="justify-content:flex-end"><span class="muted" x-text="csv.rows.filter(r=>r.include).length + ' แถวที่จะบันทึก'"></span><button class="gold" @click="commitCsv()">บันทึกที่เลือก</button></div>
         </div>

@@ -74,6 +74,15 @@
 - `tests/test_e2e.py`: A1 (จริง) + B stub + C rulebase-exp03 + equal_weight_A → run → save → restart server → load → metrics/equity/funnel ตรงกัน 100%, badge STUB+NEGATIVE, provenance ครบ, reasons ทุก trade มี A — **ผ่าน**
 - tests ทั้งหมด **24/24 ผ่าน** · UI smoke console errors **0** · sandbox v1: diff = 0 บรรทัด, `sandbox.scripts.smoke_test` ผ่าน
 
+## F1 — แก้นำเข้า CSV ✅
+- วินิจฉัย (รันจริง): ไฟล์ `tests/fixtures/manual_news_sample.csv` → `/api/news/csv/preview` ได้ **400 "หา column headline ไม่เจอ"** — mapping เดิม match ชื่อ column แบบตรงตัว, column ไทย+วงเล็บ (`ข่าวแบบย่อ (short_news)`) ไม่ match; 500 ตามภาพ reproduce ไม่ได้ (DECISIONS #11)
+- แก้ `news.py`: จับคู่ column ด้วย keyword ในชื่อ + คะแนน (greedy, 1 column/field, ตัด `label_reason` ออกจาก label), label ตัวเลข (สเกลจากหัว column/ค่าในไฟล์) + ข้อความ, column ที่ไม่รู้จัก → `extra` ต่อแถว, ข้ามแถวที่เสียพร้อมเหตุผล (ไม่ทำให้ทั้งไฟล์ fail), ไม่มีหัวข่าว → ประโยคแรกของเนื้อข่าว, body limit 4,000 → 20,000 ตัวอักษร (เดิมตัดข่าวยาวเงียบ ๆ)
+- `server.py`: global error handler (JSON ภาษาไทย + `error_id` + traceback ลง `sandbox/v2/logs/server.log`), CSV preview/commit จับ error ทุกจุด, commit คำนวณวันที่มีผลใหม่จากวันที่ที่ผู้ใช้แก้
+- UI: อ่านไฟล์เป็น UTF-8 (fallback Windows-874), หน้า preview มี dropdown แก้ mapping ต่อ field, รายการแถวที่ถูกข้าม+เหตุผล, แสดง label ดิบ → score, column ที่เก็บเป็น metadata
+- test `tests/test_csv_import.py` 12 ข้อ: ไฟล์จริงนำเข้า 9/9 แถว META, `source=manual`, วันที่ 2021-10-25 → 2023-04-26 ตรงทุกแถว, body ตรงต้นฉบับ (ความยาว + sha256), label -2 → negative / score -1.0 (ต่ำสุด), extra ครบ, BOM, text label, แถวเสียถูกข้าม, แก้ mapping เอง, ไฟล์ว่าง/ซ้ำ/encoding ผิด → 400 ภาษาไทย, exception → 500 JSON + error_id อยู่ใน log
+- ผ่านเว็บจริง (Playwright, server port 5096): ลากไฟล์ → mapping ถูก → "บันทึก 9 ข่าว", 5xx = 0, console error = 0 (สำรอง/คืน `manual_news.jsonl` ของผู้ใช้หลังทดสอบ) — screenshot `screenshots/F1_csv_*.jpg`
+- DoD: ✅
+
 # สรุปรวม
 **ทำครบ W0–W8** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

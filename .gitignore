@@ -37,6 +37,7 @@ __pycache__/
 sandbox/v2/data/prices/
 sandbox/v2/data/manual_news.jsonl
 sandbox/v2/cache/
+sandbox/v2/logs/
 sandbox/v2/jobs.db
 sandbox/v2/jobs.db-*
 sandbox/v2/experiments/*/*.parquet

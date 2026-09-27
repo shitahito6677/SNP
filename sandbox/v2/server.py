@@ -7,18 +7,50 @@ Sandbox v2 "Pipeline Lab" — Flask server
 
 from __future__ import annotations
 
-import csv
 import json
+import logging
 import os
 import subprocess
 import sys
 import threading
 import time
+import traceback
+import uuid
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request
 
 from sandbox.v2 import condition_registry, config as cfg, experiments_store as xs, jobs, registry
+from werkzeug.exceptions import HTTPException
+
+LOG_FILE = cfg.V2 / "logs" / "server.log"
+
+
+def _logger() -> logging.Logger:
+    """traceback เต็มของทุก error → stderr + sandbox/v2/logs/server.log (gitignored)"""
+    lg = logging.getLogger("sandbox.v2.server")
+    if not lg.handlers:
+        lg.setLevel(logging.INFO)
+        fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        for h in (logging.StreamHandler(), RotatingFileHandler(LOG_FILE, maxBytes=2_000_000, backupCount=3, encoding="utf-8")):
+            h.setFormatter(fmt)
+            lg.addHandler(h)
+        lg.propagate = False
+    return lg
+
+
+log = _logger()
+
+
+def fail(e: BaseException, message: str, status: int = 500):
+    """log traceback เต็มฝั่ง server แล้วคืนข้อความไทยที่อ่านรู้เรื่อง + error_id ไว้ค้นใน log — ห้ามคืน 500 ดิบ"""
+    eid = uuid.uuid4().hex[:8]
+    log.error("error_id=%s %s %s → %s: %s\n%s", eid, request.method, request.full_path, type(e).__name__, e,
+              "".join(traceback.format_exception(type(e), e, e.__traceback__)))
+    return jsonify({"error": f"{message} (รหัสอ้างอิง {eid} — ดูรายละเอียดใน {LOG_FILE.relative_to(cfg.REPO)})",
+                    "kind": "server", "error_id": eid, "detail": f"{type(e).__name__}: {e}"[:500]}), status
 
 
 def _asset_version() -> str:
@@ -30,6 +62,16 @@ def _asset_version() -> str:
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static", template_folder="templates")
     app.json.ensure_ascii = False
+
+    @app.errorhandler(Exception)
+    def on_error(e):
+        """ตาข่ายสุดท้าย: exception ที่ endpoint ไม่ได้จับเอง → JSON ภาษาไทย (ไม่ใช่หน้า 500 HTML ดิบ)"""
+        if isinstance(e, HTTPException):
+            th = {400: "คำขอไม่ถูกต้อง", 404: "ไม่พบหน้า/ข้อมูลที่ขอ", 405: "method ไม่ถูกต้อง", 413: "ไฟล์ใหญ่เกินไป"}
+            if not request.path.startswith("/api/"):
+                return e
+            return jsonify({"error": f"{th.get(e.code, 'คำขอผิดพลาด')} ({e.code}: {e.description})", "kind": "http"}), e.code
+        return fail(e, f"เกิดข้อผิดพลาดภายใน server ที่ {request.path}")
 
     @app.get("/api/registry")
     def api_registry():
@@ -214,22 +256,33 @@ def create_app() -> Flask:
     def api_news_csv_preview():
         from sandbox.v2 import news
         try:
-            return jsonify(news.csv_preview(request.get_json(force=True).get("text", "")))
-        except (ValueError, csv.Error) as e:
-            return jsonify({"error": str(e)}), 400
+            b = request.get_json(force=True, silent=True)
+            if not isinstance(b, dict):
+                return jsonify({"error": "อ่านไฟล์ไม่ได้: ส่งข้อมูลมาไม่ถูกรูปแบบ (ต้องเป็น JSON {text, mapping})"}), 400
+            return jsonify(news.csv_preview(b.get("text", ""), b.get("mapping") or None))
+        except ValueError as e:  # ข้อความไทยจาก csv_preview (ไฟล์ว่าง/ไม่มีหัวตาราง/encoding ผิด/mapping ผิด)
+            log.info("csv preview rejected: %s", e)
+            return jsonify({"error": str(e), "kind": "csv"}), 400
+        except Exception as e:  # noqa: BLE001
+            return fail(e, "อ่านไฟล์ CSV ไม่สำเร็จเพราะข้อผิดพลาดภายใน")
 
     @app.post("/api/news/csv/commit")
     def api_news_csv_commit():
         from sandbox.v2 import news
         saved, errors = [], []
-        for r in request.get_json(force=True).get("rows", []):
-            if not r.get("include"):
+        b = request.get_json(force=True, silent=True) or {}
+        for r in b.get("rows", []) if isinstance(b, dict) else []:
+            if not isinstance(r, dict) or not r.get("include"):
                 continue
+            r = dict(r, effective_date=None)  # ผู้ใช้อาจแก้วันที่ใน preview → คำนวณวันที่มีผลใหม่เสมอ
             try:
                 saved.append(news.add(r))
             except (ValueError, KeyError) as e:
-                errors.append({"row": r.get("row"), "error": str(e)})
-        return jsonify({"saved": len(saved), "errors": errors})
+                errors.append({"row": r.get("row"), "error": str(e).strip("'\"")})
+            except Exception as e:  # noqa: BLE001 — แถวเดียวพังไม่ให้ทั้งไฟล์พัง
+                resp, _ = fail(e, "บันทึกแถวนี้ไม่สำเร็จ")
+                errors.append({"row": r.get("row"), "error": resp.get_json()["error"]})
+        return jsonify({"saved": len(saved), "errors": errors, "ids": [x["id"] for x in saved]})
 
     # ------------------------------------------------------------ results / experiments
     def _result_dir(kind, rid):
