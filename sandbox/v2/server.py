@@ -187,7 +187,7 @@ def create_app() -> Flask:
 
     @app.get("/api/meta")
     def api_meta():
-        from sandbox.v2 import prices
+        from sandbox.v2 import news, prices
         man = prices.manifest()
         tickers = [{"t": t, "name": r.get("name") or t, "sector": r.get("sector") or "Unknown", "status": r.get("status"),
                     "kind": r.get("kind")} for t, r in sorted(man["tickers"].items()) if r.get("status") in ("ok", "partial")]
@@ -198,6 +198,7 @@ def create_app() -> Flask:
             "latest_trading_day": man.get("latest_trading_day"), "counts": man.get("counts"),
             "data_hash": man.get("data_hash"), "sp500_snapshot_date": man.get("sp500_snapshot_date"),
             "sector_etfs": cfg.SECTOR_ETFS, "tickers": tickers,
+            "news_labels": [[k, v] for k, v in sorted(news.LABELS.items())],  # label ข่าว manual 5 ระดับ (ลำดับ -2 → +2)
             "vendor": {"plotly": (cfg.V2 / "static/vendor/plotly.min.js").exists(),
                        "monaco": (cfg.V2 / "static/vendor/monaco/vs/loader.js").exists()},
         })

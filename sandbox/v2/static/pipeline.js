@@ -172,7 +172,7 @@ function pipeline() {
           LAB.editor.onDidChangeModelContent(() => { if (!this._ignore) { this.dirty = true; } });
           const items = [
             ["date", "วันที่ตัดสินใจ 'YYYY-MM-DD'"], ["universe", "list ticker ที่ผ่านกล่องที่เปิดทั้งหมด"], ["a", "dict ticker → สัญญาณ A {class, score, weight, reasons, date}"],
-            ["b", "dict ticker → สัญญาณ B ล่าสุด (ภายในอายุ)"], ["c", "dict sector ETF/GICS → สัญญาณ C"], ["c_for(ticker)", "สัญญาณ C ของ sector ของหุ้น"],
+            ["b", "dict ticker → สัญญาณ B ล่าสุด (ภายในอายุ) · ข่าว manual มี label -2..+2 (ความแรง) + class 3 กลุ่ม"], ["c", "dict sector ETF/GICS → สัญญาณ C"], ["c_for(ticker)", "สัญญาณ C ของ sector ของหุ้น"],
             ["sector_of(ticker)", "GICS sector"], ["etf_of(ticker)", "sector ETF"], ["price(ticker)", "Adj Close ล่าสุด ≤ วันนี้"],
             ["history(ticker, lookback_days=60, field='adj')", "pd.Series ราคาย้อนหลัง (ห้ามเกิน ctx.date)"], ["portfolio", "{value, cash, cash_weight, weights, units}"],
             ["state", "dict จำค่าข้ามวัน"], ["stage_enabled", "{A,B,C: bool}"], ["note(ticker, text)", "แนบเหตุผลเข้า trade"],

@@ -16,6 +16,12 @@ const isNum = (x) => typeof x === "number" && isFinite(x);
 function fmtPct(x, d = 2) { return isNum(x) ? (x * 100).toFixed(d) + "%" : "—"; }
 function fmtPctS(x, d = 2) { return isNum(x) ? (x >= 0 ? "+" : "") + (x * 100).toFixed(d) + "%" : "—"; }
 function fmtNum(x, d = 2) { return isNum(x) ? x.toFixed(d) : "—"; }
+/* label ข่าว manual 5 ระดับ -2..+2 (ข้อความจาก /api/meta) — ค่าหลัก ไม่ยุบเหลือ positive/neutral/negative */
+function newsLabels() { return (window.Alpine && Alpine.store("app").meta?.news_labels) || []; }
+function newsLabelOf(n) { return isNum(n?.label) ? n.label : ({ positive: 1, neutral: 0, negative: -1 }[n?.sentiment] ?? 0); }
+function labelTag(v) { const t = (newsLabels().find((x) => x[0] === v) || [v, ""])[1]; return `${v > 0 ? "+" : ""}${v} ${t}`.trim(); }
+function labelCls(v) { return v >= 2 ? "pos strong" : v >= 1 ? "pos" : v <= -2 ? "neg strong" : v <= -1 ? "neg" : "dim"; }
+const LABEL_COLORS = { "-2": "#EF4444", "-1": "#FCA5A5", "0": "#94A3B8", "1": "#86EFAC", "2": "#22C55E" };
 function fmtN(x) { return isNum(x) ? Math.round(x).toLocaleString("en-US") : "—"; }
 function fmtMoney(x) { return isNum(x) ? (x < 0 ? "−" : "") + Math.abs(x).toLocaleString("en-US", { maximumFractionDigits: 0 }) : "—"; }
 function chipKind(c) {

@@ -93,7 +93,9 @@ rebalance เฉพาะวันที่ผลลัพธ์เปลี่�
 
 ## นำเข้าข่าว CSV
 - จับคู่ column จากคำในชื่อ (มีวงเล็บ/คำไทยนำหน้าได้ เช่น `ข่าวแบบย่อ (short_news)`) — หน้า preview แก้ mapping เองได้ก่อนบันทึก
-- label ตัวเลข (เช่น `-2..+2`) → sentiment ตามเครื่องหมาย + `score = label/สเกล` (เก็บค่าดิบใน `label_raw`); หรือข้อความ positive/neutral/negative
+- **label 5 ระดับ `-2..+2` คือค่าหลักของข่าว manual** (-2 negative แรงมาก · -1 negative · 0 neutral (ไม่ค่อยมีผล) · +1 positive · +2 positive แรงมาก) — ใช้ตลอดระบบ: หน้า preview (dropdown 5 ค่า), ฟอร์มพิมพ์เอง, trade reasons (`B: … label -2 negative แรงมาก · … [MANUAL]`), hover/marker บนหน้าหุ้น (`M-2`), `ctx.b[t]["label"]` / `ctx.c[etf]["label"]` ในเงื่อนไข
+- `class` 3 กลุ่ม (≤-1 negative, 0 neutral, ≥1 positive) และ `score = label/2` **derive เพิ่ม** ใน record ของ signal เพื่อให้เกณฑ์กรองแบบ Model B (ตัด negative/neutral, score ≥) ใช้ได้เท่านั้น — ไม่เขียนทับ label
+- label สเกลอื่น (เช่น ±1, ±5) → เทียบเป็น -2..+2 และเก็บค่าในไฟล์ไว้ที่ `label_raw`; ข้อความ positive/neutral/negative → +1/0/-1
 - column อื่น (`source_url`, `label_reason`, …) เก็บเป็น `extra` ต่อแถว; แถวที่อ่านไม่ได้ถูกข้ามพร้อมเหตุผล ไม่ทำให้ทั้งไฟล์ fail
 
 ## Error / log

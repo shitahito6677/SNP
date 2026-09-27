@@ -321,6 +321,9 @@ def _chip(model, label, rec, extra=""):
     sc = rec.get("score")
     s = f" (score {sc:.1f})" if isinstance(sc, float) and model == "A" else (f" ({sc:+.2f})" if isinstance(sc, float) else "")
     src = " [MANUAL]" if rec.get("source") == "manual" else ""
+    if rec.get("label") is not None:  # ข่าว manual: แสดงความแรง -2..+2 ไม่ใช่แค่ 3 คลาส
+        from sandbox.v2.news import label_tag
+        return f"{model}: {label} {extra}label {label_tag(int(rec['label']))} · {rec.get('date')}{src}"
     return f"{model}: {label} {extra}{rec.get('class')}{s} · {rec.get('date')}{src}"
 
 

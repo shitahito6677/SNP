@@ -3,6 +3,7 @@ import csv
 import hashlib
 import json
 
+import pandas as pd
 import pytest
 
 from sandbox.v2 import config as cfg, news
@@ -11,11 +12,18 @@ from sandbox.v2.server import create_app
 FIXTURE = cfg.V2 / "tests" / "fixtures" / "manual_news_sample.csv"
 # ไฟล์จริงมี 10 บรรทัด = หัวตาราง 1 + ข่าว META 9 แถว
 EXPECTED_ROWS = 9
+# ไฟล์จริงชุดใหญ่ (20 แถว, 7 ticker) — มี label ครบทั้ง 5 ระดับ (-2, -1, 0, 1, 2)
+FIVE = cfg.V2 / "tests" / "fixtures" / "manual_news_5levels.csv"
+LABEL_COL = "label จาก Claude (-2..+2)"
+
+
+def _original_of(path):
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        return list(csv.DictReader(f))
 
 
 def _original():
-    with open(FIXTURE, encoding="utf-8-sig", newline="") as f:
-        return list(csv.DictReader(f))
+    return _original_of(FIXTURE)
 
 
 @pytest.fixture()
@@ -62,23 +70,89 @@ def test_real_file_imports_every_row(client):
         assert n["extra"]["แหล่งที่มา/ลิงค์ (source_url)"] == o["แหล่งที่มา/ลิงค์ (source_url)"]
         assert n["extra"]["เหตุผลของ label (label_reason)"] == o["เหตุผลของ label (label_reason)"]
         assert n["extra"]["ชื่อหุ้น (stock_name)"] == o["ชื่อหุ้น (stock_name)"]
-        # label ดิบเก็บไว้
-        assert n["label_raw"] == int(o["label จาก Claude (-2..+2)"]) and n["label_scale"] == "±2"
+        # label -2..+2 เป็นฟิลด์หลัก (ค่าในไฟล์ตรงกับสเกลระบบ จึงไม่ต้องมี label_raw ซ้ำ)
+        assert n["label"] == int(o[LABEL_COL]) and "label_raw" not in n and "sentiment" not in n
     dates = sorted(n["date"] for n in saved)
     assert dates[0] == "2021-10-25" and dates[-1] == "2023-04-26"
 
 
-def test_numeric_label_maps_to_internal_scale(client):
-    _import(client, FIXTURE.read_text(encoding="utf-8"))
+def test_five_label_levels_are_kept_distinct(client):
+    """label 5 ระดับ ต้องไม่ถูกยุบเป็น 3 กลุ่ม: preview → บันทึก → signal (ctx.b) → chip ใน trade reasons → hover หน้าหุ้น"""
+    from sandbox.v2 import engine, signals, stock_view
+
+    orig = _original_of(FIVE)
+    want = [int(o[LABEL_COL]) for o in orig]
+    assert set(want) == {-2, -1, 0, 1, 2}
+    prev, res = _import(client, FIVE.read_text(encoding="utf-8"))
+    assert [r["label"] for r in prev["rows"]] == want and res["saved"] == len(orig)
     saved = news._load()
-    worst = min(n["score"] for n in saved)
-    for n in saved:
-        raw = n["label_raw"]
-        assert n["sentiment"] == ("positive" if raw > 0 else "negative" if raw < 0 else "neutral")
-        assert n["score"] == raw / 2
-        if raw == -2:  # แย่สุดของไฟล์ → แย่สุดของระบบภายใน (-1.0 = เท่ากับข่าว negative ที่พิมพ์เอง)
-            assert n["sentiment"] == "negative" and n["score"] == -1.0 == worst
-    assert {n["label_raw"] for n in saved} >= {-2, -1, 1, 2}
+    assert sorted(n["label"] for n in saved) == sorted(want)
+
+    # signal ที่ condition เห็น (ctx.b) + class 3 กลุ่มที่ derive เฉพาะเพื่อเกณฑ์กรองแบบ Model B
+    recs = signals.load_manual_news("b")
+    by = {}
+    for r in recs:
+        by.setdefault(r["label"], r)
+    assert set(by) == {-2, -1, 0, 1, 2}
+    assert [by[v]["class"] for v in (-2, -1, 0, 1, 2)] == ["negative", "negative", "neutral", "positive", "positive"]
+    assert [by[v]["score"] for v in (-2, -1, 0, 1, 2)] == [-1.0, -0.5, 0.0, 0.5, 1.0]
+    texts = [by[v]["label_text"] for v in (-2, -1, 0, 1, 2)]
+    assert len(set(texts)) == 5 and texts[0] == "negative แรงมาก" and texts[4] == "positive แรงมาก"
+    assert len({by[v]["reasons"][0].split("]")[0] for v in by}) == 5  # "[−2 negative แรงมาก]" ≠ "[−1 negative]" …
+
+    # chip ใน trade reasons แยก 5 ระดับ
+    chips = {v: engine._chip("B", "B stub", by[v]) for v in by}
+    assert len(set(c.split(" · ")[0] for c in chips.values())) == 5
+    assert "label -2 negative แรงมาก" in chips[-2] and "label +2 positive แรงมาก" in chips[2] and "label +1 positive ·" in chips[1]
+
+    # hover หน้าหุ้น: MSFT มี label 0 และ +1, META มี -2 -1 +1 +2
+    meta = stock_view.build("META")["layers"]["manual"]
+    msft = stock_view.build("MSFT")["layers"]["manual"]
+    got = {m["label"]: m["label_text"] for m in meta + msft}
+    assert got == {v: news.LABELS[v] for v in (-2, -1, 0, 1, 2)}
+
+
+def test_label_reaches_condition_and_trade_reasons(client, tmp_path):
+    """condition อ่าน ctx.b[t]["label"] ได้ และ reasons ของ trade แสดงความแรงต่างกัน (ไม่ใช่ 'positive' เหมือนกันหมด)"""
+    from sandbox.v2 import engine
+
+    _import(client, FIXTURE.read_text(encoding="utf-8"))  # META: -2 -1 +1 +2
+    src = '''NAME = "label test"
+DESCRIPTION = "ถือ META ตามความแรงของข่าว manual"
+def decide(ctx):
+    b = ctx.b.get("META")
+    if not b or b.get("source") != "manual":
+        return None
+    assert b["label"] in (-2, -1, 1, 2) and isinstance(b["label"], int), b
+    return {"META": {2: 1.0, 1: 0.5}.get(b["label"], 0.0)}
+'''
+    conf, _ = engine.normalize_config({"include_manual": True, "stages": {"B": {"mode": "score-only", "version": "B:stub"}},
+                                       "condition": {"source": src}})
+    engine.run(conf, tmp_path / "run", log=lambda m: None)
+    tr = pd.read_parquet(tmp_path / "run" / "trades.parquet")
+    manual = [c for rs in tr["reasons"] for c in rs if "[MANUAL]" in c]
+    seen = {lab for lab in (-2, -1, 1, 2) for c in manual if f"label {lab:+d} " in c}
+    assert seen == {-2, -1, 1, 2}, manual[:6]
+
+
+def test_other_numeric_scale_is_mapped_to_five_levels(client):
+    text = "Headline,Date,Ticker,score (-1..+1)\nA,2023-02-03,AAPL,-1\nB,2023-02-03,AAPL,-0.4\nC,2023-02-03,AAPL,0\nD,2023-02-03,AAPL,0.5\nE,2023-02-03,AAPL,1\n"
+    prev = client.post("/api/news/csv/preview", json={"text": text, "mapping": {"headline": "Headline", "date": "Date", "ticker": "Ticker",
+                                                                             "sentiment": "score (-1..+1)"}}).get_json()
+    assert [r["label"] for r in prev["rows"]] == [-2, -1, 0, 1, 2]
+    client.post("/api/news/csv/commit", json={"rows": prev["rows"]})
+    saved = news._load()
+    assert [n["label"] for n in saved] == [-2, -1, 0, 1, 2] and saved[1]["label_raw"] == -0.4
+
+
+def test_manual_form_label_and_legacy_rows(client):
+    """ฟอร์มพิมพ์เองส่ง label -2..+2 ได้; ข่าวเก่าที่มีแค่ sentiment → +1/0/-1; label ผิดรูป → 400"""
+    assert client.post("/api/news", json={"headline": "x", "date": "2023-02-03", "tickers": ["AAPL"], "label": -2}).get_json()["label"] == -2
+    assert client.post("/api/news", json={"headline": "y", "date": "2023-02-03", "tickers": ["AAPL"], "sentiment": "positive"}).get_json()["label"] == 1
+    assert news.label_of({"sentiment": "negative"}) == -1 and news.label_of({}) == 0
+    for bad in (3, 1.5, "abc"):
+        r = client.post("/api/news", json={"headline": "z", "date": "2023-02-03", "tickers": ["AAPL"], "label": bad})
+        assert r.status_code == 400 and "-2..+2" in r.get_json()["error"]
 
 
 def test_bom_and_label_scale_from_values(client):
@@ -98,7 +172,7 @@ def test_text_labels_and_bad_rows_are_skipped_not_fatal(client):
             ",2023-02-03,MSFT,neutral,\n")
     prev, res = _import(client, text)
     rows = {r["row"]: r for r in prev["rows"]}
-    assert rows[1]["sentiment"] == "positive" and rows[2]["sentiment"] == "negative"
+    assert rows[1]["label"] == 1 and rows[2]["label"] == -1
     assert rows[1]["extra"] == {"source_url": "http://x"}
     assert "ZZZZQ" in rows[3]["skip_reasons"][0]
     assert rows[4]["skip_reasons"][0].startswith("วันที่อ่านไม่ได้")
@@ -147,7 +221,7 @@ def test_internal_error_is_logged_and_readable(client, monkeypatch, tmp_path):
 
 
 def test_commit_row_errors_do_not_fail_file(client):
-    rows = [{"row": 1, "include": True, "headline": "ok", "date": "2023-02-03", "tickers": ["AAPL"], "sentiment": "neutral"},
+    rows = [{"row": 1, "include": True, "headline": "ok", "date": "2023-02-03", "tickers": ["AAPL"], "label": 0},
             {"row": 2, "include": True, "headline": "bad", "date": "2023-02-03", "tickers": ["NOPE1"], "sentiment": "neutral"},
             {"row": 3, "include": True, "headline": "bad date", "date": "xx", "tickers": ["AAPL"], "sentiment": "neutral"}]
     r = client.post("/api/news/csv/commit", json={"rows": rows})
@@ -155,3 +229,22 @@ def test_commit_row_errors_do_not_fail_file(client):
     j = r.get_json()
     assert j["saved"] == 1 and [e["row"] for e in j["errors"]] == [2, 3]
     assert json.loads(cfg.MANUAL_NEWS.read_text().splitlines()[0])["headline"] == "ok"
+
+
+def test_rows_saved_by_first_f1_format_keep_their_strength(client):
+    """ข่าวที่นำเข้าช่วง F1 แรก (เก็บ sentiment 3 กลุ่ม + label_raw/label_scale) และข่าวพิมพ์เองรุ่นเก่า (sentiment อย่างเดียว)
+    ต้องอ่านกลับได้ความแรงเดิม — ไม่ยุบ ±2 เป็น ±1 และไม่ต้องแก้ไฟล์เดิม"""
+    from sandbox.v2 import signals, stock_view
+
+    legacy = [dict(id=f"x{v}", source="manual", headline=f"h{v}", body="", date="2022-02-02", effective_date="2022-02-02",
+                   kind="company", tickers=["META"], sectors=[], sentiment=news.label_class(v), score=v / 2,
+                   label_raw=v, label_scale="±2", deleted=False) for v in (-2, -1, 0, 1, 2)]
+    legacy.append(dict(id="old", source="manual", headline="typed", body="", date="2022-02-03", effective_date="2022-02-03",
+                       kind="company", tickers=["META"], sectors=[], sentiment="negative", score=-1.0, deleted=False))
+    news._write(legacy)
+    before = cfg.MANUAL_NEWS.read_bytes()
+    assert [news.label_of(n) for n in legacy] == [-2, -1, 0, 1, 2, -1]
+    assert sorted(r["label"] for r in signals.load_manual_news("b")) == [-2, -1, -1, 0, 1, 2]
+    assert sorted(m["label"] for m in stock_view.build("META")["layers"]["manual"]) == [-2, -1, -1, 0, 1, 2]
+    assert sorted(n["label"] for n in client.get("/api/news").get_json()) == [-2, -1, -1, 0, 1, 2]
+    assert cfg.MANUAL_NEWS.read_bytes() == before  # อ่านอย่างเดียว ไม่เขียนทับ

@@ -101,6 +101,16 @@
 - tests รวม **71/71 ผ่าน**
 - DoD: ✅
 
+## F1b — label ข่าว 5 ระดับ (-2..+2) เป็นค่าหลัก ✅
+- `news.py`: `LABELS` 5 ระดับ, ข่าว manual เก็บ `label` int เป็นฟิลด์หลัก (preview CSV, ฟอร์มพิมพ์เอง, API รับ `label` หรือ `sentiment` แบบเดิม), `label_of()` อ่านข่าวรูปแบบเก่าได้โดยไม่แก้ไฟล์ (DECISIONS #14), `label_class()` derive 3 กลุ่มเฉพาะเกณฑ์กรองแบบ Model B
+- `signals.load_manual_news`: record มี `label`, `label_text`, reasons `MANUAL 2022-02-02 [-2 negative แรงมาก]: …`; `class`/`score` derive จาก label; `FIELDS` + label → `ctx.b[t]["label"]` ใช้ในเงื่อนไขได้
+- `engine._chip`: trade reasons ของข่าว manual แสดง `label -2 negative แรงมาก` แทน class 3 กลุ่ม; `stock_view` + `stock.js`: hover "ข่าว manual · label +2 positive แรงมาก", marker `M-2`…`M+2` สีตามระดับ
+- UI: dropdown preview 5 ตัวเลือก, ฟอร์มพิมพ์เอง 5 ปุ่ม, รายการข่าวแสดง label, `/api/meta.news_labels`
+- test `test_csv_import.py` 16 ข้อ (+ fixture จริง `manual_news_5levels.csv` 20 แถวที่มีครบ -2,-1,0,1,2): preview/บันทึก/signal/chip/hover แยก 5 ระดับไม่ยุบรวม, condition อ่าน `ctx.b["META"]["label"]` และ trade reasons มี label -2/-1/+1/+2 ต่างกัน, สเกล ±1 → 5 ระดับ, ฟอร์ม/label ผิด → 400, ข่าวรูปแบบ F1 แรก + รุ่นเก่า อ่านกลับได้ความแรงเดิมโดยไฟล์ไม่เปลี่ยน
+- ผ่านเว็บจริง (Playwright, สำรอง/คืน `manual_news.jsonl`): นำเข้า 20 แถว → dropdown ตรงกับไฟล์ทุกแถว → "บันทึก 20 ข่าว" → hover หน้าหุ้น META/MSFT เห็น -2 / -1 / 0 / +1 / +2 ต่างกัน; 5xx/page error = 0 (รอบแรก timeout รอกราฟหลังเปลี่ยน hash 1 ครั้ง — รันซ้ำ 2 รอบไม่เกิด) — screenshot `screenshots/F1b_*.jpg`
+- tests รวม **75/75 ผ่าน**
+- DoD: ✅
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

@@ -5,7 +5,7 @@ const NEWS = { charts: {} };  // chart object นอก Alpine reactive state
 
 function news() {
   return {
-    headline: "", body: "", date: "", sentiment: "neutral", tickers: [], ignored: [], sectors: [], macroOn: false,
+    headline: "", body: "", date: "", label: 0, tickers: [], ignored: [], sectors: [], macroOn: false,
     det: null, dateInfo: null, mq: null, mStart: 0, mi: 0, list: [], csv: null, csvErr: "", csvText: "", csvName: "", dragOver: false, _t: null,
 
     init() {
@@ -88,10 +88,10 @@ function news() {
       try {
         await api("/api/news", { method: "POST", body: {
           headline: this.headline, body: this.body, date: this.date, effective_date: this.dateInfo?.next_trading_day,
-          tickers: this.tickers, sectors: this.macroOn ? this.sectors : [], sentiment: this.sentiment,
+          tickers: this.tickers, sectors: this.macroOn ? this.sectors : [], label: this.label,
           detected_by: Object.fromEntries((this.det?.mentions || []).filter((m) => this.tickers.includes(m.ticker)).map((m) => [m.ticker, m.how])) } });
         Alpine.store("app").toast("บันทึกข่าวแล้ว (source = manual)");
-        Object.assign(this, { headline: "", body: "", tickers: [], ignored: [], sectors: [], macroOn: false, det: null, sentiment: "neutral" });
+        Object.assign(this, { headline: "", body: "", tickers: [], ignored: [], sectors: [], macroOn: false, det: null, label: 0 });
         this.list = await api("/api/news");
       } catch (e) { Alpine.store("app").toast(e.message, "err", 6000); }
     },

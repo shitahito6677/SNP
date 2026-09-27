@@ -17,7 +17,7 @@ import pandas as pd
 from sandbox.v2 import config as cfg
 from sandbox.v2 import registry
 
-FIELDS = ("class", "score", "applicable", "reasons", "weight", "rank", "sector", "source")
+FIELDS = ("class", "score", "applicable", "reasons", "weight", "rank", "sector", "source", "label", "label_text")
 
 
 def _clean(v):
@@ -55,6 +55,8 @@ class AsOf:
         dates = df["date"].to_numpy()
         for r, d in zip(self.records, dates):
             r["date"] = str(pd.Timestamp(d).date())
+            if r.get("label") is not None:  # คอลัมน์ label เป็น float หลัง concat กับ signal ของโมเดล (NaN) → คืนเป็น int
+                r["label"] = int(r["label"])
         keys = df[self.key].astype(str).to_numpy()
         if self.kind == "rebalance":
             self.R = sorted(pd.to_datetime(df["date"].unique()))
@@ -123,6 +125,8 @@ class AsOf:
 def load_manual_news(kind: str) -> list:
     """ข่าว manual (source="manual") ที่ผู้ใช้เพิ่มเอง → record แบบ signal (kind 'b' = รายหุ้น, 'c' = ราย sector)
     ไม่ใช่ output ของโมเดลและไม่ถูกใช้เป็น training data"""
+    from sandbox.v2.news import LABELS, label_class, label_of, label_tag
+
     if not cfg.MANUAL_NEWS.exists():
         return []
     out = []
@@ -137,9 +141,11 @@ def load_manual_news(kind: str) -> list:
             continue
         if kind == "c" and not n.get("sectors"):
             continue
+        lab = label_of(n)  # ค่าหลัก -2..+2
         for k in targets:
+            # class 3 กลุ่ม derive จาก label เพื่อให้เกณฑ์กรองแบบ Model B (ตัด negative/neutral) ใช้ได้; score = label/2 ∈ [-1, 1]
             out.append({"date": n["effective_date"], ("ticker" if kind == "b" else "sector"): k,
-                        "class": n.get("sentiment", "neutral"), "score": n.get("score", 0.0), "applicable": True,
-                        "reasons": [f"MANUAL {n['effective_date']}: {n['headline'][:140]}"],
+                        "class": label_class(lab), "score": lab / 2, "label": lab, "label_text": LABELS[lab], "applicable": True,
+                        "reasons": [f"MANUAL {n['effective_date']} [{label_tag(lab)}]: {n['headline'][:140]}"],
                         "model_version": "manual", "is_stub": False, "source": "manual"})
     return out

@@ -106,7 +106,7 @@ function stock() {
         mk.push(t.side === "buy" ? { time: tm, position: "belowBar", color: "#34D399", shape: "arrowUp", text: "BUY" } : { time: tm, position: "aboveBar", color: "#F87171", shape: "arrowDown", text: "SELL" }); }
       if (this.layers.B) for (const b of d.layers.B) { const tm = this.snap(dates, b.time); if (tm) mk.push({ time: tm, position: "belowBar", color: { positive: "#C084FC", negative: "#F472B6", neutral: "#8B8FB0" }[b.class], shape: "circle", text: "B" + (b.class === "negative" ? "−" : b.class === "positive" ? "+" : "") }); }
       if (this.layers.C) for (const c of d.layers.C) { const tm = this.snap(dates, c.time); if (tm) mk.push({ time: tm, position: "aboveBar", color: { positive: "#34D399", negative: "#FB923C", neutral: "#FBBF24" }[c.class], shape: "square", text: "C" }); }
-      if (this.layers.manual) for (const n of d.layers.manual) { const tm = this.snap(dates, n.time); if (tm) mk.push({ time: tm, position: "aboveBar", color: "#38BDF8", shape: "circle", text: "M" }); }
+      if (this.layers.manual) for (const n of d.layers.manual) { const tm = this.snap(dates, n.time); if (tm) mk.push({ time: tm, position: "aboveBar", color: LABEL_COLORS[String(n.label)] || "#38BDF8", shape: "circle", text: "M" + (n.label > 0 ? "+" : "") + n.label }); }
       mk.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
       if (mk.length > 60) for (const x of mk) if (x.text === "BUY" || x.text === "SELL" || x.text.startsWith("B")) x.text = "";  // เยอะเกิน → เหลือแค่สัญลักษณ์
       candle.setMarkers(mk);
@@ -131,7 +131,7 @@ function stock() {
       for (const p of d.layers.A) if (t >= p.from && t < p.to) items.push({ title: `A ${d.labels.A?.short_label || ""}: ${p.class} (score ${fmtNum(p.score, 1)}) · รอบ ${p.rebalance}`, cls: p.class === "selected" ? "pos" : "", reasons: p.reasons.map((r) => "A: " + r) });
       for (const b of d.layers.B) if (b.time === t) items.push({ title: `B ${d.labels.B?.short_label || ""}: ${b.class}`, cls: "", reasons: b.reasons.map((r) => "B: " + r) });
       for (const c of d.layers.C) if (c.time === t) items.push({ title: `C ${d.labels.C?.short_label || ""} ${d.etf}: ${c.class} (${fmtNum(c.score)})`, cls: "", reasons: c.reasons.map((r) => "C: " + r) });
-      for (const n of d.layers.manual) if (n.time === t) items.push({ title: `ข่าว manual (${n.sentiment})`, cls: "", reasons: ["MANUAL " + n.headline] });
+      for (const n of d.layers.manual) if (n.time === t) items.push({ title: `ข่าว manual · label ${labelTag(n.label)}`, cls: labelCls(n.label), reasons: [`MANUAL [${labelTag(n.label)}] ${n.headline}`] });
       this.hoverItems = items;
     },
     focus(date) {

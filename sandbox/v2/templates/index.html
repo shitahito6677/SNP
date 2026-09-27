@@ -509,8 +509,8 @@
       </template>
       <div class="row">
         <div><label class="lbl">วันที่ข่าว</label><input type="date" x-model="date" @change="detectNow()"></div>
-        <div><label class="lbl">sentiment (ผู้ใช้กำหนด)</label>
-          <div class="seg"><template x-for="s in ['positive','neutral','negative']"><button :class="{on: sentiment===s}" @click="sentiment=s" x-text="{positive:'บวก',neutral:'กลาง',negative:'ลบ'}[s]"></button></template></div></div>
+        <div><label class="lbl">label ความแรงของข่าว (-2..+2)</label>
+          <div class="seg"><template x-for="[v, t] in newsLabels()" :key="v"><button :data-label="v" :class="{on: label===v}" :title="t" @click="label=v" x-text="(v>0?'+':'') + v + ' ' + t"></button></template></div></div>
       </div>
       <template x-if="dateInfo && !dateInfo.is_trading_day">
         <div class="warn"><b>ตลาดปิด</b><span x-text="`${dateInfo.date} เป็น${dateInfo.reason} — ข่าวจะมีผลวันทำการถัดไป ${dateInfo.next_trading_day}`"></span>
@@ -529,7 +529,7 @@
       <h2>นำเข้า CSV</h2>
       <div class="dropzone" :class="{over: dragOver}" @dragover.prevent="dragOver=true" @dragleave="dragOver=false" @drop.prevent="drop($event)">
         ลากไฟล์ .csv มาวาง หรือ <label style="color:var(--a2);cursor:pointer">เลือกไฟล์<input type="file" accept=".csv,text/csv" style="display:none" @change="file($event.target.files[0])"></label>
-        <div class="dim" style="font-size:12px;margin-top:6px">จับคู่ column จากคำในชื่อ (มีวงเล็บ/คำไทยนำหน้าได้): date/วันที่, headline/title/short_news/ข่าวแบบย่อ, full_news/body/ข่าวแบบเต็ม, ticker/symbol, label/sentiment (ตัวเลข เช่น -2..+2 หรือ positive/neutral/negative) — column อื่นเก็บเป็น metadata · ไม่มี ticker = ตรวจจากข้อความให้</div>
+        <div class="dim" style="font-size:12px;margin-top:6px">จับคู่ column จากคำในชื่อ (มีวงเล็บ/คำไทยนำหน้าได้): date/วันที่, headline/title/short_news/ข่าวแบบย่อ, full_news/body/ข่าวแบบเต็ม, ticker/symbol, label (ตัวเลข -2..+2 = 5 ระดับความแรง หรือ positive/neutral/negative → +1/0/-1) — column อื่นเก็บเป็น metadata · ไม่มี ticker = ตรวจจากข้อความให้</div>
       </div>
       <template x-if="csvErr"><div class="warn red"><b>CSV</b><span x-text="csvErr"></span></div></template>
       <template x-if="csv">
@@ -546,21 +546,22 @@
               </template>
             </div>
             <div class="dim" style="font-size:12px;margin-top:4px" x-show="csv.extra_columns.length" x-text="'เก็บเป็น metadata ต่อแถว: ' + csv.extra_columns.join(', ')"></div>
-            <div class="dim" style="font-size:12px" x-show="csv.label_scale" x-text="`label ตัวเลขสเกล ±${csv.label_scale}: >0 = positive, 0 = neutral, <0 = negative · score = label/${csv.label_scale} (เก็บค่าดิบไว้ด้วย)`"></div>
+            <div class="dim" style="font-size:12px" x-show="csv.label_scale" x-text="csv.label_scale == 2 ? 'label -2..+2 ใช้ตรง ๆ ทั้ง 5 ระดับ (ไม่ยุบรวม)' : `label สเกล ±${csv.label_scale} → เทียบเป็น -2..+2 (เก็บค่าดิบไว้ด้วย)`"></div>
           </div>
           <template x-for="p in csv.problems"><div class="warn orange"><b>MAPPING</b><span x-text="p"></span></div></template>
           <template x-if="csv.rows.some(r=>r.skip_reasons.length)">
             <div class="warn"><b>ข้าม</b><div><template x-for="r in csv.rows.filter(r=>r.skip_reasons.length)"><div x-text="`แถว ${r.row}: ${r.skip_reasons.join(' · ')}`"></div></template></div></div>
           </template>
           <div class="scroll" style="max-height:380px"><table class="t">
-            <thead><tr><th></th><th>วันที่</th><th>headline</th><th>หุ้น</th><th>sentiment</th></tr></thead>
+            <thead><tr><th></th><th>วันที่</th><th>headline</th><th>หุ้น</th><th>label (-2..+2)</th></tr></thead>
             <tbody><template x-for="r in csv.rows" :key="r.row"><tr :class="r.skip_reasons.length ? 'dim' : ''" :title="r.skip_reasons.join(' · ')">
               <td><input type="checkbox" x-model="r.include"></td>
               <td><input type="date" x-model="r.date" style="width:140px"><div class="dim" style="font-size:11px" x-show="r.effective_date && r.effective_date!==r.date" x-text="'มีผล ' + r.effective_date"></div></td>
               <td x-text="r.headline"></td>
               <td><input :value="r.tickers.join(', ')" @change="r.tickers = $event.target.value.split(/[ ,;]+/).filter(Boolean).map(x=>x.toUpperCase())" style="width:120px"><div class="dim" style="font-size:11px" x-text="r.ticker_source + (r.macro.suggest ? ' · มหภาค?' : '')"></div></td>
-              <td><select x-model="r.sentiment" @change="r.score = null"><option>positive</option><option>neutral</option><option>negative</option></select>
-                <div class="dim mono" style="font-size:11px" x-show="r.label_raw !== null && r.label_raw !== undefined" x-text="'label ' + r.label_raw + (r.score !== null ? ' → ' + fmtNum(r.score) : '')"></div></td>
+              <td><select class="label-sel" :class="labelCls(r.label)" x-model.number="r.label">
+                  <template x-for="[v, t] in newsLabels()" :key="v"><option :value="v" :selected="r.label===v" x-text="(v>0?'+':'') + v + ' ' + t"></option></template></select>
+                <div class="dim mono" style="font-size:11px" x-show="r.label_raw !== null && r.label_raw !== undefined && r.label_raw !== r.label" x-text="'ค่าในไฟล์: ' + r.label_raw"></div></td>
             </tr></template></tbody></table></div>
           <div class="row" style="justify-content:flex-end"><span class="muted" x-text="csv.rows.filter(r=>r.include).length + ' แถวที่จะบันทึก'"></span><button class="gold" @click="commitCsv()">บันทึกที่เลือก</button></div>
         </div>
@@ -572,7 +573,7 @@
         <tbody><template x-for="n in list" :key="n.id"><tr>
           <td class="mono" x-text="n.effective_date"></td><td x-text="n.headline"></td>
           <td><div class="row" style="gap:3px"><template x-for="t in n.tickers"><a class="chip B" :href="'#/stock/' + t" x-text="t"></a></template><template x-for="e in n.sectors"><span class="chip C" x-text="e"></span></template></div></td>
-          <td :class="{positive:'pos',negative:'neg'}[n.sentiment]" x-text="n.sentiment"></td>
+          <td class="mono" :class="labelCls(newsLabelOf(n))" x-text="labelTag(newsLabelOf(n))"></td>
           <td><button class="sm ghost" @click="del(n)">ลบ</button></td></tr></template></tbody></table></div>
     </div>
   </div>

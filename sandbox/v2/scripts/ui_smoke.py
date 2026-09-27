@@ -125,11 +125,11 @@ def main():
             pg.click(".suggest button.primary")  # ยืนยัน Apple
             pg.wait_for_timeout(1500)
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "10b_news_confirmed.jpg"), full_page=True)
-            n0 = len(requests.get(base + "/api/news").json())
+            ids0 = {n["id"] for n in requests.get(base + "/api/news").json()}  # /api/news คืนล่าสุด ≤ 300 แถว → เทียบ id ไม่ใช่จำนวน
             pg.click("#news-save")
             pg.wait_for_timeout(1000)
             saved = requests.get(base + "/api/news").json()
-            assert len(saved) == n0 + 1, "บันทึกข่าวไม่สำเร็จ"
+            assert saved and saved[0]["id"] not in ids0, "บันทึกข่าวไม่สำเร็จ"
             new = saved[0]
             assert new["tickers"] == ["AAPL", "NVDA"] and new["source"] == "manual", new
             assert new["effective_date"] == "2023-03-06", new  # เสาร์ → จันทร์

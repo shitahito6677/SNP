@@ -65,6 +65,40 @@ SECTOR_KEYWORDS = {
 }
 
 
+# label ความแรงของข่าว 5 ระดับ = ค่าหลักของข่าว manual (ไม่ยุบเหลือ 3 กลุ่ม)
+LABELS = {-2: "negative แรงมาก", -1: "negative", 0: "neutral (ไม่ค่อยมีผล)", 1: "positive", 2: "positive แรงมาก"}
+SENTIMENT_TO_LABEL = {"positive": 1, "neutral": 0, "negative": -1}  # ข่าวเก่า/ข้อความ positive-neutral-negative
+
+
+def label_class(label: int) -> str:
+    """3 คลาสแบบ output ของ Model B (ดี/ไม่กระทบ/แย่) — ใช้เฉพาะจุดที่ต้องเข้ากับเกณฑ์กรองของ B/C เท่านั้น ไม่เขียนทับ label"""
+    return "positive" if label >= 1 else "negative" if label <= -1 else "neutral"
+
+
+def label_tag(label: int) -> str:
+    """เช่น "-2 negative แรงมาก", "0 neutral (ไม่ค่อยมีผล)", "+1 positive" """
+    return f"{label:+d} {LABELS[label]}" if label else f"0 {LABELS[0]}"
+
+
+def _num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and np.isfinite(v)
+
+
+def label_of(n: dict) -> int:
+    """label -2..+2 ของข่าวที่บันทึกไว้ — อ่านได้ทุกรูปแบบที่เคยเขียนลงไฟล์ โดยไม่แก้ไฟล์เดิม:
+    1) `label` (รูปแบบปัจจุบัน)
+    2) `label_raw` + `label_scale` (ข่าวที่นำเข้าจาก CSV ช่วง F1 แรก ซึ่งเก็บ sentiment 3 กลุ่มเป็นหลัก) → คืนความแรงเดิม
+    3) `sentiment` อย่างเดียว (ข่าวที่พิมพ์เองก่อนมี 5 ระดับ) → +1 / 0 / -1"""
+    v = n.get("label")
+    if _num(v) and float(v).is_integer() and int(v) in LABELS:
+        return int(v)
+    raw, sc = n.get("label_raw"), re.search(r"(\d+(?:\.\d+)?)", str(n.get("label_scale") or ""))
+    if _num(raw) and sc and float(sc.group(1)) > 0 and abs(raw) <= float(sc.group(1)):
+        y = raw * 2 / float(sc.group(1))
+        return int(np.sign(y) * np.floor(abs(y) + 0.5))
+    return SENTIMENT_TO_LABEL.get(n.get("sentiment"), 0)
+
+
 def _now():
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
 
@@ -154,7 +188,7 @@ def _write(rows):
 
 
 def list_news(limit=300) -> list:
-    return [r for r in reversed(_load()) if not r.get("deleted")][:limit]
+    return [dict(r, label=label_of(r)) for r in reversed(_load()) if not r.get("deleted")][:limit]
 
 
 def add(item: dict) -> dict:
@@ -169,13 +203,18 @@ def add(item: dict) -> dict:
     sectors = sorted({s for s in item.get("sectors") or [] if s in cfg.SECTOR_ETFS.values()})
     if not tickers and not sectors:
         raise ValueError("ต้องเลือกหุ้นอย่างน้อย 1 ตัว หรือยืนยันเป็นข่าวมหภาค (C) พร้อม sector")
-    sentiment = item.get("sentiment", "neutral")
-    if sentiment not in ("positive", "neutral", "negative"):
-        raise ValueError("sentiment ต้องเป็น positive / neutral / negative")
-    score = {"positive": 1.0, "neutral": 0.0, "negative": -1.0}[sentiment]
-    if isinstance(item.get("score"), (int, float)) and -1 <= item["score"] <= 1 \
-            and np.sign(item["score"]) == np.sign(score):  # score ละเอียดจาก CSV (เช่น -1 บนสเกล ±2 → -0.5) ต้องทิศเดียวกับ sentiment
-        score = float(item["score"])
+    if item.get("label") is not None and item.get("label") != "":
+        try:
+            label = int(item["label"])
+        except (TypeError, ValueError):
+            label = None
+        if label not in LABELS or float(item["label"]) != label:
+            raise ValueError(f"label ต้องเป็นจำนวนเต็ม -2..+2 (ได้ {item['label']!r})")
+    else:  # รูปแบบเดิม: sentiment 3 ค่า
+        sentiment = item.get("sentiment", "neutral")
+        if sentiment not in SENTIMENT_TO_LABEL:
+            raise ValueError("ต้องระบุ label -2..+2 (หรือ sentiment positive / neutral / negative)")
+        label = SENTIMENT_TO_LABEL[sentiment]
     if not item.get("date"):
         raise ValueError("ต้องมีวันที่")
     try:
@@ -187,9 +226,8 @@ def add(item: dict) -> dict:
     row = {"id": str(uuid.uuid4()), "created_at": _now(), "source": "manual", "headline": headline[:500],
            "body": (item.get("body") or "")[:BODY_MAX], "date": date, "effective_date": str(pd.Timestamp(eff).date()),
            "kind": "company" if tickers else "macro", "tickers": tickers, "sectors": sectors,
-           "sentiment": sentiment, "score": score,
-           "detected_by": item.get("detected_by") or {}, "deleted": False}
-    if item.get("label_raw") is not None:  # ค่า label ดิบจาก CSV (เช่น -2..+2) — เก็บไว้ไม่ทิ้ง
+           "label": label, "detected_by": item.get("detected_by") or {}, "deleted": False}
+    if item.get("label_raw") is not None and item.get("label_raw") != label:  # ค่าในไฟล์ไม่ใช่ -2..+2 ตรง ๆ (ข้อความ/สเกลอื่น) → เก็บต้นฉบับ
         row["label_raw"] = item["label_raw"]
         row["label_scale"] = item.get("label_scale")
     if item.get("extra"):  # column ที่ระบบไม่รู้จัก (source_url, label_reason, …) → metadata ต่อแถว
@@ -273,24 +311,25 @@ def label_scale(col: str | None, values: list):
 
 
 def parse_label(v, scale):
-    """label → (sentiment, score ∈ [-1, 1], ค่าดิบ, error)
-    ตัวเลข: >0 positive, <0 negative, 0 neutral; score = ค่า/สเกล (เช่น -2 บนสเกล ±2 → -1.0 = แย่สุดของระบบ)
-    ข้อความ: positive/negative/neutral (+ คำพ้อง) → score ±1/0 เหมือนข่าวที่พิมพ์เอง"""
+    """ค่าในไฟล์ → (label -2..+2, ค่าดิบ, error) — label 5 ระดับคือค่าหลัก ไม่ยุบเหลือ 3 กลุ่ม
+    ตัวเลขสเกล ±2 → ใช้ค่าตรง ๆ; สเกลอื่น (เช่น ±1, ±5) → เทียบสัดส่วนเป็น -2..+2 (ปัดครึ่งออกจาก 0) และเก็บค่าดิบไว้
+    ข้อความ positive/neutral/negative (+ คำพ้อง) → +1 / 0 / -1"""
     s = ("" if v is None else str(v)).strip()
     if not s:
-        return "neutral", 0.0, None, None
+        return 0, None, None
     try:
         x = float(s.replace("+", ""))
     except ValueError:
         k = s.lower()
         lab = TEXT_LABELS.get(k) or TEXT_LABELS.get(k[:3])
         if lab is None:
-            return None, None, s, f"label อ่านไม่ได้: '{s[:30]}' (รองรับตัวเลข หรือ positive/neutral/negative)"
-        return lab, {"positive": 1.0, "neutral": 0.0, "negative": -1.0}[lab], s, None
+            return None, s, f"label อ่านไม่ได้: '{s[:30]}' (รองรับตัวเลข -2..+2 หรือ positive/neutral/negative)"
+        return SENTIMENT_TO_LABEL[lab], s, None
     if not np.isfinite(x) or not scale or abs(x) > scale:
-        return None, None, s, f"label {s} อยู่นอกสเกล ±{scale:g}" if scale else f"label {s} อ่านไม่ได้"
+        return None, s, f"label {s} อยู่นอกสเกล ±{scale:g}" if scale else f"label {s} อ่านไม่ได้"
     raw = int(x) if float(x).is_integer() else x
-    return ("positive" if x > 0 else "negative" if x < 0 else "neutral"), x / scale, raw, None
+    y = x * 2 / scale
+    return int(np.sign(y) * np.floor(abs(y) + 0.5)), raw, None
 
 
 def _parse_tickers(raw: str, man) -> tuple:
@@ -371,7 +410,7 @@ def csv_preview(text: str, mapping: dict | None = None, limit=2000) -> dict:
             tick, src = [m["ticker"] for m in det["mentions"]], "detected"
         if not tick and not det["macro"]["suggest"] and not any("ticker" in x for x in skip):
             skip.append("ไม่มี ticker และไม่พบคำที่บ่งว่าเป็นข่าวมหภาค")
-        sent, score, raw, lerr = parse_label(get(r, "sentiment"), scale) if mapping["sentiment"] else ("neutral", 0.0, None, None)
+        label, raw, lerr = parse_label(get(r, "sentiment"), scale) if mapping["sentiment"] else (0, None, None)
         if lerr:
             skip.append(lerr)
         if len(body) > BODY_MAX:
@@ -379,7 +418,7 @@ def csv_preview(text: str, mapping: dict | None = None, limit=2000) -> dict:
         rows.append({"row": i + 1, "headline": headline, "body": body,
                      "date": dinfo["date"] if dinfo else date_raw, "effective_date": dinfo["next_trading_day"] if dinfo else None,
                      "date_ok": bool(dinfo), "tickers": tick, "ticker_source": src,
-                     "sentiment": sent or "neutral", "score": score, "label_raw": raw,
+                     "label": label if label is not None else 0, "label_raw": raw,
                      "label_scale": f"±{scale:g}" if scale and isinstance(raw, (int, float)) else None,
                      "macro": det["macro"], "extra": extra, "warnings": warn, "skip_reasons": skip, "include": not skip})
     return {"mapping": mapping, "guessed": guessed, "columns": cols, "extra_columns": extra_cols, "fields": [[f, FIELD_TH[f]] for f in FIELD_KEYWORDS],

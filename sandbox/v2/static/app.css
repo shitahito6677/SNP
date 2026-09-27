@@ -315,3 +315,5 @@ table.t td.n, table.t th.n { text-align: right; font-family: var(--mono); font-v
 button.chip { cursor: pointer; background: transparent; font-family: inherit; }
 .sector-chip { padding: 4px 10px; gap: 6px; font-size: 12.5px; }
 .sector-chip.on { box-shadow: 0 0 0 1px currentColor inset; }
+.strong { font-weight: 700; }
+select.label-sel.pos { color: var(--pos); } select.label-sel.neg { color: var(--neg); }

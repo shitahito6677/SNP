@@ -72,3 +72,10 @@
 - **backward compatible:** scope = all → metrics/equity/trades/funnel/positions ตรงกับ engine ก่อน F3 ทุกไบต์ (ตรวจแล้ว 2 config) — key ใหม่ (`funnel.market`, `metrics.scope`) ใส่เฉพาะเมื่อจำกัด scope เพื่อให้ Re-run การทดลองเก่าได้ "REPRODUCED"
 - **EW เมื่อ scope ยังไม่มีราคาวัน rebalance** (เช่นหุ้น IPO ตัวเดียว) → ถือเงินสดรอบนั้น (เดิมจะหารด้วยศูนย์) — ไม่กระทบ scope = all
 - "พอร์ตว่าง" คำนวณตอนเปิดผล (`experiments_store.empty_reason`) จาก funnel ไม่ได้เขียนลง metrics.json
+
+## 14. (F1b) แก้ #10 — label 5 ระดับเป็นค่าหลัก ไม่ยุบเหลือ 3 กลุ่ม (ผู้ใช้สั่ง)
+- **เดิม (#10):** เก็บ `sentiment` 3 กลุ่มเป็นหลัก + `score = label/2`, ค่า -2..+2 เป็นแค่ metadata (`label_raw`) → หน้า preview/hover/trade reasons แสดง +1 กับ +2 เป็น "positive" เหมือนกัน
+- **ตอนนี้:** ข่าว manual เก็บ `label` (int -2..+2) เป็นฟิลด์หลัก ไม่เก็บ `sentiment`/`score` ซ้ำ; ตอนสร้าง record ของ signal ค่อย derive `class` (≤-1 negative / 0 neutral / ≥1 positive) + `score = label/2` สำหรับเกณฑ์กรองแบบ Model B เท่านั้น; record มี `label` + `label_text` ให้ condition และ trade reasons
+- ข่าวที่พิมพ์เอง: ฟอร์มเปลี่ยนเป็น 5 ปุ่ม; API ยังรับ `sentiment` แบบเดิม (→ +1/0/-1) เพื่อไม่ให้ของเดิมพัง
+- **ข่าวที่บันทึกไว้แล้วไม่ต้องแก้ไฟล์:** `label_of()` อ่านได้ทุกรูปแบบ — `label` → ใช้เลย; `label_raw` + `label_scale` (ข่าว 463 แถวที่ผู้ใช้นำเข้าช่วง F1 แรก เวลา 06:19) → คืนความแรงเดิม (ตรวจแล้ว: ทั้ง 463 แถว label = label_raw, กระจาย -2:32 · -1:22 · 0:160 · +1:147 · +2:102); `sentiment` อย่างเดียว (ข่าวพิมพ์เองรุ่นเก่า) → +1/0/-1 (ความแรงเดิมไม่มีให้กู้)
+- ผลต่อ backtest: ข่าว manual ที่พิมพ์เอง "negative" เดิม score -1.0 → ตอนนี้ label -1 → score -0.5 (ความแรง -1.0 สงวนไว้ให้ -2) — มีผลเฉพาะเงื่อนไขที่ใช้ `min_score` หรืออ่าน `score` ของข่าว manual
