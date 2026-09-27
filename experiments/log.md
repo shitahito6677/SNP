@@ -1346,3 +1346,17 @@ candidate pool จาก SEC frames (dei:EntityPublicFloat ทุกไตรม
 
 **ขั้นต่อไปที่ควรลอง:** W4 persistence + reproducibility test; พิจารณาขยาย PRICE_START เป็น 2010-06-01 เพื่อให้ A มีหลายรอบ
 ---
+
+---
+## Sandbox v2 W7 — auto-detect หุ้น/ข่าวมหภาคในข่าว manual — 2026-09-27 14:10
+
+**วิธีที่ใช้:** rule-based (`sandbox/v2/news.py::detect`): @mention, `$TICKER`/`(TICKER)`, alias จากชื่อบริษัท S&P 500 (ตัด Inc./Corp./Co. ฯลฯ, ไม่ใช้ชื่อสั้นที่เป็นคำทั่วไป เช่น News/Match/Target) + alias เพิ่มเอง (ชื่อเล่น/ชื่อไทย), ticker พิมพ์ใหญ่ลอย ๆ ≥3 ตัวที่ไม่อยู่ใน stopword; keyword มหภาค (Fed/FOMC/CPI/tariff/jobs/GDP/yields/ดอกเบี้ย ไทย) → แนะนำข่าว C — ผลทั้งหมดเป็น "ข้อเสนอ" ผู้ใช้ต้องยืนยัน ไม่ใช่โมเดล ML
+
+**ข้อมูลที่ใช้:** `sandbox/v2/tests/mention_samples.json` 10 ข้อความ (อังกฤษ 9 / ไทย 1, expected 15 ticker, macro 4 ข้อความ) เขียนก่อนวัดผล ไม่ได้ปรับ alias ตามชุดนี้; alias จาก `sandbox/v2/data/sp500_snapshot.csv`
+
+**ผลลัพธ์:** ticker ถูก 14 · ผิด 1 (false positive: "Nasdaq" ดัชนี → NDAQ) · พลาด 1 ("Target" → TGT ถูกกันไว้เพราะเป็นคำทั่วไป) · precision 0.93 · recall 0.93; แนะนำข่าวมหภาคถูก 10/10
+
+**มุมมอง/การตีความ:** ชุดทดสอบเล็กมาก (10 ข้อความ) ตัวเลขนี้แค่บอกว่าใช้งานได้ ไม่ใช่การประเมินที่เชื่อถือได้; จุดอ่อนหลักคือชื่อบริษัทที่ชนกับคำทั่วไป/ชื่อดัชนี ซึ่งเป็น trade-off ระหว่าง false positive กับ recall — เพราะทุกผลต้องให้ผู้ใช้ยืนยันอยู่แล้ว ความเสียหายจาก false positive จึงต่ำ
+
+**ขั้นต่อไปที่ควรลอง:** เพิ่มชุดทดสอบให้ใหญ่ขึ้น (≥100 หัวข่าวจริง) ก่อนตัดสินใจปรับ alias/stopword
+---

@@ -7,6 +7,7 @@ Sandbox v2 "Pipeline Lab" — Flask server
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import subprocess
@@ -177,6 +178,58 @@ def create_app() -> Flask:
         if "@@RESULT@@" not in p.stdout:
             return jsonify({"ok": False, "error": "validate ล้มเหลว", "traceback": (p.stderr or "")[-3000:]})
         return Response(p.stdout.split("@@RESULT@@", 1)[1], mimetype="application/json")
+
+    # ------------------------------------------------------------ manual news (source="manual")
+    @app.post("/api/news/detect")
+    def api_news_detect():
+        from sandbox.v2 import news
+        b = request.get_json(force=True)
+        out = news.detect(b.get("text", ""))
+        if b.get("date"):
+            try:
+                out["date_info"] = news.trading_day_info(b["date"])
+            except (ValueError, TypeError):
+                out["date_info"] = None
+        return jsonify(out)
+
+    @app.get("/api/news")
+    def api_news_list():
+        from sandbox.v2 import news
+        return jsonify(news.list_news())
+
+    @app.post("/api/news")
+    def api_news_add():
+        from sandbox.v2 import news
+        try:
+            return jsonify(news.add(request.get_json(force=True))), 201
+        except (ValueError, KeyError) as e:
+            return jsonify({"error": str(e)}), 400
+
+    @app.delete("/api/news/<nid>")
+    def api_news_delete(nid):
+        from sandbox.v2 import news
+        return (jsonify({"ok": True}), 200) if news.delete(nid) else (jsonify({"error": "ไม่พบข่าว"}), 404)
+
+    @app.post("/api/news/csv/preview")
+    def api_news_csv_preview():
+        from sandbox.v2 import news
+        try:
+            return jsonify(news.csv_preview(request.get_json(force=True).get("text", "")))
+        except (ValueError, csv.Error) as e:
+            return jsonify({"error": str(e)}), 400
+
+    @app.post("/api/news/csv/commit")
+    def api_news_csv_commit():
+        from sandbox.v2 import news
+        saved, errors = [], []
+        for r in request.get_json(force=True).get("rows", []):
+            if not r.get("include"):
+                continue
+            try:
+                saved.append(news.add(r))
+            except (ValueError, KeyError) as e:
+                errors.append({"row": r.get("row"), "error": str(e)})
+        return jsonify({"saved": len(saved), "errors": errors})
 
     # ------------------------------------------------------------ results / experiments
     def _result_dir(kind, rid):

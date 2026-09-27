@@ -34,7 +34,7 @@ def main():
         except requests.RequestException:
             time.sleep(0.5)
     OUT.mkdir(exist_ok=True)
-    errors, created = [], []
+    errors, created, created_news = [], [], []
     try:
         with sync_playwright() as p:
             b = p.chromium.launch()
@@ -111,9 +111,36 @@ def main():
             pg.wait_for_selector(".badge.held_out", timeout=20000)
             pg.wait_for_timeout(2000)
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "11_results_held_out.jpg"), full_page=False)
+            # W7: @mention + auto-detect + macro + ตลาดปิด + mini chart + บันทึก + CSV
             pg.goto(f"{base}/#/news")
-            pg.wait_for_timeout(1500)
+            pg.wait_for_selector("#news-headline", timeout=20000)
+            pg.fill("input[type=date][x-model=date]", "2023-03-04")  # วันเสาร์
+            pg.click("#news-headline")
+            pg.keyboard.type("@nvi")
+            pg.wait_for_selector(".mention-drop .item", timeout=5000)
+            pg.keyboard.press("Enter")
+            pg.keyboard.type("rallies as Apple gains; Fed holds rates")
+            pg.wait_for_timeout(1200)
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "10_news.jpg"), full_page=True)
+            pg.click(".suggest button.primary")  # ยืนยัน Apple
+            pg.wait_for_timeout(1500)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "10b_news_confirmed.jpg"), full_page=True)
+            n0 = len(requests.get(base + "/api/news").json())
+            pg.click("#news-save")
+            pg.wait_for_timeout(1000)
+            saved = requests.get(base + "/api/news").json()
+            assert len(saved) == n0 + 1, "บันทึกข่าวไม่สำเร็จ"
+            new = saved[0]
+            assert new["tickers"] == ["AAPL", "NVDA"] and new["source"] == "manual", new
+            assert new["effective_date"] == "2023-03-06", new  # เสาร์ → จันทร์
+            created_news.append(new["id"])
+            csvp = OUT.parent / "cache" / "ui_smoke_news.csv"
+            csvp.parent.mkdir(exist_ok=True)
+            csvp.write_text("date,title\n2023-01-10,Exxon Mobil and Chevron climb as crude jumps\n2023-02-01,Fed raises rates by 25bp\n")
+            pg.set_input_files(".dropzone input[type=file]", str(csvp))
+            pg.wait_for_function("document.body.innerText.includes('แถวที่จะบันทึก')", timeout=10000)
+            pg.wait_for_timeout(800)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "10c_news_csv.jpg"), full_page=True)
             b.close()
     except Exception:
         print("errors so far:", *errors[:20], sep="\n  ")
@@ -123,6 +150,8 @@ def main():
         if not keep:
             for e in created:
                 requests.delete(f"{base}/api/experiments/{e}?confirm={e}")
+            for n in created_news:
+                requests.delete(f"{base}/api/news/{n}")
         srv.terminate()
         srv.wait(5)
     print(f"console/page errors: {len(errors)}")

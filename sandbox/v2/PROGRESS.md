@@ -61,3 +61,10 @@
 - Gallery: การ์ด + sparkline + metrics + config chips + badge; เลือก 2–3 → Compare (equity normalize + ตาราง)
 - ทดสอบ (`scripts/ui_smoke.py`): เปิดผลที่บันทึก → กราฟครบ, คลิก trade → หน้าหุ้นโฟกัสวันนั้นพร้อมลูกศร, compare 2 การทดลอง, ผล held-out มี badge HELD-OUT + แรเงาแดง — console errors 0; screenshot เปลี่ยนเป็น JPEG (8.2 MB → 2.0 MB)
 - DoD: ✅
+
+## W7 — Automention ✅
+- ทำ: `news.py` (detect, trading_day_info, add/list/delete, CSV preview), API `/api/news*`, หน้าเพิ่มข่าว: `@` dropdown fuzzy (ticker+ชื่อ, ↑↓ Enter/Tab) → chip สีตาม sector; ข้อเสนอจากเนื้อข่าวกดยืนยัน/ปฏิเสธทีละตัว; แนะนำข่าว C (ทุก sector / sector ที่เจอ keyword) ต้องยืนยัน; วันตลาดปิด → ปุ่มเลื่อนเป็นวันทำการถัดไป (effective_date = วันทำการถัดไปเสมอ); mini chart ±45 วันพร้อม marker; CSV drag-and-drop → auto map column → ตาราง review แก้ได้ → บันทึกที่เลือก; รายการข่าว + ลบ
+- เก็บที่ `sandbox/v2/data/manual_news.jsonl` (gitignored), `source="manual"` ทุกแถว, ใช้ใน pipeline เฉพาะเมื่อเปิด toggle "รวมข่าว manual" (badge MANUAL NEWS)
+- **ความแม่นยำ auto-detect (10 ข้อความ `tests/mention_samples.json`, `scripts/eval_mentions.py`): ถูก 14 · ผิด 1 (Nasdaq→NDAQ) · พลาด 1 (Target) · precision 0.93 / recall 0.93 · แนะนำมหภาคถูก 10/10**
+- tests: 23/23 (เพิ่ม `test_manual_news.py`: ข่าว manual เข้า pipeline เฉพาะเมื่อ toggle, เสาร์→จันทร์, ไม่แตะ training data); UI smoke รวมหน้าข่าว (พิมพ์ @nvi → Enter, ยืนยัน Apple, บันทึก, นำเข้า CSV) console errors 0
+- DoD: ✅
