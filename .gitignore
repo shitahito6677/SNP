@@ -32,3 +32,14 @@ sandbox/data/sector_news_raw/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# sandbox v2 — raw prices / caches / job state / experiment binaries never go to git
+sandbox/v2/data/prices/
+sandbox/v2/data/manual_news.jsonl
+sandbox/v2/cache/
+sandbox/v2/jobs.db
+sandbox/v2/jobs.db-*
+sandbox/v2/experiments/*/*.parquet
+sandbox/v2/experiments/*/*.zip
+sandbox/v2/static/vendor/monaco/
+sandbox/v2/screenshots/*.tmp
