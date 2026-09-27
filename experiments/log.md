@@ -1284,3 +1284,45 @@ candidate pool จาก SEC frames (dei:EntityPublicFloat ทุกไตรม
 
 **ขั้นต่อไปที่ควรลอง:** EXPLORE2 ครบทุก track แล้ว (ทุกกฎระดับ C, held-out ยังไม่แตะ) — รอคำสั่งผู้ใช้; ถ้าจะลอง TF-IDF ต้องเขียน HYPOTHESIS ใหม่และนับ trial ต่อจาก 125
 ---
+
+---
+## Model A EXPLORE2 round 009 — T2 factor momentum (บันทึกย้อนหลัง: ตกหล่นตอนรัน พบและเพิ่ม 2026-09-27 11:10) — 2026-09-27
+
+**วิธีที่ใช้:** ขั้น 1 (ไม่นับ trial): Ken French 6 ภูมิภาค ทุกเดือนถือเฉพาะ factor ที่ผลตอบแทน 12 เดือนย้อนหลังเป็นบวก (FMOM) เทียบถือทุก factor เท่ากัน; ขั้น 2 (1 trial): ทุก มิ.ย. ใช้เฉพาะสัญญาณ (Q_LOWACC, V_EP, Q_GPA, A_SHY, C_MOM) ที่ spread Q5−Q1 ปีก่อนเป็นบวก แล้ว rank-average เลือก top 20% EW รายปี — ต่างจาก round ก่อนตรงที่สลับสัญญาณตามผลปีก่อนแทนสเปกคงที่
+
+**ข้อมูลที่ใช้:** Ken French regional 5 factors + momentum (US 1964-07 ถึง 2023-06, ภูมิภาคอื่นเริ่ม 1990–1991); panel S&P 500 รายปี (`lib/panel.py`); ผล `model_A/rounds/round_009/results.csv`, `stage1_french.csv`, `stage2_signal_selection.csv`
+
+**ผลลัพธ์:** ขั้น 1: FMOM ผลตอบแทนเฉลี่ยสูงกว่าถือเท่ากันทั้ง 6 ภูมิภาค (+1.3 ถึง +2.7%/ปี, t 1.6–3.5) แต่ Sharpe ต่ำกว่าใน 5/6 (เช่น US 0.730 vs 0.861). ขั้น 2: r009_FMOM_SIGNALS Sharpe 0.597 (EW 0.640, SPY 0.681), CAGR 11.8% (EW 12.5%), MaxDD −35.1% (EW −37.6%), S1 ตก, S2 51%, DSR 0.003 (N=119), S6 79.1/50; ช่วง 2011–16 Sharpe 0.962 vs EW 1.137
+
+**มุมมอง/การตีความ:** spread ของสัญญาณปีก่อนสลับเครื่องหมายบ่อยใน S&P 500 (momentum +0.241 ปี 2020 → −0.478 ปี 2021) จึงไม่ช่วยเลือกสัญญาณปีถัดไป; factor momentum ระดับโลกเพิ่มผลตอบแทนแต่กระจุก factor น้อยตัวจน Sharpe ไม่ดีขึ้น
+
+**ขั้นต่อไปที่ควรลอง:** T5 value+momentum+quality (round 010)
+---
+
+---
+## Model A EXPLORE2 round 010 — T5 value + momentum + quality (บันทึกย้อนหลัง: ตกหล่นตอนรัน พบและเพิ่ม 2026-09-27 11:10) — 2026-09-27
+
+**วิธีที่ใช้:** rank-average น้ำหนักเท่ากันของ accruals ต่ำ, earnings yield สูง, momentum 12-1 สูง จัดอันดับภายใน sector, top 20% (ขั้นต่ำ 50) EW; 2 trial = rebalance รายปี (A) และรายไตรมาส (Q) — สเปกเดียวไม่จูน ต่างจาก SHYQMOM (round 003) ตรงที่มี value และเป็น sector-neutral
+
+**ข้อมูลที่ใช้:** panel S&P 500 รายเดือน/รายปีเดิม (`rounds/round_003/run.py::monthly_universe`); ผล `model_A/rounds/round_010/results.csv`
+
+**ผลลัพธ์:** r010_VMQ_sector_A Sharpe 0.476 (EW 0.640), CAGR 9.0% (12.5%), MaxDD −36.2% (−37.6%), S2 0%, DSR 0.000; r010_VMQ_sector_Q Sharpe 0.489 (EW 0.625), CAGR 9.2% (12.4%), MaxDD −37.7% (−37.7%), S2 0%, DSR 0.000 (N=121); ช่วง 2011–16 Sharpe 1.003 vs 1.137 และ 0.906 vs 1.108; ไม่มีผู้เข้ารอบ
+
+**มุมมอง/การตีความ:** earnings yield (value) ถ่วงผลเหมือน round 001–003 ในยุคหุ้นเติบโตนำตลาด; การรวมกับ momentum ไม่ได้ทำให้นิ่งขึ้นในหุ้นใหญ่ช่วงนี้
+
+**ขั้นต่อไปที่ควรลอง:** T3 insider buying (round 011)
+---
+
+---
+## Model A EXPLORE2 round 011 — T3 opportunistic insider buying (บันทึกย้อนหลัง: ตกหล่นตอนรัน พบและเพิ่ม 2026-09-27 11:10) — 2026-09-27
+
+**วิธีที่ใช้:** SEC Form 4 (Insider Transactions Data Sets) จัด insider เป็น routine/opportunistic ตาม Cohen, Malloy & Pomorski (2012) (ซื้อ/ขายเดือนเดียวกัน 3 ปีติด = routine) ใช้เฉพาะ code P วันใช้ได้ = วันยื่น Form 4; trial 1: สัญญาณเดี่ยว (มีการซื้อ opportunistic ใน 6 เดือน) รายเดือน EW; trial 2: ให้น้ำหนัก 2 เท่ากับหุ้นที่มีสัญญาณภายในพอร์ต accruals ต่ำ (r001_Q_LOWACC_overall) รายปี — แหล่งข้อมูลใหม่ที่ไม่ใช่งบ/ราคา
+
+**ข้อมูลที่ใช้:** SEC Insider Transactions Data Sets 2006Q1–2023Q2 → 1,711,391 รายการ non-derivative ของบริษัท S&P 500 (`data/interim/insider_sp500.parquet` จาก `lib/insider.py`); insider-year ที่จัดกลุ่มได้ 31,760 (opportunistic 69.0%); ไม่มีธง 10b5-1 ก่อน 2023; ผล `model_A/rounds/round_011/results.csv`, `signal_coverage.csv`
+
+**ผลลัพธ์:** เดือนที่มีหุ้นสัญญาณ < 20 ตัว = 72.2% (median 16, min 6, max 39) → ใช้เป็นสัญญาณเดี่ยวกับ S&P 500 ไม่ได้; r011_INSIDER_OPP_BUY_M Sharpe 0.524 (EW 0.614), CAGR 11.3% (12.2%), MaxDD −40.6%, S2 11%, DSR 0.003, S6 16.7/6 (ตก); r011_LOWACC_INSIDER_TILT Sharpe 0.845 (EW 0.640), CAGR 18.5% (12.5%), MaxDD −37.3% (−37.6%), S1 ผ่าน, S2 100%, S6 63.3/51, DSR 0.471 (N=123) ตก S3; ช่วง 2011–16 Sharpe 0.806 vs 1.137
+
+**มุมมอง/การตีความ:** ผู้บริหารหุ้นใหญ่ซื้อหุ้นตัวเองแบบ opportunistic น้อยมาก สัญญาณจึงบางเกินไป; ตัวเอียงน้ำหนักกระทบเฉลี่ยแค่ 3.3 หุ้นต่อรอบ ผลจึงแทบเท่าตัวฐาน (0.863)
+
+**ขั้นต่อไปที่ควรลอง:** T4 Lazy Prices (round 012)
+---
