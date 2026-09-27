@@ -57,3 +57,10 @@
 - รันไฟล์ fixture ผ่าน endpoint จริง (test client, server ที่ผู้ใช้เปิดอยู่ port 5090, server ใหม่แบบ cold start + request พร้อมกัน, และลากไฟล์ผ่าน UI ด้วย Playwright): **ได้ 400 `หา column headline ไม่เจอ` ทุกครั้ง ไม่ใช่ 500** (โค้ด news/server ไม่เปลี่ยนตั้งแต่ W7)
 - root cause ของ "นำเข้าไม่ได้" ที่ยืนยันได้ = mapping เดิม match ชื่อ column แบบตรงตัว (`headline`, `title`…) → column `ข่าวแบบย่อ (short_news)` ไม่ match เลย
 - 500 ในภาพอาจมาจาก request อื่น/สถานะอื่นที่ reproduce ไม่ได้ → **ไม่เดา**; ใส่ global error handler: exception ใด ๆ → JSON ภาษาไทย + `error_id` + traceback เต็มใน `sandbox/v2/logs/server.log` — ถ้าเจออีก ให้ค้น `error_id` ใน log
+
+## 12. (F2) หน้าหุ้น META "HTTP 500" — root cause ที่ reproduce ได้คือช่วงวันที่ใน held-out (ไม่เฉพาะ META)
+- reproduce ด้วย query เดียวกับที่ UI ส่ง: `/api/stock/META` (ไม่มีบริบท / A1+C default / ทุก 26 run + 1 exp ที่มีในเครื่อง) = 200 ทุกครั้ง; sweep ทุก 575 ticker = ไม่มี exception
+- **ที่ 500 จริง:** `/api/stock/<ทุก ticker>?start=2026-08-14&end=2026-11-12` → traceback: `stock_view.build` ตัด `end` เหลือ `DEFAULT_END` (2023-06-30) เพราะ held-out แต่ไม่ตัด `start` → `prices.check_range` raise `ValueError: start 2026-08-14 > end 2023-06-30` → endpoint จับแค่ `KeyError` → 500 HTML ดิบ
+- ใครเรียกแบบนั้น: mini chart ของหน้าเพิ่มข่าว (±45 วันรอบวันที่ข่าว) — พิมพ์ `@meta` + วันที่ข่าวหลัง ~2023-08-14 → กล่องกราฟขึ้น `HTTP 500` (ตรงกับอาการ "พิมพ์ @meta แล้วเลือก → 500")
+- **เลือก:** ช่วงที่อยู่ใน held-out ทั้งหมด → 200 + bars ว่าง + หมายเหตุ "ล็อกไว้" (UI เดิมมีข้อความรองรับอยู่แล้ว); คร่อม → ตัดที่ DEFAULT_END + หมายเหตุ
+- manifest ปัจจุบัน **ไม่มี status `missing`** (ok 564 / partial 11) → test ของ missing ใช้ manifest จำลอง 1 รายการ

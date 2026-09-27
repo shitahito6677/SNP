@@ -83,6 +83,15 @@
 - ผ่านเว็บจริง (Playwright, server port 5096): ลากไฟล์ → mapping ถูก → "บันทึก 9 ข่าว", 5xx = 0, console error = 0 (สำรอง/คืน `manual_news.jsonl` ของผู้ใช้หลังทดสอบ) — screenshot `screenshots/F1_csv_*.jpg`
 - DoD: ✅
 
+## F2 — แก้หน้าหุ้นรายตัว ✅
+- วินิจฉัย (รันจริง, DECISIONS #12): META ด้วย query ของ UI = 200 ทุกบริบท; **500 ที่ reproduce ได้ = ช่วงวันที่เริ่มหลัง DEFAULT_END** (`start > end` หลังตัด held-out → `ValueError` ที่ endpoint ไม่จับ) — เกิดกับทุก ticker, ถูกเรียกจาก mini chart หน้าเพิ่มข่าว
+- แก้ `stock_view.py`: `StockError` (ข้อความไทย + status) สำหรับ ticker ไม่รู้จัก / status missing (บอก reason) / วันที่ผิด / start > end / ไม่พบ run-exp; ช่วง held-out ทั้งหมด → bars ว่าง + หมายเหตุ; partial → หมายเหตุช่วงราคา; ไม่มี trade ของหุ้นนี้ในการทดลอง / ไม่มี trades.parquet → หมายเหตุ ไม่ error; layer A/B/C/manual แต่ละตัวพัง → log traceback + หมายเหตุ หน้าไม่พัง; `reasons` ว่าง/None ไม่พัง
+- `server.py`: `/api/stock` จับ StockError → JSON ภาษาไทย, อื่น ๆ → 500 JSON + error_id + traceback ใน log; ticker `brk.b`/ตัวเล็ก → `BRK-B`
+- UI: กล่อง "หมายเหตุ" บนหน้าหุ้น, หัว error เป็น "โหลดหน้าหุ้นไม่ได้"
+- test `tests/test_stock_detail.py` 17 ข้อ: META/AAPL (ไม่มี trade) 200 + layer A/C, partial (CEG) + หมายเหตุ, missing (manifest จำลอง) → 404 ข้อความไทยมี reason, ticker ไม่รู้จัก, ช่วง held-out 3 แบบ, พารามิเตอร์ผิด 6 แบบ, เปิดจากการทดลองที่ไม่มี META/ไม่มี parquet, layer พัง, exception → JSON+error_id, **ทุก 575 ticker เปิดได้**
+- ผ่านเว็บจริง (Playwright): หน้าหุ้นพิมพ์ `@meta` → Enter → กราฟขึ้น ไม่มีกล่อง error; หน้าข่าว `@meta` + วันที่ 2026-09-10 → `/api/stock/META?start=2026-07-27&end=2026-10-25` = 200 (เดิม 500) กล่องกราฟแสดง "ไม่มีราคาในช่วงนี้ (held-out)"; 5xx/console error = 0 — screenshot `screenshots/F2_stock_META.jpg`
+- DoD: ✅
+
 # สรุปรวม
 **ทำครบ W0–W8** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

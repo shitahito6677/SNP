@@ -401,13 +401,14 @@
       <div class="mention-drop" x-show="q && hits.length"><template x-for="(h,i) in hits" :key="h.t"><div class="item" :class="{on:i===hi}" @click="go(h.t)"><b class="mono" x-text="h.t"></b><span class="muted" x-text="h.name"></span></div></template></div>
     </div>
   </div>
-  <template x-if="err"><div class="warn red"><b>ERROR</b><span x-text="err"></span></div></template>
+  <template x-if="err"><div class="warn red"><b>โหลดหน้าหุ้นไม่ได้</b><span x-text="err"></span></div></template>
   <div class="grid" style="grid-template-columns: 3fr 1fr" x-show="d">
     <div class="panel">
       <div class="row" style="margin-bottom:10px">
         <template x-for="l in layerList" :key="l[0]"><label class="chip" :class="l[2]" style="cursor:pointer"><input type="checkbox" x-model="layers[l[0]]" @change="render()"> <span x-text="l[1]"></span></label></template>
         <span class="dim" x-show="ctxLabel" x-text="ctxLabel" style="margin-left:auto;font-size:12px"></span>
       </div>
+      <template x-for="n in d?.notices || []"><div class="warn gray" style="margin-bottom:6px"><b>หมายเหตุ</b><span x-text="n"></span></div></template>
       <div class="stock-chart" x-ref="chart"></div>
       <div class="rsi-chart" x-ref="rsi" x-show="layers.rsi"></div>
     </div>

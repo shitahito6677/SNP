@@ -202,11 +202,15 @@ def create_app() -> Flask:
     def api_stock(ticker):
         from sandbox.v2 import stock_view
         a = request.args
+        t = ticker.strip().upper().replace(".", "-")
         try:
-            return jsonify(stock_view.build(ticker.upper(), a.get("kind"), a.get("id"), a.get("start"), a.get("end"),
+            return jsonify(stock_view.build(t, a.get("kind"), a.get("id"), a.get("start"), a.get("end"),
                                             {m: a.get(m) for m in "ABC" if a.get(m)}))
-        except KeyError as e:
-            return jsonify({"error": str(e).strip("'\"")}), 404
+        except stock_view.StockError as e:  # ข้อความไทยที่ตั้งใจแสดงผู้ใช้ (ไม่พบ ticker / ไม่มีราคา / วันที่ผิด / ไม่พบการทดลอง)
+            log.info("stock %s: %s", t, e)
+            return jsonify({"error": str(e), "kind": e.kind, "ticker": t}), e.status
+        except Exception as e:  # noqa: BLE001
+            return fail(e, f"โหลดหน้าหุ้น {t} ไม่สำเร็จเพราะข้อผิดพลาดภายใน")
 
     @app.post("/api/validate")
     def api_validate():
