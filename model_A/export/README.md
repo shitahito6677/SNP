@@ -14,6 +14,18 @@
 
 ทั้งสองกฎทำงานบน S&P 500 ไม่รวมกลุ่มการเงิน → **SCHW ได้ `applicable: False` เสมอ**
 
+## BMF20 (round 013) — history export สำหรับ sandbox v2 (`bmf20-funnel`, `bmf20-weighted`)
+> ⚠️ ทดลองระบบ ข้อมูลไม่ครบ ไม่ใช่หลักฐานว่ากฎชนะตลาด · ระดับ C (ตก S1, S2, S3, S6) · `experimental-not-frozen` · ใช้ได้ถึง 30 มิ.ย. 2023 เท่านั้น
+
+| โฟลเดอร์ | กฎ | เนื้อหา |
+|---|---|---|
+| `bmf20-funnel/` | BM 100 ตัวแรก → F-score 20 ตัว (`r013_BMF20_FUNNEL`) | `manifest.json` + `signals.parquet`: ทุกหุ้นใน universe ต่อรอบ มิ.ย. 2011–2022 (`selected` 20 ตัว / `not_selected` / `not_applicable` พร้อมเหตุผล) |
+| `bmf20-weighted/` | 0.6·percentile BM + 0.4·percentile F → 20 ตัว (`r013_BMF20_WEIGHTED`) | เหมือนกัน |
+
+- `score` 0–100 (มาก = ดี; ความหมายต่อกฎอยู่ใน `score_meaning`), `weight` = 0.05 สำหรับ 20 ตัวที่เลือก, `reasons` = [คำเตือน, อันดับตามกฎ, "BM อันดับ x/n, F-score y/9", ปีงบที่ใช้]
+- รูปแบบเดียวกับ history export ของ sandbox v2 (`export/DATA_CONTRACT.md` บน branch `feature/sandbox-v2`) — ตรวจกับ validation ของ registry แล้ว 0 error
+- สร้างใหม่: `python3 -m export.build_bmf20` (อ่าน `rounds/round_013/scores.csv` เท่านั้น; ตรวจว่าตรงกับ `picks_*.csv` ทุกรอบ)
+
 ## ไฟล์
 | ไฟล์ | เนื้อหา |
 |---|---|
