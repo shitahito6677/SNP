@@ -1,0 +1,47 @@
+{
+ "model": "C",
+ "version": "stub",
+ "short_label": "C-stub",
+ "is_stub": true,
+ "result_badge": "stub",
+ "signal_files": [
+  "signals.parquet"
+ ],
+ "source_experiment": "none — deterministic sha256 stub",
+ "created_at": "2026-09-27T05:47:52+00:00",
+ "warnings": [
+  "STUB: สุ่มแบบ deterministic ไม่ใช่โมเดล — ผลใด ๆ ที่ได้ไม่มีความหมายทางการลงทุน"
+ ],
+ "display_name": "C stub (เหตุการณ์มหภาคสมมติ ~1 ครั้ง/เดือน)",
+ "rule_id": "stub",
+ "key": "sector",
+ "rebalance": "event",
+ "asof": {
+  "max_age_days": 60
+ },
+ "classes": [
+  "positive",
+  "neutral",
+  "negative"
+ ],
+ "score_meaning": "สุ่ม [-1, 1]",
+ "coverage": {
+  "start": "2021-10-13",
+  "end": "2026-09-22",
+  "n_sectors": 11,
+  "sectors": [
+   "XLK",
+   "XLC",
+   "XLY",
+   "XLP",
+   "XLF",
+   "XLV",
+   "XLI",
+   "XLE",
+   "XLB",
+   "XLRE",
+   "XLU"
+  ]
+ },
+ "notes": "ใช้ได้จนถึงเหตุการณ์ถัดไป (สูงสุด 60 วัน)"
+}

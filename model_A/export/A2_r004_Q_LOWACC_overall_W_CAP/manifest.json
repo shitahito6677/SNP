@@ -1,0 +1,48 @@
+{
+ "model": "A",
+ "version": "A2_r004_Q_LOWACC_overall_W_CAP",
+ "short_label": "A2",
+ "display_name": "Low accruals · ถ่วง market cap · รายปี",
+ "rule_id": "r004_Q_LOWACC_overall_W_CAP",
+ "is_stub": false,
+ "result_badge": "real",
+ "signal_files": [
+  "signals.parquet"
+ ],
+ "key": "ticker",
+ "coverage": {
+  "start": "2011-06-30",
+  "end": "2022-06-30",
+  "valid_through": "2023-06-30",
+  "n_rebalances": 12,
+  "n_tickers": 728,
+  "avg_selected": 63.2
+ },
+ "rebalance": "annual_june",
+ "classes": [
+  "selected",
+  "not_selected",
+  "not_applicable"
+ ],
+ "score_meaning": "percentile 0–100 ของสัญญาณภายใน universe วันนั้น (มาก = ดี)",
+ "source_experiment": "model_A AUTORUN trial r004_Q_LOWACC_overall_W_CAP (rounds/round_004/run.py, trials.csv)",
+ "research_stats": {
+  "dec_sharpe": 0.9290030887081756,
+  "dec_cagr": 0.1901784575313856,
+  "dec_maxdd": -0.2861424771287325,
+  "dec_sharpe_ew": 0.6400131870274632,
+  "dec_sharpe_spy": 0.6810897132316699,
+  "S1": "True",
+  "S2": "True",
+  "S6": "True",
+  "DSR": 0.1890729082147747,
+  "S3": "False"
+ },
+ "created_at": "2026-09-27T05:45:42+00:00",
+ "notes": "ทดลองระบบ — กฎยังไม่ผ่าน S3 (DSR) และยังไม่ freeze ไม่ใช่หลักฐานว่ากฎชนะตลาด · ranking เป็น cross-sectional ทั้ง universe — อ่านจากไฟล์นี้เท่านั้น ห้ามคำนวณใหม่จาก subset · backtest เดิมซื้อที่ close วัน R (sandbox ใช้ R+1)",
+ "warnings": [
+  "ไม่ผ่าน S3 (DSR < 0.95) — ระดับ C",
+  "ยังไม่ freeze",
+  "universe ไม่มีหุ้นที่ Yahoo ไม่มีราคา (survivorship บางส่วน)"
+ ]
+}

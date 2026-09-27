@@ -1,0 +1,60 @@
+{
+ "model": "C",
+ "version": "rulebase-exp03",
+ "short_label": "C-rb03",
+ "display_name": "Rule-based sector impact (exp_03) — FOMC/Beige Book",
+ "rule_id": "exp_03 R4 sector_rules.score_event",
+ "is_stub": false,
+ "result_badge": "negative",
+ "signal_files": [
+  "signals.parquet"
+ ],
+ "key": "sector",
+ "coverage": {
+  "start": "1999-05-05",
+  "end": "2026-07-15",
+  "n_events": 435,
+  "n_sectors": 11,
+  "sectors": [
+   "XLK",
+   "XLC",
+   "XLY",
+   "XLP",
+   "XLV",
+   "XLF",
+   "XLI",
+   "XLB",
+   "XLE",
+   "XLU",
+   "XLRE"
+  ]
+ },
+ "rebalance": "event",
+ "asof": {
+  "max_age_days": 60
+ },
+ "classes": [
+  "positive",
+  "neutral",
+  "negative"
+ ],
+ "score_meaning": "sector_impact_score ดิบจาก engine (ไม่มีหน่วย, ช่วงจริง -6.79…3.39); |score| ≤ 0.1 = neutral (ค่าแสดงผล ไม่ได้ tune)",
+ "channels": {
+  "C1": "Duration / discount rate",
+  "C2": "Cyclical growth beta",
+  "C3": "Net interest margin (curve slope)",
+  "C4": "Credit risk",
+  "C5": "Dollar",
+  "C6": "Inflation pass-through",
+  "C7": "Leverage / refinancing"
+ },
+ "source_experiment": "exp_03 rule-based sector impact engine (PR #1, model_c_rulebase/)",
+ "created_at": "2026-09-27T05:47:07+00:00",
+ "notes": "exp_03: 0/216 cells ผ่าน |rho|>0.3 — negative result; ใช้เพื่อทดสอบระบบเท่านั้น",
+ "warnings": [
+  "NEGATIVE RESULT: exp_03 R5 0/216 cells ผ่าน |rho|>0.3",
+  "เหตุการณ์ตั้งแต่ 2020-12-02 อยู่ใน test set ของ exp_03 (ช่วง sandbox 2021+ อยู่ในนี้ทั้งหมด)",
+  "vix_p90 ของ VIX amplifier คำนวณจากทั้งช่วง 1999–2026 (look-ahead เล็กน้อยใน engine เดิม)",
+  "ข่าวออกระหว่างวัน (~14:00 ET) → ใช้ได้ ณ close วันข่าว, execute วันถัดไป"
+ ]
+}

@@ -1,0 +1,31 @@
+{
+ "model": "A",
+ "version": "stub",
+ "short_label": "A-stub",
+ "is_stub": true,
+ "result_badge": "stub",
+ "signal_files": [
+  "signals.parquet"
+ ],
+ "source_experiment": "none — deterministic sha256 stub",
+ "created_at": "2026-09-27T05:47:51+00:00",
+ "warnings": [
+  "STUB: สุ่มแบบ deterministic ไม่ใช่โมเดล — ผลใด ๆ ที่ได้ไม่มีความหมายทางการลงทุน"
+ ],
+ "display_name": "A stub (sha256 · รายปี มิ.ย.)",
+ "rule_id": "stub",
+ "key": "ticker",
+ "rebalance": "annual_june",
+ "classes": [
+  "selected",
+  "not_selected",
+  "not_applicable"
+ ],
+ "score_meaning": "สุ่ม 0–100",
+ "coverage": {
+  "start": "2021-06-30",
+  "end": "2026-06-30",
+  "n_tickers": 562
+ },
+ "notes": "เลือก ~20% ต่อรอบแบบสุ่ม deterministic"
+}

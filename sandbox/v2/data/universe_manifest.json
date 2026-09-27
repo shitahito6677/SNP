@@ -1,12 +1,12 @@
 {
- "generated_at": "2026-09-27T05:43:33+00:00",
+ "generated_at": "2026-09-27T05:46:15+00:00",
  "price_start": "2021-09-27",
  "latest_trading_day": "2026-09-25",
  "sp500_snapshot_date": "2026-09-27",
  "sp500_snapshot_source": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
- "data_hash": "8abb4315015477887d17e604792c2ca81797127f73309c4de769619be191f525",
+ "data_hash": "9cfb457be27457f5f0bea324d311abfb75b473c61dd2c5466cdaad942bb53bae",
  "counts": {
-  "ok": 549,
+  "ok": 564,
   "partial": 11
  },
  "fetched_this_run": 0,
@@ -160,7 +160,8 @@
    "sector": "Financials",
    "sub_industry": "Life & Health Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -266,7 +267,8 @@
    "sector": "Real Estate",
    "sub_industry": "Office REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -337,7 +339,8 @@
    "sector": "Financials",
    "sub_industry": "Property & Casualty Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -479,7 +482,8 @@
    "sector": "Financials",
    "sub_industry": "Consumer Finance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -496,7 +500,8 @@
    "sector": "Financials",
    "sub_industry": "Multi-line Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -513,7 +518,8 @@
    "sector": "Real Estate",
    "sub_industry": "Telecom Tower REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -548,7 +554,8 @@
    "sector": "Financials",
    "sub_industry": "Asset Management & Custody Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -637,7 +644,8 @@
    "sector": "Financials",
    "sub_industry": "Insurance Brokers",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -760,7 +768,8 @@
    "sector": "Financials",
    "sub_industry": "Property & Casualty Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -830,7 +839,8 @@
    "sector": "Financials",
    "sub_industry": "Insurance Brokers",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -847,7 +857,8 @@
    "sector": "Financials",
    "sub_industry": "Multi-line Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1026,7 +1037,8 @@
    "sector": "Financials",
    "sub_industry": "Diversified Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1079,7 +1091,8 @@
    "sector": "Financials",
    "sub_industry": "Multi-Sector Holdings",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1150,7 +1163,8 @@
    "sector": "Financials",
    "sub_industry": "Asset Management & Custody Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1218,7 +1232,8 @@
    "sector": "Financials",
    "sub_industry": "Asset Management & Custody Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1343,7 +1358,8 @@
    "sector": "Financials",
    "sub_industry": "Insurance Brokers",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1396,7 +1412,8 @@
    "sector": "Real Estate",
    "sub_industry": "Office REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1449,7 +1466,8 @@
    "sector": "Real Estate",
    "sub_industry": "Multi-Family Residential REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1466,7 +1484,8 @@
    "sector": "Financials",
    "sub_industry": "Consumer Finance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1589,7 +1608,8 @@
    "sector": "Financials",
    "sub_industry": "Financial Exchanges & Data",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1606,7 +1626,8 @@
    "sector": "Real Estate",
    "sub_industry": "Real Estate Services",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1659,7 +1680,8 @@
    "sector": "Health Care",
    "sub_industry": "Managed Health Care",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1730,7 +1752,8 @@
    "sector": "Financials",
    "sub_industry": "Investment Banking & Brokerage",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1801,7 +1824,8 @@
    "sector": "Financials",
    "sub_industry": "Property & Casualty Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1853,7 +1877,8 @@
    "sector": "Health Care",
    "sub_industry": "Health Care Services",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1870,7 +1895,8 @@
    "sector": "Financials",
    "sub_industry": "Property & Casualty Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1923,7 +1949,8 @@
    "sector": "Financials",
    "sub_industry": "Diversified Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1940,7 +1967,8 @@
    "sector": "Financials",
    "sub_industry": "Regional Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -1975,7 +2003,8 @@
    "sector": "Financials",
    "sub_industry": "Financial Exchanges & Data",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -2169,7 +2198,8 @@
    "sector": "Consumer Staples",
    "sub_industry": "Distillers & Vintners",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -2364,7 +2394,8 @@
    "sector": "Real Estate",
    "sub_industry": "Telecom Tower REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -2630,7 +2661,8 @@
    "sector": "Real Estate",
    "sub_industry": "Data Center REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -2951,7 +2983,8 @@
    "sector": "Health Care",
    "sub_industry": "Managed Health Care",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3075,7 +3108,8 @@
    "sector": "Real Estate",
    "sub_industry": "Data Center REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3109,7 +3143,8 @@
    "sector": "Real Estate",
    "sub_industry": "Multi-Family Residential REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3144,7 +3179,8 @@
    "sector": "Financials",
    "sub_industry": "Reinsurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3285,7 +3321,8 @@
    "sector": "Real Estate",
    "sub_industry": "Self-Storage REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3392,7 +3429,8 @@
    "sector": "Real Estate",
    "sub_industry": "Retail REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3479,7 +3517,8 @@
    "sector": "Financials",
    "sub_industry": "Regional Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3621,7 +3660,8 @@
    "sector": "Communication Services",
    "sub_industry": "Broadcasting",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3655,7 +3695,8 @@
    "sector": "Financials",
    "sub_industry": "Asset Management & Custody Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3744,7 +3785,8 @@
    "sector": "Health Care",
    "sub_industry": "Health Care Equipment",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3922,7 +3964,8 @@
    "sector": "Financials",
    "sub_industry": "Life & Health Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3956,7 +3999,8 @@
    "sector": "Financials",
    "sub_industry": "Investment Banking & Brokerage",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -3991,7 +4035,8 @@
    "sector": "Financials",
    "sub_industry": "Property & Casualty Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4044,7 +4089,8 @@
    "sector": "Real Estate",
    "sub_industry": "Health Care REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4275,7 +4321,8 @@
    "sector": "Health Care",
    "sub_industry": "Managed Health Care",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4292,7 +4339,8 @@
    "sector": "Financials",
    "sub_industry": "Regional Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4506,7 +4554,8 @@
    "sector": "Financials",
    "sub_industry": "Financial Exchanges & Data",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4595,7 +4644,8 @@
    "sector": "Financials",
    "sub_industry": "Asset Management & Custody Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4612,7 +4662,8 @@
    "sector": "Real Estate",
    "sub_industry": "Single-Family Residential REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4647,7 +4698,8 @@
    "sector": "Real Estate",
    "sub_industry": "Other Specialized REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4771,7 +4823,8 @@
    "sector": "Financials",
    "sub_industry": "Diversified Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4823,7 +4876,8 @@
    "sector": "Financials",
    "sub_industry": "Regional Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -4876,7 +4930,8 @@
    "sector": "Real Estate",
    "sub_industry": "Retail REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -5179,7 +5234,8 @@
    "sector": "Financials",
    "sub_industry": "Multi-line Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -5266,7 +5322,8 @@
    "sector": "Financials",
    "sub_industry": "Regional Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -5319,7 +5376,8 @@
    "sector": "Financials",
    "sub_industry": "Insurance Brokers",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -5515,7 +5573,8 @@
    "sector": "Financials",
    "sub_industry": "Life & Health Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -5622,7 +5681,8 @@
    "sector": "Real Estate",
    "sub_industry": "Multi-Family Residential REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -5729,7 +5789,8 @@
    "sector": "Financials",
    "sub_industry": "Investment Banking & Brokerage",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -5800,7 +5861,8 @@
    "sector": "Financials",
    "sub_industry": "Financial Exchanges & Data",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -5996,7 +6058,8 @@
    "sector": "Financials",
    "sub_industry": "Asset Management & Custody Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6550,7 +6613,8 @@
    "sector": "Financials",
    "sub_industry": "Diversified Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6603,7 +6667,8 @@
    "sector": "Financials",
    "sub_industry": "Life & Health Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6638,7 +6703,8 @@
    "sector": "Financials",
    "sub_industry": "Property & Casualty Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6655,7 +6721,8 @@
    "sector": "Real Estate",
    "sub_industry": "Industrial REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6672,7 +6739,8 @@
    "sector": "Financials",
    "sub_industry": "Life & Health Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6725,7 +6793,8 @@
    "sector": "Real Estate",
    "sub_industry": "Self-Storage REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6849,7 +6918,8 @@
    "sector": "Financials",
    "sub_industry": "Investment Banking & Brokerage",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6901,7 +6971,8 @@
    "sector": "Real Estate",
    "sub_industry": "Retail REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6918,7 +6989,8 @@
    "sector": "Real Estate",
    "sub_industry": "Retail REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -6953,7 +7025,8 @@
    "sector": "Financials",
    "sub_industry": "Regional Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -7184,7 +7257,8 @@
    "sector": "Real Estate",
    "sub_industry": "Telecom Tower REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -7291,7 +7365,8 @@
    "sector": "Real Estate",
    "sub_industry": "Retail REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -7468,7 +7543,8 @@
    "sector": "Financials",
    "sub_industry": "Asset Management & Custody Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -7556,7 +7632,8 @@
    "sector": "Financials",
    "sub_industry": "Consumer Finance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -7627,7 +7704,8 @@
    "sector": "Financials",
    "sub_industry": "Asset Management & Custody Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -7948,7 +8026,8 @@
    "sector": "Financials",
    "sub_industry": "Property & Casualty Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -7983,7 +8062,8 @@
    "sector": "Financials",
    "sub_industry": "Diversified Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8018,7 +8098,8 @@
    "sector": "Consumer Staples",
    "sub_industry": "Packaged Foods & Meats",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8035,7 +8116,8 @@
    "sector": "Financials",
    "sub_industry": "Diversified Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8069,7 +8151,8 @@
    "sector": "Real Estate",
    "sub_industry": "Multi-Family Residential REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8176,7 +8259,8 @@
    "sector": "Health Care",
    "sub_industry": "Managed Health Care",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8246,7 +8330,8 @@
    "sector": "Real Estate",
    "sub_industry": "Health Care REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8387,7 +8472,8 @@
    "sector": "Real Estate",
    "sub_industry": "Hotel & Resort REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8404,7 +8490,8 @@
    "sector": "Financials",
    "sub_industry": "Transaction & Payment Processing Services",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8438,7 +8525,8 @@
    "sector": "Real Estate",
    "sub_industry": "Multi-Family Residential REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8473,7 +8561,8 @@
    "sector": "Financials",
    "sub_industry": "Property & Casualty Insurance",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8634,7 +8723,8 @@
    "sector": "Financials",
    "sub_industry": "Diversified Banks",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8651,7 +8741,8 @@
    "sector": "Real Estate",
    "sub_industry": "Health Care REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8704,7 +8795,8 @@
    "sector": "Real Estate",
    "sub_industry": "Timber REITs",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8756,7 +8848,8 @@
    "sector": "Financials",
    "sub_industry": "Insurance Brokers",
    "sources": [
-    "sp500_current"
+    "sp500_current",
+    "model_A_export"
    ],
    "kind": "stock",
    "requested_start": "2021-09-27",
@@ -8945,6 +9038,23 @@
    "reason": null,
    "status": "ok"
   },
+  "AIV": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "819d50a8307b9cb8590ba0c97b5d659cb35efa571fd4dd413895f3b52dcb57cc",
+   "reason": null,
+   "status": "ok"
+  },
   "ALK": {
    "name": null,
    "sector": "Unknown",
@@ -9044,6 +9154,23 @@
    "end": "2026-09-25",
    "rows": 1255,
    "hash": "d631bc72f21fdae7a8be9135f8a0ea593d396a85e8042172f025e34ff3e9c4bb",
+   "reason": null,
+   "status": "ok"
+  },
+  "COTY": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "912129ab547aeb07830c08662ef33c485733f4d8e7e03922624acfd253f9f14b",
    "reason": null,
    "status": "ok"
   },
@@ -9183,6 +9310,23 @@
    "reason": null,
    "status": "ok"
   },
+  "FLS": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "ba9024e35a86985f10cb7a71f096ecd0253bbc855b4b3e3f08fb6b001566f710",
+   "reason": null,
+   "status": "ok"
+  },
   "FMC": {
    "name": null,
    "sector": "Unknown",
@@ -9200,6 +9344,23 @@
    "reason": null,
    "status": "ok"
   },
+  "FTI": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "92eda9c9038e639df753bad158b644bdbc17d24fa8506525c07460fe6015fb01",
+   "reason": null,
+   "status": "ok"
+  },
   "GAP": {
    "name": null,
    "sector": "Unknown",
@@ -9214,6 +9375,23 @@
    "end": "2026-09-25",
    "rows": 1255,
    "hash": "c05f30457a5b64fd7a74212dadc56e9e8b087fa920eb304424481b5c747b61fd",
+   "reason": null,
+   "status": "ok"
+  },
+  "HRB": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "07b4e11e9e9ec1619c123baf8488216d4e8807f1323f23e6be45c522c79c7941",
    "reason": null,
    "status": "ok"
   },
@@ -9251,6 +9429,23 @@
    "reason": null,
    "status": "ok"
   },
+  "KSS": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "504ecceeae1589e82212e6cc22ea6e14206ecb92c56d7e895036380964878058",
+   "reason": null,
+   "status": "ok"
+  },
   "LKQ": {
    "name": null,
    "sector": "Unknown",
@@ -9265,6 +9460,23 @@
    "end": "2026-09-25",
    "rows": 1255,
    "hash": "08798ff5313bf68753eb3bff4b5f562a0a43505ffb295199e76f067b8c733a9f",
+   "reason": null,
+   "status": "ok"
+  },
+  "LNC": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "17dc8a2877d85dd95f22e9b7069d69cc8610f3fa099e2e8d242c1e13d300f035",
    "reason": null,
    "status": "ok"
   },
@@ -9316,6 +9528,40 @@
    "end": "2026-09-25",
    "rows": 1255,
    "hash": "686ea2b5a19f00d293a072ef73406f2dd3eb6f856f5bde503f5e529ecd3d88b7",
+   "reason": null,
+   "status": "ok"
+  },
+  "MKTX": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "8782128d76943bd3a4b63ee1b8b551ac3bc26dd338e362358a4849bfef0a4b68",
+   "reason": null,
+   "status": "ok"
+  },
+  "MOH": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "5441aab12355ac70c6f67ed40cda458111d134a945392a91482cd39c36cc9775",
    "reason": null,
    "status": "ok"
   },
@@ -9540,6 +9786,23 @@
    "reason": null,
    "status": "ok"
   },
+  "SLG": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "8ccfbf54a2d3c43be223d30f1fc34851c4d25fc04c9a03f18a02cb7d2301c414",
+   "reason": null,
+   "status": "ok"
+  },
   "TAP": {
    "name": null,
    "sector": "Unknown",
@@ -9591,6 +9854,23 @@
    "reason": null,
    "status": "ok"
   },
+  "UNM": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "ecc256da402bfe18e9a39677f4cc69aa3ff7f6b2e8b04534a3a9c3f2e734c61c",
+   "reason": null,
+   "status": "ok"
+  },
   "VFC": {
    "name": null,
    "sector": "Unknown",
@@ -9605,6 +9885,40 @@
    "end": "2026-09-25",
    "rows": 1255,
    "hash": "87fe71af70f1a7b50420baa2eb22af24c6592ef7ad533dbd422caaf833d74741",
+   "reason": null,
+   "status": "ok"
+  },
+  "VNO": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "97a7d3e92885b6e1407833bc2f6e10e3a66bff852d421323706e68c14c1f808f",
+   "reason": null,
+   "status": "ok"
+  },
+  "VNT": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "4b890c4090f9beb60912bbf9f2b01a1ad4c666c5bb30935b356f7d9193ea50d7",
    "reason": null,
    "status": "ok"
   },
@@ -9656,6 +9970,40 @@
    "end": "2026-09-25",
    "rows": 1255,
    "hash": "05ee62d04f9ccc039cc758540e9e4c6f09816c1706425ceb34bf9503f89d7c0c",
+   "reason": null,
+   "status": "ok"
+  },
+  "XRX": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "d18c94db09ea12058ac7b01fb01b1754512160d12eaf81fd7361219a2e270377",
+   "reason": null,
+   "status": "ok"
+  },
+  "ZION": {
+   "name": null,
+   "sector": "Unknown",
+   "sub_industry": null,
+   "sources": [
+    "model_A_export"
+   ],
+   "kind": "stock",
+   "requested_start": "2021-09-27",
+   "checked_through": "2026-09-25",
+   "start": "2021-09-27",
+   "end": "2026-09-25",
+   "rows": 1255,
+   "hash": "5296e9e314f920c4e75fd85346380540a9dd1741b386946898197475bd2ec4d5",
    "reason": null,
    "status": "ok"
   },

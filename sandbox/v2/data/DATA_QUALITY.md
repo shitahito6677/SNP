@@ -1,10 +1,10 @@
 # DATA QUALITY — sandbox v2 prices
 
-สร้างอัตโนมัติ `2026-09-27T05:43:33+00:00` โดย `scripts/data_quality.py` — ห้ามแก้ด้วยมือ
+สร้างอัตโนมัติ `2026-09-27T05:46:15+00:00` โดย `scripts/data_quality.py` — ห้ามแก้ด้วยมือ
 
 - PRICE_START `2021-09-27` · วันทำการล่าสุด `2026-09-25` · S&P 500 snapshot `2026-09-27`
-- สถานะ ticker: **ok** 549, **partial** 11
-- data_hash `8abb4315015477887d17e604792c2ca81797127f73309c4de769619be191f525`
+- สถานะ ticker: **ok** 564, **partial** 11
+- data_hash `9cfb457be27457f5f0bea324d311abfb75b473c61dd2c5466cdaad942bb53bae`
 
 ## สรุปปัญหาที่พบ
 

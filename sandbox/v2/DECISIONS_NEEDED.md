@@ -24,3 +24,17 @@
 ## 5. Model C rulebase: `vix_p90` ใช้ข้อมูลทั้งช่วง (look-ahead เล็กน้อยใน exp_03)
 - ไม่แก้โค้ด exp_03 (ห้ามแก้ข้อมูล/ผลของ exp_01–04) → ใช้ตามเดิมและติดป้ายใน manifest `notes`
 - ถ้าต้องการ strict: เขียน export version ใหม่ที่คำนวณ `vix_p90` แบบ expanding window (ยังไม่ได้ทำ)
+
+## 6. commit ไฟล์ signal (parquet) ของ export
+- สเปคห้าม commit ราคา/parquet ของผลทดลอง แต่ signal ของโมเดลไม่ใช่ราคาดิบ และ **สร้างใหม่ไม่ได้ถ้าไม่มี `model_A/data/` (gitignored, 3 GB)**
+- **เลือก:** commit `model_A/export/A*/signals.parquet` (~3.8 MB), `model_c_rulebase/export/rulebase-exp03/signals.parquet`, `sandbox/v2/stubs/*` (~0.3 MB)
+- ย้อนกลับ: เพิ่ม `model_A/export/*/signals.parquet` ใน .gitignore แล้ว `git rm --cached`
+
+## 7. Model C rulebase: ช่วง sandbox อยู่ใน test set ของ exp_03 ทั้งหมด
+- exp_03 แบ่ง train/test ตามเวลา: test เริ่ม **2020-12-02** และ R5 "ห้ามแตะ test set จนกว่า R6 เสร็จ" — R6 ตัดสินแล้ว (negative, ไม่ calibrate)
+- การรัน sandbox ด้วย C rulebase-exp03 = ดูผลของ engine (ที่ไม่ได้ calibrate) บนช่วง test → **ไม่ควรเอาผล sandbox ไปปรับ engine ของ exp_03**
+- ติดคำเตือนใน manifest + reasons ของทุกแถวที่อยู่ใน test set แล้ว
+
+## 8. class ของ C rulebase: neutral band ±0.10
+- engine ให้ score ต่อเนื่อง ไม่มี class → ตั้ง |score| ≤ 0.10 = neutral (ค่าแสดงผล **ไม่ได้ tune** กับผลตอบแทน)
+- ย้อนกลับ/ปรับ: `NEUTRAL_BAND` ใน `model_c_rulebase/export/build_export.py` แล้วรันใหม่ (condition ใช้ `score` ดิบได้อยู่แล้ว)

@@ -18,3 +18,16 @@
   - DATA_QUALITY: big_move 11 ครั้ง / 10 ตัว, unadjusted_split_suspect 7 ครั้ง / 4 ตัว (PARA 2024 น่าสงสัยสุด — กระโดด ~2 เท่าหลายวัน)
 - ข้อสังเกต: Model A universe ไม่มีหุ้นที่ Yahoo ไม่มีราคา (เช่น TWTR, ATVI, CTXS = `no_price` ใน panel ของ Model A) → survivorship bias ติดมาจาก Model A เอง ไม่ใช่เฉพาะ sandbox
 - DoD: ✅ ทุกข้อ
+
+## W2 — Registry + Conditions ✅
+- ทำ:
+  - `model_A/export/build_history.py` — เรียก `rounds.round_004.run.build()/ranked()` เดิม สร้าง signal 5 กฎ A1–A5 (2011-06 → ก่อน held-out)
+    - **ตรวจแล้ว:** ชุดหุ้น + น้ำหนักตรงกับ `scores_rule1/2.csv` ทุกรอบ และ backtest engine ของ Model A บน holdings จาก signal ได้ NAV ตรงกับ `r001/r004_nav.parquet` (max rel diff ≤ 6e-15) ทั้ง 5 กฎ
+    - A1–A4: 12 รอบ (มิ.ย. 2011–2022) เฉลี่ยถือ 63.2 ตัว · A5: 144 รอบรายเดือน (2011-06 → 2023-05) เฉลี่ย 64.3 ตัว
+  - `model_c_rulebase/export/build_export.py` — รัน engine exp_03 เดิม (ไม่เรียก LLM): 4,785 แถว, 435 ข่าว 1999-05 → 2026-07, badge negative
+  - `scripts/build_stubs.py` — A/B/C stub (sha256) ใน `sandbox/v2/stubs/`
+  - `registry.py` (scan + validate manifest/signal), `condition_registry.py` (ตรวจด้วย ast ไม่ exec), `server.py` (GET /api/registry, POST /api/registry/rescan)
+  - conditions 5 ตัว: `equal_weight_A`, `follow_A_weights`, `hold_SPY`, `B_filter_then_EW`, `c_veto_dca_buyback` (port strategy_v1)
+  - `model_B/export/README.md`
+- DoD: registry คืน A (5 จริง + stub), B (stub), C (rulebase-exp03 negative + stub), conditions 5 ✅; manifest เสีย (badge/rebalance/coverage/ไฟล์หาย) → โผล่ใน invalid พร้อม 4 เหตุผล แล้วลบทิ้ง → invalid ว่าง ✅
+- universe ราคาอัปเดตหลังมี history: 575 ตัว (ok 564 / partial 11 / missing 0)

@@ -1,0 +1,34 @@
+{
+ "model": "B",
+ "version": "stub",
+ "short_label": "B-stub",
+ "is_stub": true,
+ "result_badge": "stub",
+ "signal_files": [
+  "signals.parquet"
+ ],
+ "source_experiment": "none — deterministic sha256 stub",
+ "created_at": "2026-09-27T05:47:52+00:00",
+ "warnings": [
+  "STUB: สุ่มแบบ deterministic ไม่ใช่โมเดล — ผลใด ๆ ที่ได้ไม่มีความหมายทางการลงทุน"
+ ],
+ "display_name": "B stub (ข่าวสมมติ ~1.4 ครั้ง/เดือน/หุ้น)",
+ "rule_id": "stub",
+ "key": "ticker",
+ "rebalance": "event",
+ "asof": {
+  "max_age_days": 10
+ },
+ "classes": [
+  "positive",
+  "neutral",
+  "negative"
+ ],
+ "score_meaning": "confidence สุ่ม [0.34, 1]",
+ "coverage": {
+  "start": "2021-09-27",
+  "end": "2026-09-25",
+  "n_tickers": 562
+ },
+ "notes": "signal หมดอายุหลัง 10 วัน (ไม่มีข่าว = ไม่มีสัญญาณ)"
+}

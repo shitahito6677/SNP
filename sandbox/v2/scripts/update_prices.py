@@ -72,7 +72,8 @@ def model_a_tickers(min_R: pd.Timestamp) -> set:
     for p in glob.glob(str(root / "*" / "signals.parquet")):
         s = pd.read_parquet(p, columns=["date", "ticker"])
         found |= set(s.loc[pd.to_datetime(s["date"]) >= min_R, "ticker"].dropna().astype(str))
-    return {to_yahoo(t) for t in found}
+    # "?XYZ" = สมาชิกที่ Model A หา ticker Yahoo ไม่เจอ (applicable=False) — ไม่มีราคาให้ดึงอยู่แล้ว
+    return {to_yahoo(t) for t in found if not t.startswith("?")}
 
 
 def build_universe(refresh: bool) -> dict:
