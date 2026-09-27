@@ -8,13 +8,22 @@ Sandbox v2 "Pipeline Lab" — Flask server
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, request
+from flask import Flask, Response, jsonify, render_template, request
 
 from sandbox.v2 import condition_registry, config as cfg, experiments_store as xs, jobs, registry
+
+
+def _asset_version() -> str:
+    """cache-busting ของ static (mtime ล่าสุดของ app.js/app.css)"""
+    fs = [cfg.V2 / "static" / n for n in ("app.css", "app.js", "pipeline.js", "results.js", "stock.js", "news.js")]
+    return str(int(max((f.stat().st_mtime for f in fs if f.exists()), default=0)))
 
 
 def create_app() -> Flask:
@@ -123,6 +132,51 @@ def create_app() -> Flask:
                     return
                 time.sleep(0.5)
         return Response(gen(), mimetype="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    # ------------------------------------------------------------ meta / stock / validate
+    @app.get("/")
+    def index():
+        return render_template("index.html", v=_asset_version())
+
+    @app.get("/api/meta")
+    def api_meta():
+        from sandbox.v2 import prices
+        man = prices.manifest()
+        tickers = [{"t": t, "name": r.get("name") or t, "sector": r.get("sector") or "Unknown", "status": r.get("status"),
+                    "kind": r.get("kind")} for t, r in sorted(man["tickers"].items()) if r.get("status") in ("ok", "partial")]
+        return jsonify({
+            "config": {"price_start": cfg.PRICE_START, "default_end": cfg.DEFAULT_END, "held_out_start": cfg.HELD_OUT_START,
+                       "confirm_text": cfg.HELD_OUT_CONFIRM_TEXT, "capital": cfg.INITIAL_CAPITAL, "cost": cfg.TRANSACTION_COST,
+                       "execution": cfg.EXECUTION, "decide_timeout": cfg.DECIDE_TIMEOUT_SEC},
+            "latest_trading_day": man.get("latest_trading_day"), "counts": man.get("counts"),
+            "data_hash": man.get("data_hash"), "sp500_snapshot_date": man.get("sp500_snapshot_date"),
+            "sector_etfs": cfg.SECTOR_ETFS, "tickers": tickers,
+            "vendor": {"plotly": (cfg.V2 / "static/vendor/plotly.min.js").exists(),
+                       "monaco": (cfg.V2 / "static/vendor/monaco/vs/loader.js").exists()},
+        })
+
+    @app.get("/api/stock/<ticker>")
+    def api_stock(ticker):
+        from sandbox.v2 import stock_view
+        a = request.args
+        try:
+            return jsonify(stock_view.build(ticker.upper(), a.get("kind"), a.get("id"), a.get("start"), a.get("end"),
+                                            {m: a.get(m) for m in "ABC" if a.get(m)}))
+        except KeyError as e:
+            return jsonify({"error": str(e).strip("'\"")}), 404
+
+    @app.post("/api/validate")
+    def api_validate():
+        body = request.get_json(force=True)
+        env = dict(os.environ, PYTHONHASHSEED="0")
+        try:
+            p = subprocess.run([sys.executable, "-m", "sandbox.v2.dryrun"], cwd=cfg.REPO, env=env, capture_output=True,
+                               text=True, input=json.dumps(body), timeout=cfg.DECIDE_TIMEOUT_SEC + 60)
+        except subprocess.TimeoutExpired:
+            return jsonify({"ok": False, "error": "validate เกินเวลา — condition อาจวนลูปไม่จบ"})
+        if "@@RESULT@@" not in p.stdout:
+            return jsonify({"ok": False, "error": "validate ล้มเหลว", "traceback": (p.stderr or "")[-3000:]})
+        return Response(p.stdout.split("@@RESULT@@", 1)[1], mimetype="application/json")
 
     # ------------------------------------------------------------ results / experiments
     def _result_dir(kind, rid):

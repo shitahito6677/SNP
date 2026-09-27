@@ -1,0 +1,46 @@
+{
+ "alpine.min.js": {
+  "source": "alpinejs@3.14.1/dist/cdn.min.js",
+  "sha256": "358d9afbb1ab5befa2f48061a30776e5bcd7707f410a606ba985f98bc3b1c034"
+ },
+ "lightweight-charts.js": {
+  "source": "lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js",
+  "sha256": "46fc69534ec098f095bbcd1d9a26d693d39a8b9eeff7343536765b3dd28c2bdf"
+ },
+ "plotly.min.js": {
+  "source": "plotly.js-dist-min@2.35.2/plotly.min.js",
+  "sha256": "6d21266ce1bd7d9e5ab4e115989c70c20de0382fd973a8f26ab58619eba4d603"
+ },
+ "confetti.js": {
+  "source": "canvas-confetti@1.9.3/dist/confetti.browser.js",
+  "sha256": "e103ab02784339d56c93ca3debe2c5a299372cafc5215148d55283de046e86d1"
+ },
+ "fonts/plex-thai-thai-400.woff2": {
+  "source": "@fontsource/ibm-plex-sans-thai@5.1.0/files/ibm-plex-sans-thai-thai-400-normal.woff2",
+  "sha256": "20981667a9d7b8a85865067fc09ed12c34ca7ddba238cc8bccd48d800dd9cf6b"
+ },
+ "fonts/plex-thai-thai-600.woff2": {
+  "source": "@fontsource/ibm-plex-sans-thai@5.1.0/files/ibm-plex-sans-thai-thai-600-normal.woff2",
+  "sha256": "268b2c03e1fb47f6640dc148e24c27d0ed2064cb53030ed05304db14d17230f9"
+ },
+ "fonts/plex-thai-latin-400.woff2": {
+  "source": "@fontsource/ibm-plex-sans-thai@5.1.0/files/ibm-plex-sans-thai-latin-400-normal.woff2",
+  "sha256": "b8337f359e686b7b4f6a30a8f2c9d159cb732b2cba8b6c54f03fc48bf474fd2e"
+ },
+ "fonts/plex-thai-latin-600.woff2": {
+  "source": "@fontsource/ibm-plex-sans-thai@5.1.0/files/ibm-plex-sans-thai-latin-600-normal.woff2",
+  "sha256": "8657a85c885294f58c7cd7d24faf3377aaee8d72d0534dfe005399772debabcc"
+ },
+ "fonts/jetbrains-mono-400.woff2": {
+  "source": "@fontsource/jetbrains-mono@5.1.0/files/jetbrains-mono-latin-400-normal.woff2",
+  "sha256": "7c53386f55c866c1b4c9309c4bcf74eda10896aab3a1780b0af5cc4976e27a27"
+ },
+ "fonts/jetbrains-mono-600.woff2": {
+  "source": "@fontsource/jetbrains-mono@5.1.0/files/jetbrains-mono-latin-600-normal.woff2",
+  "sha256": "1cd6778760d101a5c522f5d1de6fe17efa9e66950bcd5fce274ae3b4f494f923"
+ },
+ "monaco.tgz": {
+  "source": "https://registry.npmjs.org/monaco-editor/-/monaco-editor-0.52.0.tgz",
+  "sha256": "5dbda58750b13452de39affcea703af096022d8e3546c67ed5d3bd072763f939"
+ }
+}

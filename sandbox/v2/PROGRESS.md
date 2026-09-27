@@ -46,3 +46,11 @@
 - แก้ระหว่างทาง: re-run ได้ metrics ต่างกันระดับ 1e-14 → สาเหตุ: ลำดับการบวกเลขตามลำดับ `set` ที่สุ่มต่อ process (hash randomization) → เรียงทุกจุด + `PYTHONHASHSEED=0` ให้ job/condition process
 - DoD test (`tests/test_persistence.py`): รัน → save → restart server → เปิด → `metrics` และ equity ตรงกัน 100% ✅; re-run → `identical: true` ✅ (รันซ้ำ 3 ครั้ง ผ่านทุกครั้ง); ลบต้อง confirm ✅
 - tests รวม 20/20 ผ่าน
+
+## W5 — UI Shell + Pipeline Builder ✅
+- ทำ: `templates/index.html` (SPA hash-route), `static/app.css` (design tokens, glass, gradient ต่อโมเดล, grid+noise+glow, reduced-motion), `static/app.js` (store/router/⌘K palette/คีย์ลัด R S /, gallery, compare), `static/pipeline.js` (กล่อง A→B→C→ƒ, เส้นโค้ง SVG + อนุภาคระหว่างรัน, สวิตช์โหมด/เวอร์ชัน/เกณฑ์, ไฟสถานะ coverage, คำเตือนเห็นเสมอ, Monaco + autocomplete `ctx.`, Validate dry-run, Save as new, timeline แรเงา held-out + toggle/พิมพ์ยืนยัน, RUN + stepper + ETA ภาษาไทย + log สด SSE + ยกเลิก, mini-progress บน topbar), `static/results.js`, `static/stock.js`; API เพิ่ม `/api/meta`, `/api/stock/<t>`, `/api/validate` (subprocess `dryrun.py`), `engine.stage_day()/dry_run()`
+- vendor offline: `scripts/fetch_vendor.py` + `static/vendor/vendor.lock.json` (sha256); commit Alpine 3.14.1, lightweight-charts 4.2.0, confetti, fonts (IBM Plex Sans Thai, JetBrains Mono); Plotly 2.35.2 + Monaco 0.52.0 ต้องรัน fetch_vendor (gitignored)
+- Legacy v1: ลิงก์ไป 127.0.0.1:5050 (ไม่ mount — ดู DECISIONS #4)
+- ทดสอบ: `scripts/ui_smoke.py` (Playwright headless): pipeline → เปิด B/C กรอง → RUN จาก UI จนจบ → ผลลัพธ์ → บันทึก → คลิก trade → หน้าหุ้น → gallery → compare → registry/about/news — **console/page errors = 0**, screenshot ใน `sandbox/v2/screenshots/`
+- บั๊กที่เจอและแก้: `x-for` ใช้ใน `<svg>` ไม่ได้ (→ x-html), Alpine เรียก `init()` ซ้ำ 2 รอบ (ลบ x-init), **Monaco/chart/EventSource ถูก Alpine ห่อ proxy → หน้าค้าง** (ย้ายไปเก็บนอก reactive state), `/api/stock` 500 (itertuples กับชื่อ column `class`)
+- DoD: ✅

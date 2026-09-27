@@ -422,52 +422,9 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
                 pos_rows.append({"date": t, "ticker": tk, "weight": weights_now[tk], "value": u * p})
 
             # 4) pipeline + decide (ไม่ต้องตัดสินใจวันสุดท้าย เพราะไม่มีวัน t+1 ให้ execute)
-            price_payload = {"date": str(t.date()),
-                             "prices": {"adj": [None if np.isnan(x) else float(x) for x in pxrow.to_numpy()],
-                                        "close": [None if np.isnan(x) else float(x) for x in close.iloc[i].to_numpy()],
-                                        "volume": [None if np.isnan(x) else float(x) for x in vol.iloc[i].to_numpy()]}}
-            has_px = [tk for tk in stocks if not np.isnan(pxrow[tk])]
-            fun = {"date": t, "universe": len(has_px)}
+            price_payload = {"date": str(t.date()), "prices": _price_row(adj, close, vol, i)}
             held = sorted(units)
-            a_recs, b_recs = {}, {}
-            if "A" in asof:
-                snap = asof["A"].snapshot(t)
-                fun["a_rebalance"] = asof["A"].rebalance_date(t)
-                if st["A"]["mode"] == "filter":
-                    passed = [k for k, r in snap.items() if _crit_A(r, st["A"]["criteria"])]
-                    hp = set(has_px)
-                    fun["dropped_no_price"] = sum(1 for k in passed if k not in hp)
-                    fun["a_signal_empty"] = not snap
-                    passA = sorted(k for k in passed if k in hp)
-                else:
-                    passA = has_px
-                a_recs = {k: snap.get(k) for k in sorted(set(passA) | set(held)) if snap.get(k) is not None}
-            else:
-                passA = has_px
-            fun["after_A"] = len(passA)
-            if "B" in asof:
-                for k in sorted(set(passA) | set(held)):
-                    b_recs[k] = asof["B"].at(k, t)
-                passB = [k for k in passA if st["B"]["mode"] != "filter" or _crit_event(b_recs.get(k), st["B"]["criteria"])]
-                b_recs = {k: v for k, v in b_recs.items() if v is not None}
-            else:
-                passB = passA
-            fun["after_B"] = len(passB)
-            c_recs = {}
-            if "C" in asof:
-                for e in cfg.SECTOR_ETFS.values():
-                    r = asof["C"].at(e, t)
-                    if r is not None:
-                        c_recs[e] = dict(r, sector=e)
-                if st["C"]["mode"] == "filter":
-                    passC = [k for k in passB
-                             if _crit_event(c_recs.get(cfg.SECTOR_ETFS.get(sector_of.get(k), "")), st["C"]["criteria"])]
-                else:
-                    passC = passB
-            else:
-                passC = passB
-            fun["after_C"] = len(passC)
-            universe = passC
+            universe, a_recs, b_recs, c_recs, fun = stage_day(t, pxrow, stocks, held, asof, st, sector_of)
 
             if i < n - 1:
                 payload = dict(price_payload, universe=universe, a=a_recs, b=b_recs, c=c_recs,
@@ -558,6 +515,98 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
     progress("save", 100, 0, "เสร็จ")
     log(f"เสร็จใน {prov['runtime_sec']} วินาที · trades {len(trades_df)}")
     return {"metrics": met, "provenance": prov}
+
+
+def stage_day(t, pxrow, stocks, held, asof, st, sector_of):
+    """pipeline ของวันเดียว: universe (หุ้นที่มีราคา ณ t) → A → B → C — ใช้ร่วมกันระหว่าง run() และ dry_run()
+    คืน (universe, a_recs, b_recs, c_recs, funnel_row) ; ทุก record มี date ≤ t (AsOf บังคับ)"""
+    has_px = [tk for tk in stocks if not np.isnan(pxrow[tk])]
+    fun = {"date": t, "universe": len(has_px)}
+    a_recs, b_recs = {}, {}
+    if "A" in asof:
+        snap = asof["A"].snapshot(t)
+        fun["a_rebalance"] = asof["A"].rebalance_date(t)
+        if st["A"]["mode"] == "filter":
+            passed = [k for k, r in snap.items() if _crit_A(r, st["A"]["criteria"])]
+            hp = set(has_px)
+            fun["dropped_no_price"] = sum(1 for k in passed if k not in hp)
+            fun["a_signal_empty"] = not snap
+            passA = sorted(k for k in passed if k in hp)
+        else:
+            passA = has_px
+        a_recs = {k: snap.get(k) for k in sorted(set(passA) | set(held)) if snap.get(k) is not None}
+    else:
+        passA = has_px
+    fun["after_A"] = len(passA)
+    if "B" in asof:
+        for k in sorted(set(passA) | set(held)):
+            b_recs[k] = asof["B"].at(k, t)
+        passB = [k for k in passA if st["B"]["mode"] != "filter" or _crit_event(b_recs.get(k), st["B"]["criteria"])]
+        b_recs = {k: v for k, v in b_recs.items() if v is not None}
+    else:
+        passB = passA
+    fun["after_B"] = len(passB)
+    c_recs = {}
+    if "C" in asof:
+        for e in cfg.SECTOR_ETFS.values():
+            r = asof["C"].at(e, t)
+            if r is not None:
+                c_recs[e] = dict(r, sector=e)
+        if st["C"]["mode"] == "filter":
+            passC = [k for k in passB if _crit_event(c_recs.get(cfg.SECTOR_ETFS.get(sector_of.get(k), "")), st["C"]["criteria"])]
+        else:
+            passC = passB
+    else:
+        passC = passB
+    fun["after_C"] = len(passC)
+    return passC, a_recs, b_recs, c_recs, fun
+
+
+def dry_run(conf: dict, date=None, history_days: int = 260) -> dict:
+    """Validate ใน editor: รัน pipeline + decide() วันเดียว (พอร์ตว่าง) — ไม่ซื้อขาย ไม่บันทึกอะไร"""
+    allow = conf["held_out"]["touched"]
+    end = pd.Timestamp(date or conf["end"])
+    cal_all = prices.calendar(conf["start"], conf["end"], allow)
+    cal_all = cal_all[cal_all <= end]
+    if not len(cal_all):
+        raise ConfigError("ไม่มีวันทำการในช่วงที่เลือก")
+    t = cal_all[-1]
+    hstart = max(pd.Timestamp(cfg.PRICE_START), t - pd.Timedelta(days=int(history_days * 1.5)))
+    cal = prices.calendar(hstart, t, allow)
+    adj = prices.load("adj", None, hstart, t, allow).reindex(cal)
+    close = prices.load("close", None, hstart, t, allow).reindex(cal)
+    vol = prices.load("volume", None, hstart, t, allow).reindex(cal)
+    stocks = [x for x in prices.available_tickers("stock") if x in adj.columns and adj[x].notna().any()]
+    columns = stocks + [x for x in ALLOWED_ETFS if x in adj.columns]
+    adj, close, vol = adj[columns], close[columns], vol[columns]
+    sector_of = {x: prices.sector_of(x) for x in columns}
+    st = conf["stages"]
+    asof = {m: AsOf(st[m]["version"], load_manual_news(m.lower()) if conf["include_manual"] and m in "BC" else None)
+            for m in "ABC" if st[m]["mode"] != "off"}
+    universe, a_recs, b_recs, c_recs, fun = stage_day(t, adj.iloc[-1], stocks, [], asof, st, sector_of)
+    runner = ConditionRunner(conf["condition"]["source"], columns, sector_of)
+    try:
+        for i in range(len(cal) - 1):
+            runner.prices_only({"date": str(cal[i].date()), "prices": _price_row(adj, close, vol, i)})
+        res = runner.day({"date": str(t.date()), "prices": _price_row(adj, close, vol, len(cal) - 1),
+                          "universe": universe, "a": a_recs, "b": b_recs, "c": c_recs,
+                          "portfolio": {"value": conf["capital"], "cash": conf["capital"], "cash_weight": 1.0,
+                                        "weights": {}, "units": {}},
+                          "stage_enabled": {m: st[m]["mode"] != "off" for m in "ABC"}})
+    finally:
+        runner.close()
+    w = res["weights"]
+    if w is not None:
+        w = _validate_weights(w, set(universe) | set(ALLOWED_ETFS), t)
+    fun = {k: (str(v.date()) if isinstance(v, pd.Timestamp) else v) for k, v in fun.items()}
+    return {"date": str(t.date()), "funnel": fun, "universe_size": len(universe), "weights": w,
+            "weight_sum": None if w is None else float(sum(w.values())), "notes": res.get("notes") or {},
+            "stdout": "".join(runner.stdout)[-4000:]}
+
+
+def _price_row(adj, close, vol, i):
+    f = lambda row: [None if np.isnan(x) else float(x) for x in row.to_numpy()]  # noqa: E731
+    return {"adj": f(adj.iloc[i]), "close": f(close.iloc[i]), "volume": f(vol.iloc[i])}
 
 
 def _validate_weights(w, allowed, t):

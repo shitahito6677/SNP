@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline Lab · SP Sandbox v2</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%2310B981'/><stop offset='.5' stop-color='%23D946EF'/><stop offset='1' stop-color='%23F97316'/></linearGradient></defs><rect width='32' height='32' rx='8' fill='url(%23g)'/></svg>">
+<link rel="stylesheet" href="/static/app.css?v={{ v }}">
+<script src="/static/vendor/lightweight-charts.js"></script>
+<script src="/static/vendor/plotly.min.js" onerror="window.__noPlotly=true"></script>
+<script src="/static/vendor/confetti.js"></script>
+<script src="/static/app.js?v={{ v }}"></script>
+<script src="/static/pipeline.js?v={{ v }}"></script>
+<script src="/static/results.js?v={{ v }}"></script>
+<script src="/static/stock.js?v={{ v }}"></script>
+<script src="/static/news.js?v={{ v }}"></script>
+<script defer src="/static/vendor/alpine.min.js"></script>
+</head>
+<body x-data x-cloak @keydown.window="$store.app.onKey($event)">
+
+<!-- ===================== TOPBAR ===================== -->
+<header class="topbar">
+  <div class="brand"><div class="logo"></div><div>Pipeline Lab <small>SP · sandbox v2</small></div></div>
+  <nav class="nav">
+    <a href="#/pipeline" :class="{active: $store.app.route.name==='pipeline'}">Pipeline</a>
+    <a href="#/gallery" :class="{active: ['gallery','compare','results'].includes($store.app.route.name)}">ผลการทดลอง</a>
+    <a href="#/stock" :class="{active: $store.app.route.name==='stock'}">หุ้นรายตัว</a>
+    <a href="#/news" :class="{active: $store.app.route.name==='news'}">เพิ่มข่าว</a>
+    <a href="#/registry" :class="{active: $store.app.route.name==='registry'}">Registry</a>
+    <a href="#/about" :class="{active: $store.app.route.name==='about'}">About</a>
+    <a href="http://127.0.0.1:5050" target="_blank" title="sandbox v1 ต้องรันแยก: python3 -m sandbox.app.server">Legacy v1 ↗</a>
+  </nav>
+  <div class="spacer"></div>
+  <template x-if="$store.app.job && ['queued','running'].includes($store.app.job.status)">
+    <div class="mini-progress" @click="location.hash='#/pipeline'">
+      <span class="light partial"></span>
+      <span x-text="$store.app.stageLabel($store.app.job.stage)"></span>
+      <div class="bar"><i :style="`width:${$store.app.job.pct||0}%`"></i></div>
+      <span class="mono" x-text="Math.round($store.app.job.pct||0)+'%'"></span>
+      <span x-text="$store.app.etaText($store.app.job.eta_sec)"></span>
+    </div>
+  </template>
+  <span class="dim" style="font-size:12px">กด <span class="kbd">⌘K</span></span>
+</header>
+
+<main>
+<!-- ===================== PIPELINE ===================== -->
+<section x-show="$store.app.route.name==='pipeline'" x-data="pipeline()">
+  <div class="page-head">
+    <div>
+      <h1>Pipeline — A → B → C → เงื่อนไข</h1>
+      <p>A คัดหุ้น → B ดูข่าวของตัวที่รอด → C ดูมหภาครายกลุ่มอุตสาหกรรม → เงื่อนไข Python ตัดสินใจน้ำหนักสุดท้าย · ตัดสินใจที่ close วัน t ซื้อขายที่ close วัน t+1</p>
+    </div>
+    <div class="row">
+      <button class="sm" @click="rescan()">↻ Rescan registry</button>
+      <button class="sm" @click="preflight()">ตรวจก่อนรัน</button>
+    </div>
+  </div>
+
+  <!-- กล่อง A B C + เงื่อนไข -->
+  <div class="pipeline" x-ref="canvas">
+    <svg class="flow-svg" x-ref="svg">
+      <defs>
+        <linearGradient id="wireGrad" x1="0" x2="1"><stop offset="0" stop-color="#10B981"/><stop offset=".5" stop-color="#D946EF"/><stop offset="1" stop-color="#EAB308"/></linearGradient>
+      </defs>
+      <g x-html="wireSvg()"></g>
+      <g x-html="particleSvg()"></g>
+    </svg>
+
+    <template x-for="m in ['A','B','C']" :key="m">
+      <div class="box" :class="[m, stages[m].mode==='off' ? 'off' : '', running && activeStage===m ? 'active' : '']" :data-box="m">
+        <div class="bypass" x-show="stages[m].mode==='off'">BYPASS</div>
+        <div class="box-head">
+          <div class="box-letter" x-text="m"></div>
+          <div class="box-title">
+            <span x-text="{A:'Fundamental screening',B:'Company news sentiment',C:'Macro / FOMC → sector'}[m]"></span>
+            <small x-text="{A:'Model A — ranking ทั้ง universe (อ่านจาก export)',B:'Model B — ข่าวรายบริษัท',C:'Model C — ข่าวมหภาค ราย sector'}[m]"></small>
+          </div>
+          <span class="light" :class="statusOf(m).cls" :title="statusOf(m).text" style="margin-left:auto"></span>
+        </div>
+        <div class="seg">
+          <template x-for="mode in ['off','filter','score-only']">
+            <button :data-mode="mode" :class="{on: stages[m].mode===mode}" @click="setMode(m, mode)" x-text="{off:'ปิด',filter:'กรอง','score-only':'แนบคะแนน'}[mode]"></button>
+          </template>
+        </div>
+        <div class="field">
+          <label class="lbl">version (สแกนอัตโนมัติ)</label>
+          <select class="vsel" x-model="stages[m].version" @change="changed()">
+            <template x-for="v in versions(m)" :key="v.id">
+              <option :value="v.id" x-text="`${v.short_label} · ${v.display_name}  [${v.result_badge.toUpperCase()}]`" :selected="v.id===stages[m].version"></option>
+            </template>
+          </select>
+          <div class="row" style="margin-top:8px">
+            <template x-if="vmeta(m)"><span class="badge" :class="vmeta(m).result_badge" x-text="vmeta(m).result_badge==='real'?'REAL':(vmeta(m).result_badge==='stub'?'STUB':'NEGATIVE')"></span></template>
+            <span class="chip" x-show="vmeta(m)" x-text="vmeta(m) && ({annual_june:'รายปี (มิ.ย.)',monthly:'รายเดือน',event:'ตามเหตุการณ์',daily:'รายวัน'}[vmeta(m).rebalance])"></span>
+          </div>
+          <div class="cov" x-show="vmeta(m)">
+            <span class="light" :class="statusOf(m).cls" style="width:8px;height:8px"></span>
+            <span x-text="statusOf(m).text"></span>
+          </div>
+        </div>
+        <div class="field" x-show="stages[m].mode!=='off'">
+          <label class="lbl">เกณฑ์กรอง</label>
+          <template x-if="m==='A'">
+            <div class="crit">
+              <label><input type="checkbox" x-model="stages.A.onlySelected" @change="changed()"> เฉพาะที่กฎเลือก (selected)</label>
+              <label>score ≥ <input type="number" min="0" max="100" step="5" style="width:70px" x-model.number="stages.A.minScore" @change="changed()" placeholder="—"></label>
+            </div>
+          </template>
+          <template x-if="m!=='A'">
+            <div class="crit">
+              <label><input type="checkbox" x-model="stages[m].exNeg" @change="changed()"> ตัด negative</label>
+              <label><input type="checkbox" x-model="stages[m].exNeu" @change="changed()"> ตัด neutral</label>
+              <label>ไม่มีสัญญาณ →
+                <select x-model="stages[m].missing" @change="changed()" style="padding:3px 6px"><option value="pass">ผ่าน</option><option value="drop">ตัด</option></select>
+              </label>
+            </div>
+          </template>
+          <p class="dim" style="font-size:12px;margin:6px 0 0" x-show="stages[m].mode==='score-only'">ส่งหุ้นทุกตัวต่อ แต่แนบคะแนนให้เงื่อนไขใช้ (ctx.<span x-text="m.toLowerCase()"></span>)</p>
+        </div>
+        <div class="count-pill" x-show="funnel" x-text="funnel ? `ผ่าน ${fmtN(funnel['after_'+m])}` : ''"></div>
+      </div>
+    </template>
+
+    <div class="box G" data-box="G" :class="running && activeStage==='condition' ? 'active' : ''">
+      <div class="box-head">
+        <div class="box-letter">ƒ</div>
+        <div class="box-title">เงื่อนไข Python<small>decide(ctx) → {ticker: weight}</small></div>
+      </div>
+      <label class="lbl">template / condition</label>
+      <select style="width:100%" x-model="condId" @change="loadCondition()">
+        <template x-for="c in $store.app.registry?.conditions || []" :key="c.id">
+          <option :value="c.id" x-text="c.name + (c.ok ? '' : ' (ไม่ผ่านตรวจ)')" :selected="c.id===condId"></option>
+        </template>
+      </select>
+      <p class="muted" style="font-size:12.5px" x-text="condDesc"></p>
+      <div class="row">
+        <span class="chip cond" x-show="dirty">แก้ไขแล้ว (ยังไม่บันทึก)</span>
+      </div>
+      <div class="count-pill" x-show="funnel" x-text="funnel ? `ถือ ${fmtN(funnel.held)}` : ''"></div>
+    </div>
+  </div>
+
+  <!-- คำเตือน (ต้องเห็นเสมอ) -->
+  <div class="panel" style="margin-top:26px" x-show="warnings.length || error">
+    <h3>สิ่งที่ต้องรู้ก่อนเชื่อผล</h3>
+    <div class="warnings">
+      <template x-for="w in warnings"><div class="warn" :class="warnClass(w)"><b x-text="warnTag(w)"></b><span x-text="w"></span></div></template>
+      <div class="warn red" x-show="error"><b>ERROR</b><span x-text="error"></span></div>
+    </div>
+  </div>
+
+  <div class="grid" style="grid-template-columns: 1.45fr 1fr; margin-top:16px">
+    <!-- editor -->
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">Condition editor</h2>
+        <div class="row">
+          <button class="sm" @click="validate()" :disabled="validating"><span x-text="validating ? 'กำลังตรวจ…' : 'Validate (dry-run 1 วัน)'"></span></button>
+          <button class="sm" @click="saveAsNew()">Save as new condition</button>
+        </div>
+      </div>
+      <div x-ref="editor" class="editor" x-show="$store.app.meta?.vendor?.monaco"></div>
+      <textarea class="code" x-ref="fallback" x-show="!$store.app.meta?.vendor?.monaco" x-model="source" @input="dirty=true" spellcheck="false"></textarea>
+      <div class="dim" style="font-size:12px;margin-top:6px">ctx: <span class="mono">date, universe, a[t], b[t], c[sector], c_for(t), sector_of(t), etf_of(t), price(t), history(t, lookback), portfolio, state, stage_enabled, note(t, text)</span> · คืน <span class="mono">None</span> = คงเป้าเดิม (ไม่ซื้อขาย)</div>
+      <template x-if="validation">
+        <div style="margin-top:10px">
+          <template x-if="validation.ok">
+            <div class="warn gray"><b>OK</b>
+              <span>วันที่ <span class="mono" x-text="validation.date"></span> · universe <span class="mono" x-text="validation.universe_size"></span> ตัว ·
+                น้ำหนัก <span class="mono" x-text="validation.weights ? Object.keys(validation.weights).length + ' ตัว รวม ' + fmtPct(validation.weight_sum) : 'None (คงเป้าเดิม)'"></span>
+                <span class="mono dim" x-text="validation.weights ? ' · ' + Object.entries(validation.weights).slice(0,8).map(([k,v])=>k+' '+(100*v).toFixed(2)+'%').join(', ') : ''"></span></span>
+            </div>
+          </template>
+          <template x-if="!validation.ok"><div><div class="warn red"><b>ERROR</b><span x-text="validation.error"></span></div><pre class="tb" x-show="validation.traceback" x-text="validation.traceback"></pre></div></template>
+        </div>
+      </template>
+    </div>
+
+    <!-- run config -->
+    <div class="panel stack">
+      <h2>Run config</h2>
+      <div class="row">
+        <div><label class="lbl">เริ่ม</label><input type="date" x-model="run.start" :min="$store.app.meta?.config.price_start" @change="changed()"></div>
+        <div><label class="lbl">จบ</label><input type="date" x-model="run.end" :max="$store.app.meta?.latest_trading_day" @change="changed()"></div>
+        <div><label class="lbl">ทุน</label><input type="number" x-model.number="run.capital" style="width:130px"></div>
+        <div><label class="lbl">cost/ขา %</label><input type="number" step="0.01" x-model.number="run.costPct" style="width:80px"></div>
+      </div>
+      <div class="timeline" x-ref="timeline">
+        <div class="ho" :style="`left:${tlPos($store.app.meta?.config.held_out_start)}%;right:0`"><span>HELD-OUT</span></div>
+        <div class="sel" :style="`left:${tlPos(run.start)}%;width:${Math.max(0.5, tlPos(run.end)-tlPos(run.start))}%`"></div>
+        <template x-for="y in tlYears()"><span class="tick" :style="`left:${tlPos(y+'-01-01')}%`" x-text="y"></span></template>
+      </div>
+      <div class="warn red" x-show="touchesHeldOut()">
+        <b>HELD-OUT</b>
+        <div class="stack" style="width:100%">
+          <span>ช่วงที่เลือกเข้า held-out (≥ <span class="mono" x-text="$store.app.meta?.config.held_out_start"></span>) — ดูผลช่วงนี้แล้วกลับไปปรับเงื่อนไข = เอาข้อสอบมาติว ผลจะติดธง held-out <b>ถาวร</b></span>
+          <div class="row"><label class="switch"><input type="checkbox" x-model="run.heldOut"><i></i></label><span>เปิดใช้ held-out</span>
+            <input placeholder="พิมพ์: ยืนยัน held-out" x-model="run.confirm" style="flex:1" :disabled="!run.heldOut"></div>
+        </div>
+      </div>
+      <div class="row"><label class="switch" style="--x:1"><input type="checkbox" x-model="run.includeManual" @change="changed()"><i></i></label>
+        <span>รวมข่าว manual (badge MANUAL — ไม่ใช่ output โมเดล)</span></div>
+      <div><label class="lbl">ชื่อการทดลอง (ใช้ตอนบันทึก)</label><input id="run-name" style="width:100%" x-model="run.name" placeholder="เช่น A1 + C-veto ทดลองรอบแรก"></div>
+      <div class="runbar">
+        <div class="stack">
+          <div class="stepper">
+            <template x-for="(s, i) in stepList" :key="s[0]">
+              <div class="step" :class="stepClass(s[0])"><span x-text="stepIcon(s[0])"></span><span x-text="s[1]"></span></div>
+            </template>
+          </div>
+          <div class="progress"><i :style="`width:${job ? job.pct||0 : 0}%`"></i></div>
+          <div class="row" style="justify-content:space-between">
+            <span class="eta" x-text="job ? ($store.app.stageLabel(job.stage) + ' · ' + Math.round(job.pct||0) + '%') : 'พร้อมรัน'"></span>
+            <span class="muted" x-text="job && ['queued','running'].includes(job.status) ? $store.app.etaText(job.eta_sec) : ''"></span>
+          </div>
+        </div>
+        <div class="stack" style="text-align:center">
+          <button class="run-btn" @click="runNow()" :disabled="running" x-text="running ? 'RUNNING…' : 'RUN'"></button>
+          <button class="sm danger" x-show="running" @click="cancel()">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px" x-show="job">
+    <div class="panel">
+      <h3>Log สด</h3>
+      <div class="log" x-ref="log"><template x-for="l in logs" :key="l.rowid"><div :class="l.level" x-text="l.ts.slice(11,19) + '  ' + l.msg"></div></template></div>
+    </div>
+    <div class="panel">
+      <h3>สถานะ</h3>
+      <template x-if="job && job.status==='failed'"><div class="stack"><div class="warn red"><b>FAILED</b><span x-text="job.error"></span></div><pre class="tb" x-show="job.traceback" x-text="job.traceback"></pre></div></template>
+      <template x-if="job && job.status==='done'">
+        <div class="stack">
+          <div class="warn gray"><b>DONE</b><span>รันเสร็จ — ผลยังไม่ถูกบันทึกจนกว่าจะกด "บันทึกการทดลอง" ในหน้าผลลัพธ์</span></div>
+          <a id="view-result" class="btn primary" :href="`#/results/run/${job.id}`" style="display:inline-block;text-align:center">ดูผลลัพธ์ →</a>
+        </div>
+      </template>
+      <template x-if="job && job.status==='cancelled'"><div class="warn gray"><b>CANCELLED</b><span>ยกเลิกแล้ว</span></div></template>
+      <template x-if="job && ['queued','running'].includes(job.status)"><div class="muted">กำลังรัน… ไปหน้าอื่นได้ (ความคืบหน้าแสดงที่แถบบน)</div></template>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== RESULTS ===================== -->
+<section x-show="$store.app.route.name==='results'" x-data="results()">
+  <template x-if="loading"><div class="stack"><div class="skeleton" style="height:40px"></div><div class="skeleton" style="height:110px"></div><div class="skeleton" style="height:340px"></div></div></template>
+  <template x-if="err"><div class="warn red"><b>ERROR</b><span x-text="err"></span></div></template>
+  <div x-show="r && !loading">
+    <div class="page-head">
+      <div>
+        <h1 x-text="title()"></h1>
+        <p><span class="mono" x-text="r?.config?.start + ' → ' + r?.config?.end"></span> · <span x-text="r?.chips?.join(' · ')"></span></p>
+        <div class="row" style="margin-top:8px"><template x-for="b in r?.badges || []"><span class="badge" :class="b.kind" x-text="b.text"></span></template></div>
+      </div>
+      <div class="row">
+        <template x-if="kind==='run'">
+          <div class="row"><input id="save-name" x-model="saveName" placeholder="ตั้งชื่อการทดลอง" style="width:260px"><button id="save-btn" class="gold" @click="save()">บันทึกการทดลอง <span class="kbd">S</span></button></div>
+        </template>
+        <template x-if="kind==='exp'">
+          <div class="row">
+            <button class="sm" @click="rerun()" :disabled="rerunning" x-text="rerunning ? 'กำลังรันซ้ำ…' : 'Re-run ตรวจ reproducibility'"></button>
+            <a class="btn sm" :href="`/api/experiments/${id}/bundle`">Export bundle (.zip)</a>
+            <button class="sm danger" @click="del()">ลบ</button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <template x-if="rerunDiff">
+      <div class="warn" :class="rerunDiff.identical ? 'gray' : 'orange'" style="margin-bottom:14px">
+        <b x-text="rerunDiff.identical ? 'REPRODUCED' : 'DIFFERENT'"></b>
+        <div>
+          <span x-text="rerunDiff.identical ? 'รันซ้ำได้ตัวเลขเท่าเดิมทุกหลัก (metrics + equity)' : `ต่าง ${rerunDiff.n_diffs} ค่า`"></span>
+          <template x-for="c in rerunDiff.possible_causes"><div>• <span x-text="c"></span></div></template>
+          <template x-for="d in (rerunDiff.diffs||[]).slice(0,8)"><div class="mono dim" x-text="`${d.key}: ${d.saved} → ${d.rerun}`"></div></template>
+        </div>
+      </div>
+    </template>
+
+    <div class="warnings" style="margin-bottom:14px">
+      <template x-for="b in r?.badges || []">
+        <div class="warn" :class="{held_out:'red', stub:'gray', negative:'orange', survivorship:'', manual:'gray'}[b.kind]"><b x-text="b.text"></b><span x-text="badgeText(b)"></span></div>
+      </template>
+    </div>
+
+    <template x-if="r && !r.has_artifacts"><div class="warn"><b>NO ARTIFACTS</b><span>ไม่มีไฟล์ parquet ของการทดลองนี้ในเครื่อง (ไม่ได้อยู่ใน git) — แสดงได้เฉพาะ metrics/config; กด Re-run เพื่อสร้างใหม่</span></div></template>
+
+    <div class="hero">
+      <template x-for="c in heroCards()" :key="c.k">
+        <div class="panel metric">
+          <div class="k" x-text="c.k"></div>
+          <div class="v" :class="c.cls" x-text="c.v" x-init="$nextTick(()=>countUp($el, c))"></div>
+          <div class="d"><span :class="c.dSpy>0?'pos':'neg'" x-show="c.dSpy!==null" x-text="'vs SPY ' + c.dSpyTxt"></span><span :class="c.dEw>0?'pos':'neg'" x-show="c.dEw!==null" x-text="'vs EW ' + c.dEwTxt"></span></div>
+        </div>
+      </template>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 2fr 1fr; margin-top:16px">
+      <div class="panel"><h3>Equity curve — strategy vs SPY vs EW universe</h3><div class="chart tall" x-ref="eq"></div></div>
+      <div class="panel"><h3>Funnel — หุ้นหายไปตรงไหน (เฉลี่ยต่อวัน)</h3><div class="chart tall" x-ref="sankey"></div></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="panel"><h3>Underwater (drawdown)</h3><div class="chart short" x-ref="dd"></div></div>
+      <div class="panel"><h3>ผลตอบแทนรายเดือน</h3><div class="chart short" x-ref="heat"></div></div>
+    </div>
+    <div class="grid" style="grid-template-columns: 2fr 1fr; margin-top:16px">
+      <div class="panel"><h3>Sector exposure</h3><div class="chart" x-ref="sector"></div></div>
+      <div class="panel">
+        <h3>Top winners / losers (P&amp;L รวมต่อหุ้น)</h3>
+        <div class="grid g2">
+          <table class="t"><tbody><template x-for="w in r?.winners || []"><tr><td><a :href="stockHref(w.ticker)" x-text="w.ticker"></a></td><td class="n pos" x-text="fmtMoney(w.pnl)"></td></tr></template></tbody></table>
+          <table class="t"><tbody><template x-for="w in r?.losers || []"><tr><td><a :href="stockHref(w.ticker)" x-text="w.ticker"></a></td><td class="n neg" x-text="fmtMoney(w.pnl)"></td></tr></template></tbody></table>
+        </div>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns: 1fr 2fr; margin-top:16px">
+      <div class="panel"><h3>Metrics เต็ม</h3>
+        <div class="scroll" style="max-height:460px"><table class="t">
+          <thead><tr><th>metric</th><th class="n">strategy</th><th class="n">SPY</th><th class="n">EW</th></tr></thead>
+          <tbody><template x-for="row in metricRows()"><tr><td x-text="row[0]"></td><td class="n" x-text="row[1]"></td><td class="n" x-text="row[2]"></td><td class="n" x-text="row[3]"></td></tr></template></tbody>
+        </table></div>
+        <template x-if="r?.metrics?.held_out"><p class="warn red" style="margin-top:10px"><b>SPLIT</b><span>รันคร่อม held-out — ดูตาราง pre/held-out ใน metrics.json (<span class="mono" x-text="'held-out Sharpe ' + fmtNum(r.metrics.held_out.strategy.sharpe)"></span>)</span></p></template>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">Trade log <span class="dim mono" x-text="'(' + (trades.total ?? 0) + ')'"></span></h3>
+          <div class="row"><input placeholder="ค้นหา ticker / เหตุผล" x-model="tq" @input.debounce.300ms="loadTrades(0)" style="width:220px">
+            <select x-model="tside" @change="loadTrades(0)"><option value="">ทั้งหมด</option><option value="buy">ซื้อ</option><option value="sell">ขาย</option></select></div></div>
+        <div class="scroll" style="margin-top:10px"><table class="t">
+          <thead><tr><th>วันที่ execute</th><th>ticker</th><th>side</th><th class="n">มูลค่า</th><th class="n">น้ำหนัก</th><th>เหตุผล</th></tr></thead>
+          <tbody><template x-for="t in trades.rows || []" :key="t.date + t.ticker + t.side + t.notional">
+            <tr>
+              <td class="mono" x-text="t.date"></td>
+              <td><a :href="stockHref(t.ticker, t.date)" x-text="t.ticker"></a></td>
+              <td :class="t.side==='buy'?'pos':'neg'" x-text="t.side==='buy'?'▲ ซื้อ':'▼ ขาย'"></td>
+              <td class="n" x-text="fmtMoney(t.notional)"></td>
+              <td class="n mono" x-text="fmtPct(t.weight_before,1) + ' → ' + fmtPct(t.weight_after,1)"></td>
+              <td><div class="row" style="gap:4px"><template x-for="c in t.reasons"><span class="chip" :class="chipKind(c)" x-text="c"></span></template></div></td>
+            </tr></template></tbody>
+        </table></div>
+        <div class="row" style="justify-content:flex-end;margin-top:8px">
+          <button class="sm" :disabled="trades.offset<=0" @click="loadTrades(trades.offset-200)">← ก่อนหน้า</button>
+          <span class="dim mono" x-text="`${trades.offset+1}–${Math.min(trades.offset+200, trades.total||0)}`"></span>
+          <button class="sm" :disabled="trades.offset+200>=trades.total" @click="loadTrades(trades.offset+200)">ถัดไป →</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px"><h3>เงื่อนไขที่ใช้ (snapshot ณ เวลารัน)</h3><pre class="log" style="height:auto;max-height:360px" x-text="r?.condition_source"></pre>
+      <div class="dim mono" style="font-size:12px" x-text="'git ' + (r?.provenance?.git?.commit||'').slice(0,10) + (r?.provenance?.git?.dirty?' (dirty)':'') + ' · data_hash ' + (r?.provenance?.data_hash||'').slice(0,16) + ' · runtime ' + r?.provenance?.runtime_sec + 's'"></div></div>
+  </div>
+</section>
+
+<!-- ===================== GALLERY ===================== -->
+<section x-show="$store.app.route.name==='gallery'" x-data="gallery()">
+  <div class="page-head">
+    <div><h1>ผลการทดลอง</h1><p>เปิดผลเก่าได้ทุกอย่างเหมือนเดิม (โหลดจากไฟล์ ไม่รันใหม่) · เลือก 2–3 การ์ดเพื่อเทียบ</p></div>
+    <div class="row"><span class="muted" x-text="sel.length ? `เลือก ${sel.length}` : ''"></span><button class="gold" :disabled="sel.length<2" @click="location.hash='#/compare?ids='+sel.join(',')">Compare</button></div>
+  </div>
+  <template x-if="!items.length"><div class="panel muted">ยังไม่มีการทดลองที่บันทึก — รันที่หน้า Pipeline แล้วกด "บันทึกการทดลอง"</div></template>
+  <div class="cards">
+    <template x-for="e in items" :key="e.id">
+      <div class="panel card" :class="{sel: sel.includes(e.id)}" @click="open(e)">
+        <div class="row" style="justify-content:space-between"><b x-text="e.name"></b>
+          <input type="checkbox" :checked="sel.includes(e.id)" @click.stop="toggle(e.id)"></div>
+        <div class="dim mono" style="font-size:12px" x-text="e.start + ' → ' + e.end + ' · บันทึก ' + (e.saved_at||'').slice(0,16).replace('T',' ')"></div>
+        <svg class="spark" viewBox="0 0 300 56" preserveAspectRatio="none"><path :d="spark(e.sparkline)" fill="none" stroke-width="2" :stroke="(e.metrics.total_return||0)>=0 ? '#34D399' : '#F87171'"/></svg>
+        <div class="grid g3" style="gap:6px">
+          <div><div class="dim" style="font-size:11px">RETURN</div><div class="mono" :class="e.metrics.total_return>=0?'pos':'neg'" x-text="fmtPct(e.metrics.total_return)"></div></div>
+          <div><div class="dim" style="font-size:11px">SHARPE</div><div class="mono" x-text="fmtNum(e.metrics.sharpe)"></div></div>
+          <div><div class="dim" style="font-size:11px">MAX DD</div><div class="mono neg" x-text="fmtPct(e.metrics.max_dd)"></div></div>
+        </div>
+        <div class="row" style="margin-top:8px;gap:4px"><template x-for="c in e.chips"><span class="chip" :class="c[0]==='A'?'A':(c[0]==='B'?'B':(c[0]==='C'?'C':'cond'))" x-text="c"></span></template></div>
+        <div class="row" style="margin-top:6px;gap:4px"><template x-for="b in e.badges"><span class="badge" :class="b.kind" x-text="b.text"></span></template></div>
+      </div>
+    </template>
+  </div>
+</section>
+
+<!-- ===================== COMPARE ===================== -->
+<section x-show="$store.app.route.name==='compare'" x-data="compare()">
+  <div class="page-head"><div><h1>Compare</h1><p>equity (normalize = 1 ที่วันแรก) + metrics เทียบกัน</p></div><a class="btn" href="#/gallery">← กลับ</a></div>
+  <div class="panel"><div class="chart tall" x-ref="chart"></div></div>
+  <div class="panel" style="margin-top:16px"><table class="t">
+    <thead><tr><th>metric</th><template x-for="e in data?.experiments || []"><th class="n"><span x-text="e.name"></span><div class="row" style="justify-content:flex-end;gap:3px"><template x-for="b in e.badges"><span class="badge" :class="b.kind" x-text="b.text"></span></template></div></th></template></tr></thead>
+    <tbody><template x-for="k in keys"><tr><td x-text="k[1]"></td><template x-for="e in data?.experiments || []"><td class="n" x-text="k[2](e.metrics[k[0]])"></td></template></tr></template></tbody>
+  </table></div>
+</section>
+
+<!-- ===================== STOCK ===================== -->
+<section x-show="$store.app.route.name==='stock'" x-data="stock()">
+  <div class="page-head">
+    <div><h1><span x-text="d?.ticker || 'หุ้นรายตัว'"></span> <small class="muted" style="font-size:15px" x-text="d ? d.name + ' · ' + d.sector + (d.etf ? ' (' + d.etf + ')' : '') : ''"></small></h1>
+      <p x-text="d ? d.price_note : 'เลือกหุ้นจากช่องค้นหา (กด /) หรือคลิกจาก trade log'"></p></div>
+    <div class="mention-box" style="width:320px">
+      <input x-ref="search" placeholder="ค้นหา ticker / ชื่อบริษัท" x-model="q" @keydown.down.prevent="hi=Math.min(hi+1, hits.length-1)" @keydown.up.prevent="hi=Math.max(hi-1,0)" @keydown.enter.prevent="hits[hi] && go(hits[hi].t)" style="width:100%">
+      <div class="mention-drop" x-show="q && hits.length"><template x-for="(h,i) in hits" :key="h.t"><div class="item" :class="{on:i===hi}" @click="go(h.t)"><b class="mono" x-text="h.t"></b><span class="muted" x-text="h.name"></span></div></template></div>
+    </div>
+  </div>
+  <template x-if="err"><div class="warn red"><b>ERROR</b><span x-text="err"></span></div></template>
+  <div class="grid" style="grid-template-columns: 3fr 1fr" x-show="d">
+    <div class="panel">
+      <div class="row" style="margin-bottom:10px">
+        <template x-for="l in layerList" :key="l[0]"><label class="chip" :class="l[2]" style="cursor:pointer"><input type="checkbox" x-model="layers[l[0]]" @change="render()"> <span x-text="l[1]"></span></label></template>
+        <span class="dim" x-show="ctxLabel" x-text="ctxLabel" style="margin-left:auto;font-size:12px"></span>
+      </div>
+      <div class="stock-chart" x-ref="chart"></div>
+      <div class="rsi-chart" x-ref="rsi" x-show="layers.rsi"></div>
+    </div>
+    <div class="panel side-reasons">
+      <h3>วันที่ <span class="mono" x-text="hover || '—'"></span></h3>
+      <template x-if="!hoverItems.length"><p class="dim">ชี้เมาส์บนกราฟเพื่อดูเหตุผลของ trade / สัญญาณ ในวันนั้น</p></template>
+      <template x-for="it in hoverItems"><div class="panel" style="padding:10px;margin-bottom:8px">
+        <div class="row"><b :class="it.cls" x-text="it.title"></b></div>
+        <div class="row" style="gap:4px;margin-top:6px"><template x-for="c in it.reasons"><span class="chip" :class="chipKind(c)" x-text="c"></span></template></div>
+      </div></template>
+      <h3 style="margin-top:14px">Trades ของหุ้นนี้</h3>
+      <table class="t"><tbody><template x-for="t in d?.trades || []"><tr @click="focus(t.date)" style="cursor:pointer"><td class="mono" x-text="t.date"></td><td :class="t.side==='buy'?'pos':'neg'" x-text="t.side==='buy'?'▲':'▼'"></td><td class="n" x-text="fmtMoney(t.notional)"></td></tr></template></tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== NEWS ===================== -->
+<section x-show="$store.app.route.name==='news'" x-data="news()">
+  <div id="news-root"></div>
+</section>
+
+<!-- ===================== REGISTRY ===================== -->
+<section x-show="$store.app.route.name==='registry'" x-data>
+  <div class="page-head"><div><h1>Model Registry</h1><p>เพิ่ม version = สร้างโฟลเดอร์ + manifest.json + signals → กด Rescan (ไม่ต้องแก้โค้ดเว็บ) · ดู <span class="mono">model_B/export/README.md</span></p></div>
+    <button @click="$store.app.rescan()">↻ Rescan</button></div>
+  <div class="grid g3">
+    <template x-for="m in ['A','B','C']"><div class="panel stack">
+      <h2 x-text="'Model ' + m"></h2>
+      <template x-for="v in $store.app.registry?.models?.[m] || []" :key="v.id"><div class="panel" style="padding:12px">
+        <div class="row" style="justify-content:space-between"><b x-text="v.short_label + ' · ' + v.display_name"></b><span class="badge" :class="v.result_badge" x-text="v.result_badge"></span></div>
+        <div class="dim mono" style="font-size:12px" x-text="v.path"></div>
+        <div class="cov" x-text="`coverage ${v.coverage.start} → ${v.coverage.end}` + (v.coverage.valid_through ? ` (ใช้ได้ถึง ${v.coverage.valid_through})` : '') + ` · ${v.rebalance}`"></div>
+        <template x-for="w in v.warnings || []"><div class="warn" :class="v.result_badge==='stub'?'gray':(v.result_badge==='negative'?'orange':'')" style="margin-top:6px;font-size:12px"><span x-text="w"></span></div></template>
+        <div class="dim" style="font-size:12px;margin-top:6px" x-text="v.notes"></div>
+        <template x-if="v.research_stats"><div class="mono dim" style="font-size:11.5px;margin-top:4px" x-text="`ผลวิจัยเดิม: Sharpe ${fmtNum(v.research_stats.dec_sharpe)} (EW ${fmtNum(v.research_stats.dec_sharpe_ew)}), DSR ${fmtNum(v.research_stats.DSR)}, S3 ${v.research_stats.S3}`"></div></template>
+      </div></template>
+    </div></template>
+  </div>
+  <div class="panel" style="margin-top:16px">
+    <h2>Invalid <span class="dim mono" x-text="'(' + ($store.app.registry?.invalid?.length||0) + ')'"></span></h2>
+    <template x-if="!($store.app.registry?.invalid||[]).length"><p class="dim">ไม่มี</p></template>
+    <template x-for="x in $store.app.registry?.invalid || []"><div class="warn red"><b x-text="x.model + ' · ' + x.path"></b><span x-text="x.errors.join(' · ')"></span></div></template>
+  </div>
+  <div class="panel" style="margin-top:16px">
+    <h2>Conditions</h2>
+    <table class="t"><thead><tr><th>id</th><th>NAME</th><th>DESCRIPTION</th><th>ตรวจ</th></tr></thead>
+      <tbody><template x-for="c in $store.app.registry?.conditions || []"><tr><td class="mono" x-text="c.id"></td><td x-text="c.name"></td><td class="muted" x-text="c.description"></td><td :class="c.ok?'pos':'neg'" x-text="c.ok?'ok':c.errors.join('; ')"></td></tr></template></tbody></table>
+  </div>
+</section>
+
+<!-- ===================== ABOUT ===================== -->
+<section x-show="$store.app.route.name==='about'">
+  <div class="page-head"><div><h1>About / Methodology</h1><p>อ่านก่อนเชื่อตัวเลขใด ๆ ในเว็บนี้</p></div></div>
+  <div class="grid g2">
+    <div class="panel stack">
+      <h2>Pipeline ทำงานยังไง</h2>
+      <p>ทุกวันทำการ <b>t</b>: (1) execute คำสั่งของเมื่อวานที่ราคา close วัน t (Adj Close รวมปันผล) (2) หุ้นที่ไม่มีราคาแล้ว (delist) → เงินสดที่ราคาล่าสุด (3) คิดมูลค่าพอร์ต (4) A → B → C คัดหุ้นจากสัญญาณที่วันที่ ≤ t (5) ส่ง ctx ให้เงื่อนไข (process แยก) → เป้าน้ำหนักใหม่ → ซื้อขายที่ close วัน t+1 · ค่าธรรมเนียม 0.10% ต่อขา · rebalance เฉพาะวันที่เป้าเปลี่ยน</p>
+      <p><b>เว็บไม่คำนวณโมเดลเอง</b> — อ่าน signal ที่คำนวณไว้แล้วจาก export ของแต่ละโมเดลเท่านั้น (ranking ของ Model A เทียบทั้ง universe — คำนวณจาก subset จะผิด) version ไหนไม่มีไฟล์ = "ไม่มีข้อมูล"</p>
+      <h2>Look-ahead guard</h2>
+      <p>process ของเงื่อนไขได้รับราคาและสัญญาณทีละวัน จึง<b>ไม่มีข้อมูลอนาคตอยู่ในหน่วยความจำเลย</b>; <span class="mono">ctx.history(end=อนาคต)</span> → error; signal ทุกตัวผ่าน as-of (date ≤ t); Model A หลัง valid_through (held-out ของโมเดล) = ไม่มีข้อมูล ไม่ใช้รอบเก่าแทน · มี unit test ที่พยายามอ่านอนาคตแล้วต้อง fail</p>
+      <h2>Held-out</h2>
+      <p>ข้อมูลตั้งแต่ <span class="mono" x-text="$store.app.meta?.config.held_out_start"></span> ล็อกไว้ (วันจบ default <span class="mono" x-text="$store.app.meta?.config.default_end"></span>) — ถ้าดูผลช่วงนี้แล้วกลับไปปรับเงื่อนไข = เอาข้อสอบมาติว ผลช่วง held-out จะไม่น่าเชื่อถืออีก การรันเข้า held-out ต้องเปิด toggle + พิมพ์ยืนยัน และผลติด badge <span class="badge held_out">HELD-OUT</span> ถาวร</p>
+      <h2>Reproducibility</h2>
+      <p>ผลที่บันทึกเก็บ config + ข้อความเงื่อนไขเต็ม + git commit + data_hash ของราคา + manifest ของทุก version · เปิดผลเก่า = อ่านไฟล์ ไม่รันใหม่ · ปุ่ม Re-run เทียบตัวเลขทุกหลักและบอกสาเหตุถ้าต่าง</p>
+    </div>
+    <div class="panel stack">
+      <h2>ความหมายของ badge</h2>
+      <div class="row"><span class="badge real">REAL</span><span>output จริงของโมเดล (ไม่ได้แปลว่าชนะตลาด)</span></div>
+      <div class="row"><span class="badge stub">STUB</span><span>สุ่มแบบ deterministic — ไว้ทดสอบระบบเท่านั้น</span></div>
+      <div class="row"><span class="badge negative">NEGATIVE</span><span>โมเดลที่ทดสอบแล้วไม่ผ่านเกณฑ์ (C rulebase exp_03: 0/216 cells ผ่าน |rho|&gt;0.3)</span></div>
+      <div class="row"><span class="badge held_out">HELD-OUT</span><span>ผลนี้แตะช่วง held-out แล้ว</span></div>
+      <div class="row"><span class="badge survivorship">SURVIVORSHIP</span><span>A ไม่ได้กรอง → universe = S&amp;P 500 ปัจจุบัน ผลจะดีเกินจริง</span></div>
+      <div class="row"><span class="badge manual">MANUAL NEWS</span><span>รวมข่าวที่ผู้ใช้พิมพ์เอง (ไม่ใช่ output โมเดล ไม่ใช่ training data)</span></div>
+      <h2>ข้อจำกัดที่รู้แล้ว</h2>
+      <ul class="muted">
+        <li>Model A: 5 กฎอยู่ระดับ C (ไม่ผ่าน S3/DSR) และยังไม่ freeze; universe ของ Model A เองไม่มีหุ้นที่ Yahoo ไม่มีราคา (เช่น TWTR, ATVI) → survivorship บางส่วน</li>
+        <li>Model A backtest เดิมซื้อที่ close วัน rebalance; sandbox ซื้อ close วันถัดไป → ผลต่างกันเล็กน้อย (A1 corr รายวัน 0.99999)</li>
+        <li>ราคาเริ่ม <span class="mono" x-text="$store.app.meta?.config.price_start"></span> → ก่อน held-out มีแค่ ~21 เดือน = A รายปีได้ 2 รอบ (เปลี่ยน PRICE_START ได้ ดู README)</li>
+        <li>Model B = stub เท่านั้น (ยังไม่มี weights จริง)</li>
+        <li>Model C rulebase = negative result, ช่วง 2021+ อยู่ใน test set ของ exp_03, vix_p90 ใช้ข้อมูลทั้งช่วง</li>
+        <li>ราคาจาก yfinance: ดู DATA_QUALITY.md (เช่น PARA 2024 กระโดดผิดปกติ)</li>
+        <li>โค้ดเงื่อนไขรันด้วย exec ใน process แยก — ไม่ใช่ sandbox ด้าน security: <b>ห้ามเปิดเว็บนี้ผ่าน ngrok / tunnel / LAN</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ===================== PALETTE / MODAL / TOASTS ===================== -->
+<div class="palette-wrap" x-show="$store.app.palette.open" @click.self="$store.app.palette.open=false" x-transition.opacity>
+  <div class="palette">
+    <input x-ref="pal" placeholder="พิมพ์คำสั่ง หรือ ticker…" x-model="$store.app.palette.q" @keydown.down.prevent="$store.app.palette.i++" @keydown.up.prevent="$store.app.palette.i=Math.max(0,$store.app.palette.i-1)" @keydown.enter.prevent="$store.app.palRun()" x-effect="$store.app.palette.open && $nextTick(()=>$refs.pal.focus())">
+    <template x-for="(it, i) in $store.app.palItems()" :key="it.label"><div class="item" :class="{on: i===$store.app.palette.i}" @click="$store.app.palette.i=i; $store.app.palRun()"><span x-text="it.label"></span><span class="dim mono" x-text="it.hint||''"></span></div></template>
+  </div>
+</div>
+<div class="toasts"><template x-for="t in $store.app.toasts" :key="t.id"><div class="toast" :class="t.kind" x-text="t.msg"></div></template></div>
+</body>
+</html>
