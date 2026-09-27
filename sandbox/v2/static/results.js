@@ -80,9 +80,9 @@ function results() {
       const eq = this.r.equity, x = eq.map((e) => e.date);
       const annot = this.heldOutShape().length ? [{ x: Alpine.store("app").meta.config.held_out_start, y: 1, yref: "paper", text: "HELD-OUT", showarrow: false, font: { color: "#FCA5A5", size: 11 }, xanchor: "left" }] : [];
       Plotly.react(this.$refs.eq, [
-        { x, y: eq.map((e) => e.strategy), name: "Strategy", line: { color: "#FDE68A", width: 2.4 } },
         { x, y: eq.map((e) => e.spy), name: "SPY buy & hold", line: { color: "#60A5FA", width: 1.5 } },
         { x, y: eq.map((e) => e.ew), name: "EW universe", line: { color: "#A78BFA", width: 1.5, dash: "dot" } },
+        { x, y: eq.map((e) => e.strategy), name: "Strategy", line: { color: "#FDE68A", width: 2.4 } },
       ], PL.layout({ shapes: this.heldOutShape(), annotations: annot, yaxis: { gridcolor: "rgba(120,150,220,.10)", tickformat: ",.0f" } }), PL.config);
       Plotly.react(this.$refs.dd, [
         { x, y: eq.map((e) => e.dd_strategy), name: "Strategy", fill: "tozeroy", line: { color: "#F87171", width: 1.2 }, fillcolor: "rgba(248,113,113,.25)" },
@@ -101,20 +101,30 @@ function results() {
       Plotly.react(this.$refs.sector, Object.entries(se.series).map(([k, v]) => ({ x: se.dates, y: v, name: k, stackgroup: "one", line: { width: 0.5, color: SECTOR_COLORS[k] || "#64748B" } })),
         PL.layout({ yaxis: { tickformat: ".0%", gridcolor: "rgba(120,150,220,.10)" }, legend: { orientation: "h", y: -0.18, font: { size: 10.5 } }, margin: { l: 50, r: 10, t: 6, b: 60 } }), PL.config);
       this.renderSankey();
+      setTimeout(() => [this.$refs.eq, this.$refs.dd, this.$refs.heat, this.$refs.sector, this.$refs.sankey].forEach((el) => el && el.offsetParent && Plotly.Plots.resize(el)), 60);
     },
     renderSankey() {
-      const f = this.r.metrics.funnel_avg || {};
-      const st = this.r.config.stages;
-      const U = f.universe || 0, A = f.after_A ?? U, B = f.after_B ?? A, C = f.after_C ?? B, H = Math.min(f.held ?? 0, C);
-      const labels = [`Universe ${fmtN(U)}`, `ผ่าน A ${fmtN(A)}`, `ผ่าน B ${fmtN(B)}`, `ผ่าน C ${fmtN(C)}`, `ถือจริง ${fmtN(H)}`,
-        `ตัดโดย A ${fmtN(U - A)}`, `ตัดโดย B ${fmtN(A - B)}`, `ตัดโดย C ${fmtN(B - C)}`, `เงื่อนไขไม่ถือ ${fmtN(C - H)}`];
-      const link = { source: [0, 0, 1, 1, 2, 2, 3, 3], target: [1, 5, 2, 6, 3, 7, 4, 8], value: [A, U - A, B, A - B, C, B - C, H, C - H].map((v) => Math.max(v, 0.0001)),
-        color: ["rgba(16,185,129,.45)", "rgba(100,116,139,.25)", "rgba(168,85,247,.45)", "rgba(100,116,139,.25)", "rgba(249,115,22,.45)", "rgba(100,116,139,.25)", "rgba(234,179,8,.55)", "rgba(100,116,139,.25)"] };
-      const off = (m) => (st[m].mode === "off" ? " (ปิด)" : "");
-      labels[1] += off("A"); labels[2] += off("B"); labels[3] += off("C");
-      Plotly.react(this.$refs.sankey, [{ type: "sankey", arrangement: "snap",
-        node: { label: labels, pad: 14, thickness: 14, color: ["#94A3B8", "#10B981", "#A855F7", "#F97316", "#EAB308", "#334155", "#334155", "#334155", "#334155"], line: { width: 0 } },
-        link }], PL.layout({ margin: { l: 6, r: 6, t: 6, b: 6 }, font: { size: 11.5, color: "#E6ECFF" } }), PL.config);
+      // เฉพาะกล่องที่เปิด — กล่องที่ปิด (bypass) ไม่แสดงเป็น node
+      const f = this.r.metrics.funnel_avg || {}, st = this.r.config.stages;
+      const U = f.universe || 0;
+      const seq = [["Universe", U, "#94A3B8", null]];
+      const colors = { A: ["#10B981", "rgba(16,185,129,.45)"], B: ["#A855F7", "rgba(168,85,247,.45)"], C: ["#F97316", "rgba(249,115,22,.45)"] };
+      for (const m of ["A", "B", "C"]) if (st[m].mode !== "off") seq.push([`ผ่าน ${m}${st[m].mode === "score-only" ? " (แนบคะแนน)" : ""}`, f["after_" + m], colors[m][0], colors[m][1], m]);
+      const lastN = seq[seq.length - 1][1];
+      const H = Math.min(f.held ?? 0, lastN);
+      seq.push(["ถือจริง", H, "#EAB308", "rgba(234,179,8,.55)"]);
+      const labels = [], nc = [], src = [], tgt = [], val = [], lc = [];
+      seq.forEach((n) => { labels.push(`${n[0]} ${fmtN(n[1])}`); nc.push(n[2]); });
+      for (let i = 1; i < seq.length; i++) {
+        src.push(i - 1); tgt.push(i); val.push(Math.max(seq[i][1], 0.0001)); lc.push(seq[i][3]);
+        const drop = seq[i - 1][1] - seq[i][1];
+        if (drop > 0.5) {
+          labels.push(i === seq.length - 1 ? `เงื่อนไขไม่ถือ ${fmtN(drop)}` : `ตัดโดย ${seq[i][4]} ${fmtN(drop)}`); nc.push("#334155");
+          src.push(i - 1); tgt.push(labels.length - 1); val.push(drop); lc.push("rgba(100,116,139,.25)");
+        }
+      }
+      Plotly.react(this.$refs.sankey, [{ type: "sankey", arrangement: "snap", node: { label: labels, pad: 16, thickness: 14, color: nc, line: { width: 0 } },
+        link: { source: src, target: tgt, value: val, color: lc } }], PL.layout({ margin: { l: 6, r: 6, t: 6, b: 6 }, font: { size: 11.5, color: "#E6ECFF" } }), PL.config);
     },
     async loadTrades(offset) {
       if (!this.r?.has_artifacts) return;

@@ -54,3 +54,10 @@
 - ทดสอบ: `scripts/ui_smoke.py` (Playwright headless): pipeline → เปิด B/C กรอง → RUN จาก UI จนจบ → ผลลัพธ์ → บันทึก → คลิก trade → หน้าหุ้น → gallery → compare → registry/about/news — **console/page errors = 0**, screenshot ใน `sandbox/v2/screenshots/`
 - บั๊กที่เจอและแก้: `x-for` ใช้ใน `<svg>` ไม่ได้ (→ x-html), Alpine เรียก `init()` ซ้ำ 2 รอบ (ลบ x-init), **Monaco/chart/EventSource ถูก Alpine ห่อ proxy → หน้าค้าง** (ย้ายไปเก็บนอก reactive state), `/api/stock` 500 (itertuples กับชื่อ column `class`)
 - DoD: ✅
+
+## W6 — ผลลัพธ์ + หุ้นรายตัว + Gallery ✅
+- หน้าสรุปผล: hero cards count-up + delta vs SPY/EW + badge, equity (strategy/SPY/EW) แรเงา held-out, underwater, heatmap รายเดือน, sector exposure stacked area, Sankey funnel (เฉพาะกล่องที่เปิด), holdings วันสุดท้าย (คลิกไปหน้าหุ้น), top winners/losers, metrics เต็ม, trade log + reason chips สีตามโมเดล + ค้นหา/กรอง/แบ่งหน้า, snapshot เงื่อนไข + provenance, ปุ่มบันทึก (confetti) / Re-run diff / Export zip / ลบ (พิมพ์ exp_id)
+- หน้าหุ้น: แท่งเทียน + ▲ซื้อ/▼ขาย ณ วันที่ execute, hover แสดง reasons, layer: ช่วงที่ A เลือก, จุด B, เส้น C ตามทิศ, ข่าว manual, SMA20/50, EMA20, volume, RSI14 (chart แยก sync กัน); เลือกหุ้นจาก trade log/holdings/ช่องค้นหา
+- Gallery: การ์ด + sparkline + metrics + config chips + badge; เลือก 2–3 → Compare (equity normalize + ตาราง)
+- ทดสอบ (`scripts/ui_smoke.py`): เปิดผลที่บันทึก → กราฟครบ, คลิก trade → หน้าหุ้นโฟกัสวันนั้นพร้อมลูกศร, compare 2 การทดลอง, ผล held-out มี badge HELD-OUT + แรเงาแดง — console errors 0; screenshot เปลี่ยนเป็น JPEG (8.2 MB → 2.0 MB)
+- DoD: ✅

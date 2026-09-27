@@ -65,6 +65,12 @@ const PL = {
   ok() { return !window.__noPlotly && window.Plotly; },
 };
 
+/* Plotly ที่ render ตอน section ยังซ่อนอยู่จะกว้างผิด → resize ทุกครั้งที่เปลี่ยนหน้า */
+window.addEventListener("route", () => setTimeout(() => {
+  if (!PL.ok()) return;
+  document.querySelectorAll(".js-plotly-plot").forEach((el) => { if (el.offsetParent) Plotly.Plots.resize(el); });
+}, 80));
+
 /* ---------- store ---------- */
 document.addEventListener("alpine:init", () => {
   Alpine.store("app", {
@@ -240,6 +246,7 @@ function compare() {
       const colors = ["#FDE68A", "#22D3EE", "#E879F9"];
       const tr = this.data.experiments.filter((e) => e.equity).map((e, i) => ({ x: e.equity.dates, y: e.equity.values, name: e.name, line: { color: colors[i], width: 2 } }));
       Plotly.react(this.$refs.chart, tr, PL.layout({ yaxis: { gridcolor: "rgba(120,150,220,.10)", tickformat: ".2f" } }), PL.config);
+      setTimeout(() => Plotly.Plots.resize(this.$refs.chart), 60);
     },
   };
 }

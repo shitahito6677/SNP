@@ -46,7 +46,7 @@ def main():
             pg.goto(base + "/#/pipeline")
             pg.wait_for_selector(".box.A", timeout=20000)
             pg.wait_for_timeout(2500)  # monaco + preflight
-            pg.screenshot(path=str(OUT / "01_pipeline.png"), full_page=True)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "01_pipeline.jpg"), full_page=True)
 
             # เปิด B stub (กรอง) + C rulebase (กรอง) ผ่าน UI
             pg.click(".box.B .seg button[data-mode=filter]")
@@ -55,15 +55,15 @@ def main():
             pg.fill("#run-name", "UI smoke: A1 + B stub + C rb03 + EW")
             pg.click("button.run-btn")
             pg.wait_for_timeout(1500)
-            pg.screenshot(path=str(OUT / "02_running.png"), full_page=False)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "02_running.jpg"), full_page=False)
             pg.wait_for_selector("#view-result", timeout=180000)
             pg.wait_for_timeout(800)
-            pg.screenshot(path=str(OUT / "03_pipeline_done.png"), full_page=True)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "03_pipeline_done.jpg"), full_page=True)
 
             pg.click("#view-result")
             pg.wait_for_selector(".hero .metric", timeout=30000)
             pg.wait_for_timeout(2500)
-            pg.screenshot(path=str(OUT / "04_results_run.png"), full_page=True)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "04_results_run.jpg"), full_page=True)
             pg.fill("#save-name", "UI smoke run")
             pg.click("#save-btn")
             pg.wait_for_function("location.hash.startsWith('#/results/exp/')", timeout=20000)
@@ -71,13 +71,13 @@ def main():
             created.append(exp_id)
             pg.wait_for_selector(".hero .metric", timeout=30000)
             pg.wait_for_timeout(2500)
-            pg.screenshot(path=str(OUT / "05_results_saved.png"), full_page=True)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "05_results_saved.jpg"), full_page=True)
 
             # คลิก trade แรก → หน้าหุ้น
             pg.locator("table.t tbody tr td a").first.click()
             pg.wait_for_selector(".stock-chart canvas", timeout=20000)
             pg.wait_for_timeout(1500)
-            pg.screenshot(path=str(OUT / "06_stock.png"), full_page=True)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "06_stock.jpg"), full_page=True)
 
             # รันอีกครั้ง (hold_SPY) เพื่อใช้ compare
             job = requests.post(base + "/api/jobs", json={"name": "UI smoke SPY", "condition": {"id": "hold_SPY"}}).json()["id"]
@@ -91,17 +91,29 @@ def main():
             pg.goto(base + "/#/gallery")
             pg.wait_for_selector(".card", timeout=20000)
             pg.wait_for_timeout(800)
-            pg.screenshot(path=str(OUT / "07_gallery.png"), full_page=True)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "07_gallery.jpg"), full_page=True)
             pg.goto(f"{base}/#/compare?ids={exp_id},{exp2}")
             pg.wait_for_timeout(2500)
-            pg.screenshot(path=str(OUT / "08_compare.png"), full_page=True)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "08_compare.jpg"), full_page=True)
             for name in ("registry", "about"):
                 pg.goto(f"{base}/#/{name}")
                 pg.wait_for_timeout(1200)
-                pg.screenshot(path=str(OUT / f"09_{name}.png"), full_page=True)
+                pg.screenshot(type="jpeg", quality=72, path=str(OUT / f"09_{name}.jpg"), full_page=True)
+            # held-out run → ต้องเห็น badge HELD-OUT + แรเงาแดงบนกราฟ
+            hj = requests.post(base + "/api/jobs", json={"name": "UI smoke held-out", "condition": {"id": "hold_SPY"},
+                                                         "start": "2023-01-03", "end": "2023-12-29",
+                                                         "held_out": {"enabled": True, "confirm": cfg.HELD_OUT_CONFIRM_TEXT}}).json()["id"]
+            for _ in range(120):
+                if requests.get(f"{base}/api/jobs/{hj}").json()["status"] == "done":
+                    break
+                time.sleep(0.5)
+            pg.goto(f"{base}/#/results/run/{hj}")
+            pg.wait_for_selector(".badge.held_out", timeout=20000)
+            pg.wait_for_timeout(2000)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "11_results_held_out.jpg"), full_page=False)
             pg.goto(f"{base}/#/news")
             pg.wait_for_timeout(1500)
-            pg.screenshot(path=str(OUT / "10_news.png"), full_page=True)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "10_news.jpg"), full_page=True)
             b.close()
     except Exception:
         print("errors so far:", *errors[:20], sep="\n  ")
@@ -116,7 +128,7 @@ def main():
     print(f"console/page errors: {len(errors)}")
     for e in errors:
         print("  ", e[:400])
-    print("screenshots:", ", ".join(sorted(x.name for x in OUT.glob("*.png"))))
+    print("screenshots:", ", ".join(sorted(x.name for x in OUT.glob("*.jpg"))))
     return 1 if errors else 0
 
 

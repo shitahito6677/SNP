@@ -308,6 +308,10 @@
     <div class="grid" style="grid-template-columns: 2fr 1fr; margin-top:16px">
       <div class="panel"><h3>Sector exposure</h3><div class="chart" x-ref="sector"></div></div>
       <div class="panel">
+        <h3>Holdings วันสุดท้าย <span class="dim mono" x-text="'(' + (r?.holdings_last?.length||0) + ')'"></span></h3>
+        <div class="scroll" style="max-height:150px;margin-bottom:12px"><div class="row" style="gap:5px">
+          <template x-for="h in r?.holdings_last || []"><a class="chip" :href="stockHref(h.ticker)" x-text="h.ticker + ' ' + fmtPct(h.weight,1)"></a></template>
+        </div></div>
         <h3>Top winners / losers (P&amp;L รวมต่อหุ้น)</h3>
         <div class="grid g2">
           <table class="t"><tbody><template x-for="w in r?.winners || []"><tr><td><a :href="stockHref(w.ticker)" x-text="w.ticker"></a></td><td class="n pos" x-text="fmtMoney(w.pnl)"></td></tr></template></tbody></table>
