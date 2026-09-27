@@ -16,7 +16,7 @@ from pathlib import Path
 
 from sandbox.v2 import config as cfg
 
-ID_RE = re.compile(r"^[a-z0-9][a-z0-9_]{1,60}$")
+ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_]{1,60}$")
 
 
 def static_check(source: str) -> dict:
@@ -79,7 +79,7 @@ def source(cid: str) -> str:
 def save_new(cid: str, src: str) -> Path:
     """บันทึกเป็นไฟล์ใหม่ — ห้ามเขียนทับไฟล์เดิม"""
     if not ID_RE.match(cid):
-        raise ValueError("ชื่อไฟล์ต้องเป็น a-z, 0-9, _ (2–61 ตัว) เช่น my_condition_v2")
+        raise ValueError("ชื่อไฟล์ต้องเป็น A-Z, a-z, 0-9, _ (2–61 ตัว) เช่น my_condition_v2")
     p = cfg.CONDITIONS_DIR / f"{cid}.py"
     if p.exists():
         raise FileExistsError(f"มี condition ชื่อ {cid!r} อยู่แล้ว — ห้ามเขียนทับ ตั้งชื่อใหม่")

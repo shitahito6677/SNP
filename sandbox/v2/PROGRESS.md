@@ -31,3 +31,11 @@
   - `model_B/export/README.md`
 - DoD: registry คืน A (5 จริง + stub), B (stub), C (rulebase-exp03 negative + stub), conditions 5 ✅; manifest เสีย (badge/rebalance/coverage/ไฟล์หาย) → โผล่ใน invalid พร้อม 4 เหตุผล แล้วลบทิ้ง → invalid ว่าง ✅
 - universe ราคาอัปเดตหลังมี history: 575 ตัว (ok 564 / partial 11 / missing 0)
+
+## W3 — Engine + Simulator + Jobs ✅
+- ทำ: `signals.py` (as-of, ห้ามอนาคต), `condition_worker.py` (process แยก, รับข้อมูล ≤ t ทีละวัน), `engine.py` (pipeline A→B→C, simulator next_close, delist→cash, benchmark SPY/EW, reasons ต่อ trade, artifacts), `metrics.py`, `jobs.py` (process แยก + SQLite + ETA + cancel/kill), API `/api/preflight`, `/api/jobs[/<id>[/stream|/cancel]]`
+- ผลรันจริง: ดู `experiments/log.md` "Sandbox v2 W3" — hold_SPY = SPY B&H (4.91%), A1 เทียบ Model A corr 0.99999, DoD run ได้ metrics + funnel, ETA ลดลงต่อเนื่อง 5.4 → 0 วิ
+- tests: 19/19 ผ่าน (`python3 -m pytest sandbox/v2/tests`)
+- แก้ระหว่างทาง: parent ไม่รู้ว่า condition process ตาย (ตอน spawn ล้ม) → เพิ่มเช็ค `is_alive()` ทุก 0.2 วิ + ปิด child pipe ฝั่ง parent
+- ข้อจำกัด: B on-demand มีแค่ interface ใน registry (ไม่มี B จริงให้ทดสอบ — engine ยังไม่เรียก infer.py); หุ้นที่ condition ให้ซื้อวันที่ไม่มีราคา → ข้าม (log) และไม่ลองซ้ำวันถัดไปถ้าเป้าไม่เปลี่ยน
+- DoD: ✅

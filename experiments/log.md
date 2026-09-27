@@ -1326,3 +1326,23 @@ candidate pool จาก SEC frames (dei:EntityPublicFloat ทุกไตรม
 
 **ขั้นต่อไปที่ควรลอง:** T4 Lazy Prices (round 012)
 ---
+
+---
+## Sandbox v2 W3 — engine validation + pipeline run แรก (A1 → B stub → C rulebase-exp03 → equal_weight_A) — 2026-09-27 13:05
+
+**วิธีที่ใช้:** engine ใหม่ของ sandbox v2 (`sandbox/v2/engine.py`): อ่าน signal ที่ precomputed เท่านั้น, ตัดสินใจ close วัน t → execute close วัน t+1 (Adj Close), cost 0.10%/ขา, rebalance เฉพาะวันที่เป้าน้ำหนักเปลี่ยน, condition รันใน process แยก (ได้ข้อมูล ≤ t ทีละวัน) — ไม่ใช่การประเมินกลยุทธ์ เป็นการตรวจความถูกต้องของระบบ; ไม่นับเป็น trial ของ Model A
+
+**ข้อมูลที่ใช้:** ราคา yfinance 575 ticker (`sandbox/v2/data/prices/`, 2021-09-27 → 2023-06-30 = 443 วันทำการ, ok 564/partial 11/missing 0); signal A1 จาก `model_A/export/A1_r001_Q_LOWACC_overall/signals.parquet` (สร้างโดย `export/build_history.py`), B stub, C `model_c_rulebase/export/rulebase-exp03/signals.parquet`
+
+**ผลลัพธ์:**
+- export ของ Model A: holdings จาก signal ทั้ง 5 กฎ (A1–A5) + backtest engine เดิมของ Model A → NAV ตรงกับ `r001/r004_nav.parquet` (max rel diff ≤ 6e-15)
+- sanity `hold_SPY`: equity ต่างจาก SPY buy & hold − cost ที่คำนวณอิสระ < 1e-4 (test ผ่าน), total return 4.91% = SPY 4.91%
+- A1 filter + `equal_weight_A` เทียบ NAV ของ Model A ช่วงถือรอบ มิ.ย. 2022 (2022-07-05 → 2023-06-30): ผลตอบแทนสะสม 20.09% vs 19.92%, correlation ผลตอบแทนรายวัน 0.99999, ต่างรายวันสูงสุด 2.3e-4
+- A1 filter เดี่ยว ทั้งช่วง: total return 14.17%, Sharpe 0.340, MaxDD −19.85%, 194 trades (SPY 4.91%, EW universe 5.87%)
+- pipeline DoD (A1 filter + B stub filter + C rb03 filter + equal_weight_A): total return 10.69%, CAGR 5.96%, Sharpe 0.258, MaxDD −30.84%, trades 12,767, turnover 16.5 เท่า/ปี, ค่าธรรมเนียมรวม 60,587 (6.1% ของทุน); funnel เฉลี่ย 552 → A 74.1 → B 64.4 → C 34.6 → ถือ 34.6
+- pytest `sandbox/v2/tests` 19/19 ผ่าน (look-ahead, sanity, held-out guard, condition พัง/วนลูป/น้ำหนักเกิน, cancel)
+
+**มุมมอง/การตีความ:** engine ให้ผลตรงกับ backtest ของ Model A ในจุดที่เทียบได้ ส่วนต่างเล็กน้อยมาจาก execution ช้ากว่า 1 วันและแหล่งราคาต่างกัน; pipeline ที่มี B stub/C กรองรายวันทำให้รายชื่อเปลี่ยนเกือบทุกวัน → `equal_weight_A` rebalance บ่อยมาก ค่าธรรมเนียมกินผลตอบแทน — B เป็น stub และ C เป็น negative result ตัวเลขนี้จึงไม่มีความหมายทางการลงทุน ใช้ยืนยันว่า pipeline ทำงานเท่านั้น ช่วงราคา 5 ปีให้ A รายปีได้แค่ 2 รอบ
+
+**ขั้นต่อไปที่ควรลอง:** W4 persistence + reproducibility test; พิจารณาขยาย PRICE_START เป็น 2010-06-01 เพื่อให้ A มีหลายรอบ
+---

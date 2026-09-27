@@ -6,6 +6,7 @@ Config กลางของ sandbox v2 "Pipeline Lab" — single source of trut
 ตัว updater จะดึงเฉพาะช่วงที่ยังไม่มี (ย้อนหลัง/ต่อท้าย) — โค้ดส่วนอื่นไม่ต้องแก้
 """
 
+import os
 from pathlib import Path
 
 PRICE_START = "2021-09-27"   # 5 ปีย้อนหลังตามที่ผู้ใช้ขอ (ดู DECISIONS_NEEDED.md ข้อ 2)
@@ -15,7 +16,7 @@ TRANSACTION_COST = 0.001     # 0.10% ต่อขา ตรงกับ Model A
 INITIAL_CAPITAL = 1_000_000
 DECISION_FREQ = "daily"
 EXECUTION = "next_close"     # signal ณ close วัน t → ซื้อขายที่ close วัน t+1
-HOST, PORT = "127.0.0.1", 5060
+HOST, PORT = "127.0.0.1", int(os.environ.get("SANDBOX_V2_PORT", "5060"))
 
 HELD_OUT_CONFIRM_TEXT = "ยืนยัน held-out"
 
