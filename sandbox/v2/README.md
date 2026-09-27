@@ -11,7 +11,7 @@
 ## รัน (คำสั่งเดียว จาก repo root)
 
 ```bash
-python3 -m sandbox.v2.server          # → http://127.0.0.1:5060
+python3 -m sandbox.v2.server          # → http://127.0.0.1:5090
 ```
 
 ครั้งแรกบนเครื่องใหม่ (ต้องมีเน็ต ครั้งเดียว — หลังจากนั้นใช้ offline ได้):

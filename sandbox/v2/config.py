@@ -16,7 +16,7 @@ TRANSACTION_COST = 0.001     # 0.10% ต่อขา ตรงกับ Model A
 INITIAL_CAPITAL = 1_000_000
 DECISION_FREQ = "daily"
 EXECUTION = "next_close"     # signal ณ close วัน t → ซื้อขายที่ close วัน t+1
-HOST, PORT = "127.0.0.1", int(os.environ.get("SANDBOX_V2_PORT", "5060"))
+HOST, PORT = "127.0.0.1", int(os.environ.get("SANDBOX_V2_PORT", "5090"))  # ห้ามใช้ 5060: อยู่ใน unsafe port list ของ Chrome (SIP)
 
 HELD_OUT_CONFIRM_TEXT = "ยืนยัน held-out"
 

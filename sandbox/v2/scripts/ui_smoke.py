@@ -2,7 +2,7 @@
 UI smoke test ด้วย Playwright (headless Chromium): เปิดทุกหน้า, รันจาก UI จนจบ, บันทึก, เปิดผล, หน้าหุ้น, compare
 เก็บ console error ทั้งหมด + screenshot ลง sandbox/v2/screenshots/
 
-    python3 -m sandbox.v2.scripts.ui_smoke            # ใช้ server ที่รันอยู่ที่ 127.0.0.1:5060 หรือเปิดใหม่ที่ port 5095
+    python3 -m sandbox.v2.scripts.ui_smoke            # เปิด server ของตัวเองที่ port 5095 (เปลี่ยนได้ด้วย env UI_PORT)
 """
 
 from __future__ import annotations
