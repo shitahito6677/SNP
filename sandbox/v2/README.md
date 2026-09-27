@@ -83,6 +83,22 @@ def decide(ctx):                       # เรียกทุกวันทำ
 กติกา: long-only, น้ำหนัก ≥ 0 รวม ≤ 1, ticker ต้องอยู่ใน universe / SPY + sector ETF / ที่ถืออยู่ ·
 rebalance เฉพาะวันที่ผลลัพธ์เปลี่ยนจากครั้งก่อน · `decide()` เกิน 10 วินาที/ครั้ง หรือ job เกิน 30 นาที → job fail
 
+## ขอบเขตการลงทุน (ขั้น 0 ก่อนกล่อง A)
+- หน้า Pipeline → "ขั้น 0 — ขอบเขตการลงทุน": `ทั้งตลาด (S&P 500)` (ค่าเริ่มต้น) / `เลือก Sector` (11 GICS ETF, เลือกได้หลายตัว) / `เลือกหุ้นเอง` (พิมพ์ `@ticker` หรือชื่อบริษัท แล้ว Enter)
+- **A จัดอันดับจากทั้ง universe เสมอ** แล้วค่อยกรองเหลือ scope — record ของ A (class/score/เหตุผล) ที่เงื่อนไขเห็นเป็นค่าเดียวกับตอนไม่จำกัด scope
+- funnel ขั้นแรก = หุ้นใน scope ที่มีราคาวันนั้น · EW benchmark = EW ของหุ้นใน scope · SPY = ตลาดรวม (ไม่เปลี่ยน)
+- `config.json` เก็บ `scope: {mode, sectors, tickers, members}` → เปิดผลเก่า/Re-run ได้ scope เดิม
+- sector ว่าง / ticker ไม่รู้จัก → preflight ปฏิเสธก่อนกด RUN; หุ้นใน scope ไม่ผ่าน A ทุกรอบ → เตือนก่อนรัน และหน้าผลบอกว่าทำไมพอร์ตว่าง
+- หุ้นที่หลุด index (sector = Unknown, 59 ตัว) อยู่ได้เฉพาะ scope "ทั้งตลาด"
+
+## นำเข้าข่าว CSV
+- จับคู่ column จากคำในชื่อ (มีวงเล็บ/คำไทยนำหน้าได้ เช่น `ข่าวแบบย่อ (short_news)`) — หน้า preview แก้ mapping เองได้ก่อนบันทึก
+- label ตัวเลข (เช่น `-2..+2`) → sentiment ตามเครื่องหมาย + `score = label/สเกล` (เก็บค่าดิบใน `label_raw`); หรือข้อความ positive/neutral/negative
+- column อื่น (`source_url`, `label_reason`, …) เก็บเป็น `extra` ต่อแถว; แถวที่อ่านไม่ได้ถูกข้ามพร้อมเหตุผล ไม่ทำให้ทั้งไฟล์ fail
+
+## Error / log
+- ทุก error ของ API คืน JSON ข้อความภาษาไทย (ไม่มีหน้า 500 HTML ดิบ); error ที่ไม่คาดคิดมี `รหัสอ้างอิง` → ค้นใน `sandbox/v2/logs/server.log` (traceback เต็ม, gitignored)
+
 ## Held-out
 
 ข้อมูลตั้งแต่ `2023-07-01` ล็อกไว้ (วันจบ default `2023-06-30`) — รันเข้าช่วงนี้ต้องเปิด toggle + พิมพ์ `ยืนยัน held-out`

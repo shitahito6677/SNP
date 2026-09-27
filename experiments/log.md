@@ -1360,3 +1360,21 @@ candidate pool จาก SEC frames (dei:EntityPublicFloat ทุกไตรม
 
 **ขั้นต่อไปที่ควรลอง:** เพิ่มชุดทดสอบให้ใหญ่ขึ้น (≥100 หัวข่าวจริง) ก่อนตัดสินใจปรับ alias/stopword
 ---
+
+---
+## Sandbox v2 F3 — ขอบเขตการลงทุน (all / 1 sector / 1 ticker) ด้วย A1 filter + equal_weight_A — 2026-09-28 06:05
+
+**วิธีที่ใช้:** เพิ่ม "ขอบเขตการลงทุน" ก่อนกล่อง A ใน engine ของ sandbox v2 — สัญญาณ A อ่านจาก export ที่จัดอันดับจากทั้ง universe แล้วค่อยกรองเหลือหุ้นใน scope (ไม่จัดอันดับใหม่), EW benchmark = EW ของหุ้นใน scope, SPY ไม่เปลี่ยน; รัน 3 กรณีเทียบกัน (config เดียวกันทุกอย่างนอกจาก scope) — เป็นการตรวจความถูกต้องของฟีเจอร์ ไม่ใช่การประเมินกลยุทธ์ และไม่นับเป็น trial ของ Model A
+
+**ข้อมูลที่ใช้:** ราคา yfinance 575 ticker (`sandbox/v2/data/prices/`, 2021-09-27 → 2023-06-30 = 443 วันทำการ); signal `A:A1_r001_Q_LOWACC_overall` (2 รอบ rebalance ในช่วงนี้); scope sector XLE = 21 หุ้น (GICS Energy ตาม `universe_manifest.json`), scope ticker = NVDA (และ XOM ใน pytest)
+
+**ผลลัพธ์:**
+- scope = all: funnel เฉลี่ย 552.2 → A 74.1 → ถือ 74.1; total return 14.17%, Sharpe 0.340, MaxDD −19.85%, 194 trades; EW (ทั้ง universe) 5.87%, SPY 4.91% — **metrics/equity/trades/funnel/positions ตรงกับ engine ก่อน F3 ทุกไบต์** (ตรวจ 2 config: A1+EW และ A5+B stub+C rb03)
+- scope = sector XLE: funnel ขอบเขต 21.0 → A 10.4 → ถือ 10.4 (ตลาดรวม 552.2); total return 66.47%, Sharpe 0.892, MaxDD −30.82%, 23 trades; **EW ของ 21 ตัว XLE 60.33%** (Sharpe 0.900) — เทียบ EW ทั้งตลาด 5.87% ต่างกันมาก; SPY 4.91%
+- scope = NVDA: funnel ขอบเขต 1 → A 0 → ถือ 0 ทุกวัน (A1 ไม่เลือก NVDA ทั้ง 2 รอบ) → พอร์ตเป็นเงินสด 100% ตลอด, return 0.00%; EW ของ NVDA ตัวเดียว 104.43% (MaxDD −66.34%); ระบบเตือนก่อนรัน + หน้าผลแสดง "หุ้นที่เลือกไม่ผ่านเกณฑ์ A ในช่วงเวลานี้"
+- pytest `sandbox/v2/tests` 71/71 ผ่าน (รวม test_scope 18 ข้อ: funnel ขั้นแรก = จำนวนหุ้นใน scope ที่มีราคาทุกวัน, EW = `_bench_ew` ของหุ้นใน scope ทุกค่า, บันทึก → restart → เปิดใหม่ scope เดิม, record A ใน scope = record เดียวกับไม่จำกัด scope)
+
+**มุมมอง/การตีความ:** ในช่วงนี้ (ก.ย. 2021 – มิ.ย. 2023) หุ้นพลังงานขึ้นแรงทั้งกลุ่ม — ผล 66% ของ scope XLE จึงมาจากตัวกลุ่มเป็นหลัก (EW ของกลุ่มเองได้ 60%) ส่วนต่าง vs EW ขอบเขต (+6.1 จุด) คือสิ่งที่ A1 เพิ่มให้จริง ถ้าเทียบกับ EW ทั้งตลาด (5.87%) จะดูเหมือน A เก่งเกินจริง — ยืนยันเหตุผลที่ต้องให้ EW ตาม scope; ข้อมูลแค่ 2 รอบ rebalance และ 21 ตัว จึงยังสรุปอะไรเรื่องฝีมือ A ในกลุ่มพลังงานไม่ได้; Sharpe −20 ของกรณี NVDA เป็นผลของสูตร (excess return = −rf ทุกวัน, volatility ≈ 0) ไม่ใช่ความเสี่ยงจริง
+
+**ขั้นต่อไปที่ควรลอง:** ขยาย PRICE_START เป็น 2010-06-01 เพื่อให้เทียบ A ราย sector ได้หลายรอบ; แสดง Sharpe เป็น "—" เมื่อพอร์ตไม่เคยลงทุน
+---

@@ -39,6 +39,12 @@ function results() {
         manual: "รวมข่าวที่ผู้ใช้พิมพ์เอง (source=manual) ไม่ใช่ output ของโมเดล",
       }[b.kind] || "";
     },
+    ewLabel() { const sc = this.r?.metrics?.scope; return sc ? `EW ขอบเขต (${sc.ew_names} ตัว)` : "EW universe"; },
+    scopeText() {
+      const sc = this.r.config.scope, m = this.r.metrics.scope || {};
+      const what = sc.mode === "sectors" ? `sector ${sc.sectors.join(", ")}` : `หุ้น ${sc.tickers.join(", ")}`;
+      return `${what} — ${m.n_members ?? (sc.members || []).length} ตัวในขอบเขต (มีราคา ${m.n_priced ?? "?"} ตัว) · อันดับ A มาจากทั้ง universe แล้วค่อยกรอง · EW = EW ของหุ้นในขอบเขต · SPY = ตลาดรวม`;
+    },
     heroCards() {
       const m = this.r?.metrics?.full;
       if (!m) return [];
@@ -81,7 +87,7 @@ function results() {
       const annot = this.heldOutShape().length ? [{ x: Alpine.store("app").meta.config.held_out_start, y: 1, yref: "paper", text: "HELD-OUT", showarrow: false, font: { color: "#FCA5A5", size: 11 }, xanchor: "left" }] : [];
       Plotly.react(this.$refs.eq, [
         { x, y: eq.map((e) => e.spy), name: "SPY buy & hold", line: { color: "#60A5FA", width: 1.5 } },
-        { x, y: eq.map((e) => e.ew), name: "EW universe", line: { color: "#A78BFA", width: 1.5, dash: "dot" } },
+        { x, y: eq.map((e) => e.ew), name: this.ewLabel(), line: { color: "#A78BFA", width: 1.5, dash: "dot" } },
         { x, y: eq.map((e) => e.strategy), name: "Strategy", line: { color: "#FDE68A", width: 2.4 } },
       ], PL.layout({ shapes: this.heldOutShape(), annotations: annot, yaxis: { gridcolor: "rgba(120,150,220,.10)", tickformat: ",.0f" } }), PL.config);
       Plotly.react(this.$refs.dd, [
@@ -106,8 +112,9 @@ function results() {
     renderSankey() {
       // เฉพาะกล่องที่เปิด — กล่องที่ปิด (bypass) ไม่แสดงเป็น node
       const f = this.r.metrics.funnel_avg || {}, st = this.r.config.stages;
-      const U = f.universe || 0;
-      const seq = [["Universe", U, "#94A3B8", null]];
+      const U = f.universe || 0, sc = this.r.config.scope;
+      const first = !sc || sc.mode === "all" ? "ทั้งตลาด" : (sc.mode === "sectors" ? `ขอบเขต ${sc.sectors.join(" ")}` : `ขอบเขต ${sc.tickers.slice(0, 3).join(" ")}${sc.tickers.length > 3 ? "…" : ""}`);
+      const seq = [[first, U, "#94A3B8", null]];
       const colors = { A: ["#10B981", "rgba(16,185,129,.45)"], B: ["#A855F7", "rgba(168,85,247,.45)"], C: ["#F97316", "rgba(249,115,22,.45)"] };
       for (const m of ["A", "B", "C"]) if (st[m].mode !== "off") seq.push([`ผ่าน ${m}${st[m].mode === "score-only" ? " (แนบคะแนน)" : ""}`, f["after_" + m], colors[m][0], colors[m][1], m]);
       const lastN = seq[seq.length - 1][1];

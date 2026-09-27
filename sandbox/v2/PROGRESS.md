@@ -92,8 +92,17 @@
 - ผ่านเว็บจริง (Playwright): หน้าหุ้นพิมพ์ `@meta` → Enter → กราฟขึ้น ไม่มีกล่อง error; หน้าข่าว `@meta` + วันที่ 2026-09-10 → `/api/stock/META?start=2026-07-27&end=2026-10-25` = 200 (เดิม 500) กล่องกราฟแสดง "ไม่มีราคาในช่วงนี้ (held-out)"; 5xx/console error = 0 — screenshot `screenshots/F2_stock_META.jpg`
 - DoD: ✅
 
+## F3 — ขอบเขตการลงทุน ✅
+- engine: `normalize_scope/scope_members/scope_label`, `config.scope = {mode, sectors, tickers, members}`, `stage_day(..., scope)` กรองหลังอ่าน A, funnel ขั้นแรก `universe` = หุ้นใน scope ที่มีราคา (+ `market` = ทั้งตลาด), EW benchmark จากหุ้นใน scope, `metrics.scope`; preflight ปฏิเสธ sector/ticker ผิดหรือว่าง, เตือนถ้าหุ้นใน scope ไม่ผ่าน A ทุกรอบ; dry-run (Validate) ใช้ scope ด้วย
+- UI: "ขั้น 0 — ขอบเขตการลงทุน" เหนือกล่อง A (radio 3 โหมด, chip 11 sector พร้อมจำนวนหุ้น, ช่องค้นหา `@` เลือกหลายตัว, สรุป "sector XLE → 21 ตัว"), ป้าย flow "ขอบเขต N →"; หน้าผล: แถบ "ขอบเขต", Sankey node แรก "ขอบเขต XLE 21", กราฟ/ตาราง "EW ขอบเขต (21 ตัว)", กล่อง "พอร์ตว่าง" บอกเหตุผล; gallery chip `scope: XLE`
+- ผลรันจริง (experiments/log.md "F3"): all = 14.17% (EW 5.87%) ตรงกับก่อน F3 ทุกไบต์; XLE = 66.47% vs EW XLE 60.33%; NVDA = ไม่ผ่าน A ทั้ง 2 รอบ → พอร์ตว่าง + ข้อความอธิบาย
+- test `tests/test_scope.py` 18 ข้อ (all / 1 sector XLE / 1 ticker XOM ผ่าน API จริง → บันทึก → restart → เปิดใหม่): funnel ขั้นแรก = จำนวนหุ้นใน scope ที่มีราคาทุกวัน, EW = EW ของ scope ทุกค่า (และ ≠ EW ทั้งตลาด), SPY เท่าเดิม, scope/chips/metrics/funnel/equity หลังเปิดใหม่ตรงกัน, A record ไม่ถูกจัดอันดับใหม่, NVDA → เตือน + empty_reason, scope ผิด 5 แบบ, sector ไม่มีสมาชิก → preflight 400
+- ผ่านเว็บจริง (Playwright): เลือก Sector แต่ยังไม่เลือก → เตือนก่อน RUN; XLE → "21 ตัว"; `@nvda` → เตือนไม่ผ่าน A → RUN → หน้าผลแสดง "พอร์ตว่าง"; XLE → RUN → บันทึก → เปิดใหม่ → scope เดิม; 5xx/page error = 0 (เจอ+แก้ `sectorList()` อ่าน meta ก่อนโหลด); `ui_smoke` เดิม console errors 0 — screenshot `screenshots/F3_*.jpg`
+- tests รวม **71/71 ผ่าน**
+- DoD: ✅
+
 # สรุปรวม
-**ทำครบ W0–W8** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
+**ทำครบ W0–W8 + F1–F3** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
 **ตรวจแล้วด้วยการรันจริง**
 - signal Model A ทั้ง 5 กฎ reproduce NAV ของ backtest เดิมเป๊ะ (≤ 6e-15); engine ของ sandbox ตาม NAV ของ A1 (corr รายวัน 0.99999)

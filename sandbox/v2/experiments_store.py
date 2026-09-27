@@ -76,7 +76,28 @@ def chips(conf, prov) -> list:
             lab = (prov.get("versions") or {}).get(m, {}).get("short_label", s["version"])
             out.append(f"{lab}{' (score)' if s['mode'] == 'score-only' else ''}")
     out.append(f"cond: {conf['condition'].get('id') or conf['condition'].get('name')}")
+    sc = conf.get("scope") or {}
+    if sc.get("mode") == "sectors":
+        out.insert(0, "scope: " + " ".join(sc["sectors"]))
+    elif sc.get("mode") == "tickers":
+        out.insert(0, "scope: " + " ".join(sc["tickers"][:4]) + (f" +{len(sc['tickers']) - 4}" if len(sc["tickers"]) > 4 else ""))
     return out
+
+
+def empty_reason(conf, met) -> str | None:
+    """พอร์ตไม่เคยถือหุ้นเลย → บอกว่าหุ้นหายไปที่ขั้นไหนของ funnel (แทนกราฟเปล่าเงียบ ๆ)"""
+    f = met.get("funnel_avg") or {}
+    if (met.get("full") or {}).get("strategy", {}).get("avg_holdings", 1) or f.get("held", 1):
+        return None
+    sc = conf.get("scope") or {}
+    who = "หุ้นที่เลือก" if sc.get("mode") == "tickers" else ("หุ้นใน sector ที่เลือก" if sc.get("mode") == "sectors" else "หุ้นใน universe")
+    if not f.get("universe"):
+        return f"{who}ไม่มีราคาในช่วงเวลานี้ — พอร์ตว่างตลอดการทดลอง"
+    for m, name in (("A", "A"), ("B", "B"), ("C", "C")):
+        st = conf["stages"][m]
+        if st["mode"] == "filter" and not f.get(f"after_{m}"):
+            return f"{who}ไม่ผ่านเกณฑ์ {name} ในช่วงเวลานี้ — กล่อง {name} กรองออกหมด พอร์ตจึงว่างตลอดการทดลอง"
+    return "มีหุ้นผ่านทุกกล่อง แต่เงื่อนไข (condition) ไม่ได้ให้น้ำหนักหุ้นตัวใดเลย — พอร์ตว่างตลอดการทดลอง"
 
 
 def _summary(d: Path, name: str, exp_id: str | None, saved_at: str | None) -> dict:
@@ -150,7 +171,8 @@ def load_dir(d: Path, exp_id: str | None = None) -> dict:
     conf, met, prov = _json(d / "config.json"), _json(d / "metrics.json"), _json(d / "provenance.json")
     src = (d / "condition_snapshot.py").read_text(encoding="utf-8")
     out = {"id": exp_id, "config": conf, "metrics": met, "provenance": prov, "condition_source": src,
-           "badges": badges(conf, prov), "chips": chips(conf, prov), "has_artifacts": (d / "equity.parquet").exists()}
+           "badges": badges(conf, prov), "chips": chips(conf, prov), "has_artifacts": (d / "equity.parquet").exists(),
+           "empty_reason": empty_reason(conf, met)}
     if not out["has_artifacts"]:
         return out
     eq = pd.read_parquet(d / "equity.parquet")

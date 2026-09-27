@@ -64,3 +64,11 @@
 - ใครเรียกแบบนั้น: mini chart ของหน้าเพิ่มข่าว (±45 วันรอบวันที่ข่าว) — พิมพ์ `@meta` + วันที่ข่าวหลัง ~2023-08-14 → กล่องกราฟขึ้น `HTTP 500` (ตรงกับอาการ "พิมพ์ @meta แล้วเลือก → 500")
 - **เลือก:** ช่วงที่อยู่ใน held-out ทั้งหมด → 200 + bars ว่าง + หมายเหตุ "ล็อกไว้" (UI เดิมมีข้อความรองรับอยู่แล้ว); คร่อม → ตัดที่ DEFAULT_END + หมายเหตุ
 - manifest ปัจจุบัน **ไม่มี status `missing`** (ok 564 / partial 11) → test ของ missing ใช้ manifest จำลอง 1 รายการ
+
+## 13. (F3) ขอบเขตการลงทุน — การออกแบบ
+- **กรองหลังอ่าน A:** `stage_day()` อ่าน snapshot ของ A (ranking ทั้ง universe ที่ precomputed ใน export) แล้วค่อยตัดเหลือ scope — ไม่มีโค้ดจัดอันดับใหม่ใน sandbox เลย (test ยืนยันว่า record ของ A ใน scope เท่ากับตอนไม่จำกัด scope ทุกตัวอักษร)
+- **ราคา/columns ที่ส่งให้ condition ไม่ถูกตัด** (ยังเห็นราคาทุกตัว + ETF) — scope จำกัดแค่ `ctx.universe` และสิ่งที่ซื้อได้; ETF ยังซื้อได้เหมือนเดิม
+- **sector ของ scope = GICS ใน `universe_manifest.json` (snapshot S&P 500 ปัจจุบัน)** — หุ้นที่หลุด index แล้ว 59 ตัวไม่มี GICS ย้อนหลัง (sector = Unknown) → อยู่ได้เฉพาะ scope "ทั้งตลาด"; scope ราย sector จึงมี survivorship bias มากกว่า "ทั้งตลาด" เล็กน้อย
+- **backward compatible:** scope = all → metrics/equity/trades/funnel/positions ตรงกับ engine ก่อน F3 ทุกไบต์ (ตรวจแล้ว 2 config) — key ใหม่ (`funnel.market`, `metrics.scope`) ใส่เฉพาะเมื่อจำกัด scope เพื่อให้ Re-run การทดลองเก่าได้ "REPRODUCED"
+- **EW เมื่อ scope ยังไม่มีราคาวัน rebalance** (เช่นหุ้น IPO ตัวเดียว) → ถือเงินสดรอบนั้น (เดิมจะหารด้วยศูนย์) — ไม่กระทบ scope = all
+- "พอร์ตว่าง" คำนวณตอนเปิดผล (`experiments_store.empty_reason`) จาก funnel ไม่ได้เขียนลง metrics.json

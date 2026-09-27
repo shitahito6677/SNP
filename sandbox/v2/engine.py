@@ -31,6 +31,7 @@ from sandbox.v2.signals import AsOf, load_manual_news
 
 STAGES = ["load", "A", "B", "C", "condition", "simulate", "metrics", "save"]
 MODES = ("off", "filter", "score-only")
+SCOPE_MODES = ("all", "sectors", "tickers")
 ALLOWED_ETFS = [cfg.BENCHMARK] + list(cfg.SECTOR_ETFS.values())
 
 
@@ -57,6 +58,56 @@ DEFAULT_CRITERIA = {
 }
 
 
+def normalize_scope(raw) -> dict:
+    """ขอบเขตการลงทุน: all = ทั้ง universe (S&P 500) · sectors = GICS sector ETF ที่เลือก · tickers = หุ้นที่ระบุเอง"""
+    raw = raw or {}
+    mode = raw.get("mode") or "all"
+    if mode not in SCOPE_MODES:
+        raise ConfigError(f"ขอบเขต: mode ต้องเป็น {SCOPE_MODES} (ได้ {mode!r})")
+    if mode == "sectors":
+        valid = list(cfg.SECTOR_ETFS.values())
+        secs = sorted({str(x).strip().upper() for x in raw.get("sectors") or [] if str(x).strip()})
+        bad = [x for x in secs if x not in valid]
+        if bad:
+            raise ConfigError(f"ขอบเขต: ไม่รู้จัก sector {bad} (ใช้ได้: {' '.join(valid)})")
+        if not secs:
+            raise ConfigError("ขอบเขต: ยังไม่ได้เลือก sector")
+        return {"mode": mode, "sectors": secs, "tickers": []}
+    if mode == "tickers":
+        tks = sorted({str(x).strip().lstrip("@$").upper().replace(".", "-") for x in raw.get("tickers") or [] if str(x).strip()})
+        stocks = set(prices.available_tickers("stock"))
+        bad = [x for x in tks if x not in stocks]
+        if bad:
+            raise ConfigError(f"ขอบเขต: ไม่พบหุ้น {bad} ในระบบ (หรือไม่มีราคา)")
+        if not tks:
+            raise ConfigError("ขอบเขต: ยังไม่ได้เลือกหุ้น")
+        return {"mode": mode, "sectors": [], "tickers": tks}
+    return {"mode": "all", "sectors": [], "tickers": []}
+
+
+def scope_members(scope: dict | None):
+    """None = ทั้ง universe; list = หุ้นใน scope (ตาม manifest — ยังไม่ดูว่ามีราคาช่วงไหน)"""
+    scope = scope or {"mode": "all"}
+    if scope["mode"] == "all":
+        return None
+    stocks = prices.available_tickers("stock")
+    if scope["mode"] == "sectors":
+        want = set(scope["sectors"])
+        return [t for t in stocks if cfg.SECTOR_ETFS.get(prices.sector_of(t)) in want]
+    ok = set(stocks)
+    return [t for t in scope["tickers"] if t in ok]
+
+
+def scope_label(scope: dict | None) -> str:
+    scope = scope or {"mode": "all"}
+    if scope["mode"] == "sectors":
+        return "sector " + " ".join(scope["sectors"])
+    if scope["mode"] == "tickers":
+        tk = scope["tickers"]
+        return "หุ้น " + " ".join(tk[:6]) + (f" +{len(tk) - 6}" if len(tk) > 6 else "")
+    return "ทั้งตลาด (S&P 500)"
+
+
 def normalize_config(c: dict) -> tuple:
     """ตรวจ + เติมค่า default → (config, warnings) ; ผิด = ConfigError"""
     c = json.loads(json.dumps(c))  # deep copy
@@ -73,6 +124,20 @@ def normalize_config(c: dict) -> tuple:
         raise prices.HeldOutError(
             f"ช่วงวันที่ถึง {end.date()} เข้า held-out (≥ {cfg.HELD_OUT_START}) — ต้องเปิด toggle และพิมพ์ "
             f"'{cfg.HELD_OUT_CONFIRM_TEXT}' ก่อน (ผลจะติดธง held_out_touched ถาวร)")
+    scope = normalize_scope(c.get("scope"))
+    members = scope_members(scope)
+    if members is not None:
+        if not members:
+            raise ConfigError(f"ขอบเขต: {scope_label(scope)} ไม่มีหุ้นใน universe เลย — เลือก sector/หุ้นใหม่")
+        has = prices.load("adj", members, start, end, touched).notna().any()
+        if not has.any():
+            raise ConfigError(f"ขอบเขต: หุ้นใน {scope_label(scope)} ไม่มีราคาในช่วง {start.date()} → {end.date()} เลย")
+        nopx = sorted(has.index[~has])
+        scope["members"] = members
+        warnings.append(f"SCOPE: ทดลองเฉพาะ {scope_label(scope)} ({len(members)} ตัว) — สัญญาณ A ยังจัดอันดับจากทั้ง universe "
+                        "แล้วค่อยกรองเหลือเฉพาะ scope (ไม่จัดอันดับใหม่) · EW benchmark = EW ของหุ้นใน scope · SPY = ตลาดรวมเหมือนเดิม")
+        if nopx:
+            warnings.append(f"SCOPE: {len(nopx)} ตัวใน scope ไม่มีราคาในช่วงนี้: {' '.join(nopx[:10])}" + (" …" if len(nopx) > 10 else ""))
     stages = {}
     for m in "ABC":
         s = dict((c.get("stages") or {}).get(m) or {})
@@ -111,6 +176,7 @@ def normalize_config(c: dict) -> tuple:
         "cost": float(c.get("cost") if c.get("cost") is not None else cfg.TRANSACTION_COST),
         "execution": cfg.EXECUTION,
         "held_out": {"enabled": bool(ho.get("enabled")), "touched": bool(touched)},
+        "scope": scope,
         "stages": stages,
         "include_manual": bool(c.get("include_manual")),
         "condition": {"id": cond.get("id"), "name": cond["name"], "source": cond["source"]},
@@ -134,7 +200,26 @@ def coverage_warnings(conf: dict) -> list:
         man = registry.get(s["version"])
         for w in man.get("warnings") or []:
             out.append(f"{man['short_label']}: {w}")
+        if m == "A" and s["mode"] == "filter" and (conf.get("scope") or {}).get("mode", "all") != "all":
+            out += _scope_vs_A(conf, a, start, end)
     return out
+
+
+def _scope_vs_A(conf, a, start, end) -> list:
+    """เตือนก่อนรัน: หุ้นใน scope ไม่ผ่านเกณฑ์ A เลยทุกรอบของช่วงนี้ → พอร์ตจะว่างตลอด"""
+    members = conf["scope"].get("members") or scope_members(conf["scope"])
+    Rs = [R for R in getattr(a, "R", []) if start <= R <= end]
+    R0 = a.rebalance_date(start)
+    Rs = sorted(set(Rs + ([R0] if R0 is not None else [])))
+    if not Rs:
+        return []
+    crit = conf["stages"]["A"]["criteria"]
+    ever = sorted({k for R in Rs for k in members if _crit_A(a.at(k, R), crit)})
+    if not ever:
+        return [f"SCOPE: หุ้นใน scope ไม่ผ่านเกณฑ์ A ในทุกรอบของช่วงนี้ ({len(Rs)} รอบ) → กล่อง A กรองออกหมด พอร์ตจะว่างตลอดการทดลอง"]
+    if len(ever) < len(members):
+        return [f"SCOPE: ผ่านเกณฑ์ A อย่างน้อย 1 รอบ {len(ever)}/{len(members)} ตัว"]
+    return []
 
 
 # ---------------------------------------------------------------- condition process
@@ -265,6 +350,14 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
     irx = prices.load("close", [cfg.RISK_FREE], start, end, allow)[cfg.RISK_FREE].reindex(cal).ffill()
     rf_daily = (irx.shift(1) / 100 / 252).fillna(0.0)
     log(f"ราคา {len(cal)} วันทำการ {cal[0].date()} → {cal[-1].date()}, หุ้น {len(stocks)} ตัว + ETF {len(columns) - len(stocks)}")
+    # ขอบเขต: ไม่ตัด universe ของราคา/สัญญาณ — A ยังอ่าน ranking ที่คำนวณจากทั้ง universe; กรองเหลือ scope ใน stage_day
+    members = scope_members(conf.get("scope"))
+    scope = None if members is None else set(members) & set(stocks)
+    scope_stocks = stocks if scope is None else [t for t in stocks if t in scope]
+    if scope is not None:
+        if not scope_stocks:
+            raise ConfigError(f"ขอบเขต: หุ้นใน {scope_label(conf['scope'])} ไม่มีราคาในช่วงนี้")
+        log(f"ขอบเขต: {scope_label(conf['scope'])} → {len(scope_stocks)} ตัวที่มีราคา (จาก {len(members)} ตัวใน scope)")
     progress("load", 5, None, None)
 
     # ---- stages
@@ -424,7 +517,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
             # 4) pipeline + decide (ไม่ต้องตัดสินใจวันสุดท้าย เพราะไม่มีวัน t+1 ให้ execute)
             price_payload = {"date": str(t.date()), "prices": _price_row(adj, close, vol, i)}
             held = sorted(units)
-            universe, a_recs, b_recs, c_recs, fun = stage_day(t, pxrow, stocks, held, asof, st, sector_of)
+            universe, a_recs, b_recs, c_recs, fun = stage_day(t, pxrow, stocks, held, asof, st, sector_of, scope)
 
             if i < n - 1:
                 payload = dict(price_payload, universe=universe, a=a_recs, b=b_recs, c=c_recs,
@@ -469,7 +562,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
     progress("metrics", 96, 3, "คำนวณ metrics")
     equity = pd.DataFrame(eq_rows).set_index("date")
     equity["spy"] = _bench_spy(adj, conf["capital"], cost)
-    equity["ew"] = _bench_ew(adj[stocks], conf["capital"], cost)
+    equity["ew"] = _bench_ew(adj[scope_stocks], conf["capital"], cost)  # EW ของหุ้นใน scope (ทั้ง universe ถ้า scope = all)
     trades_df = pd.DataFrame(trades, columns=["date", "decision_date", "ticker", "side", "units", "price_adj", "price_close",
                                               "notional", "cost", "weight_before", "weight_after", "reasons"])
     for tk, p in pos.items():
@@ -479,7 +572,10 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
                             "pnl": float(p["realized"] + p["units"] * lp - p["basis"]), "closed": False})
     met = metrics.compute(equity, rf_daily, trades_df, round_trips, cfg.HELD_OUT_START)
     funnel = pd.DataFrame(funnel_rows)
-    met["funnel_avg"] = {k: float(funnel[k].mean()) for k in ("universe", "after_A", "after_B", "after_C", "held") if k in funnel}
+    met["funnel_avg"] = {k: float(funnel[k].mean()) for k in ("market", "universe", "after_A", "after_B", "after_C", "held") if k in funnel}
+    if scope is not None:  # เฉพาะเมื่อจำกัดขอบเขต — ผลของ scope = all ต้องตรงกับที่บันทึกไว้ก่อนมีฟีเจอร์นี้ทุกหลัก
+        met["scope"] = {"mode": conf["scope"]["mode"], "label": scope_label(conf["scope"]), "n_members": len(members),
+                        "n_priced": len(scope_stocks), "ew_names": len(scope_stocks)}
     met["dropped_no_price_avg"] = float(funnel["dropped_no_price"].mean()) if "dropped_no_price" in funnel else 0.0
     met["delisted_to_cash"] = sorted(held_for_delist)
 
@@ -517,17 +613,23 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
     return {"metrics": met, "provenance": prov}
 
 
-def stage_day(t, pxrow, stocks, held, asof, st, sector_of):
-    """pipeline ของวันเดียว: universe (หุ้นที่มีราคา ณ t) → A → B → C — ใช้ร่วมกันระหว่าง run() และ dry_run()
+def stage_day(t, pxrow, stocks, held, asof, st, sector_of, scope=None):
+    """pipeline ของวันเดียว: ขอบเขต (หุ้นใน scope ที่มีราคา ณ t) → A → B → C — ใช้ร่วมกันระหว่าง run() และ dry_run()
+    scope = None (ทั้ง universe) หรือ set ของ ticker — **กรองหลังอ่านสัญญาณ A**: record ของ A (class/score/rank)
+    มาจากการจัดอันดับทั้ง universe ใน export เสมอ ไม่มีการจัดอันดับใหม่เฉพาะหุ้นใน scope
     คืน (universe, a_recs, b_recs, c_recs, funnel_row) ; ทุก record มี date ≤ t (AsOf บังคับ)"""
     has_px = [tk for tk in stocks if not np.isnan(pxrow[tk])]
-    fun = {"date": t, "universe": len(has_px)}
+    fun = {"date": t}
+    if scope is not None:
+        fun["market"] = len(has_px)
+        has_px = [tk for tk in has_px if tk in scope]
+    fun["universe"] = len(has_px)
     a_recs, b_recs = {}, {}
     if "A" in asof:
         snap = asof["A"].snapshot(t)
         fun["a_rebalance"] = asof["A"].rebalance_date(t)
         if st["A"]["mode"] == "filter":
-            passed = [k for k, r in snap.items() if _crit_A(r, st["A"]["criteria"])]
+            passed = [k for k, r in snap.items() if _crit_A(r, st["A"]["criteria"]) and (scope is None or k in scope)]
             hp = set(has_px)
             fun["dropped_no_price"] = sum(1 for k in passed if k not in hp)
             fun["a_signal_empty"] = not snap
@@ -583,7 +685,9 @@ def dry_run(conf: dict, date=None, history_days: int = 260) -> dict:
     st = conf["stages"]
     asof = {m: AsOf(st[m]["version"], load_manual_news(m.lower()) if conf["include_manual"] and m in "BC" else None)
             for m in "ABC" if st[m]["mode"] != "off"}
-    universe, a_recs, b_recs, c_recs, fun = stage_day(t, adj.iloc[-1], stocks, [], asof, st, sector_of)
+    members = scope_members(conf.get("scope"))
+    scope = None if members is None else set(members)
+    universe, a_recs, b_recs, c_recs, fun = stage_day(t, adj.iloc[-1], stocks, [], asof, st, sector_of, scope)
     runner = ConditionRunner(conf["condition"]["source"], columns, sector_of)
     try:
         for i in range(len(cal) - 1):
@@ -656,6 +760,10 @@ def _bench_ew(adj, capital, cost):
         i1 = firsts[k + 1] if k + 1 < len(firsts) else len(idx) - 1
         row = adj.iloc[i0]
         names = row.index[row.notna()]
+        if not len(names):  # scope เล็ก (เช่นหุ้น IPO ตัวเดียว) ยังไม่มีราคา → ถือเงินสดรอบนี้
+            out.iloc[i0:i1 + 1] = V
+            w_old = None
+            continue
         w = pd.Series(1.0 / len(names), index=names)
         if w_old is None:
             turn = 1.0

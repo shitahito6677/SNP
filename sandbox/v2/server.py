@@ -124,7 +124,11 @@ def create_app() -> Flask:
             conf, warnings = _prepare(request.get_json(force=True))
         except Exception as e:  # noqa: BLE001
             return _err(e)
-        return jsonify({"ok": True, "warnings": warnings, "held_out_touched": conf["held_out"]["touched"]})
+        from sandbox.v2 import engine
+        sc = conf["scope"]
+        return jsonify({"ok": True, "warnings": warnings, "held_out_touched": conf["held_out"]["touched"],
+                        "scope": {"mode": sc["mode"], "label": engine.scope_label(sc), "sectors": sc["sectors"], "tickers": sc["tickers"],
+                                  "n_members": len(sc["members"]) if "members" in sc else None}})
 
     @app.post("/api/jobs")
     def api_job_submit():

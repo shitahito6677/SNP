@@ -14,6 +14,7 @@ function pipeline() {
       B: { mode: "off", version: null, exNeg: true, exNeu: false, missing: "pass" },
       C: { mode: "off", version: null, exNeg: true, exNeu: false, missing: "pass" },
     },
+    scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null,
     condId: "equal_weight_A", condDesc: "", source: "", dirty: false,
     run: { start: "", end: "", capital: 1000000, costPct: 0.1, heldOut: false, confirm: "", includeManual: false, name: "" },
     warnings: [], error: "", validation: null, validating: false,
@@ -85,6 +86,7 @@ function pipeline() {
       return {
         name: this.run.name, start: this.run.start, end: this.run.end, capital: this.run.capital, cost: this.run.costPct / 100,
         held_out: { enabled: this.run.heldOut, confirm: this.run.confirm }, include_manual: this.run.includeManual,
+        scope: { mode: this.scope.mode, sectors: [...this.scope.sectors], tickers: [...this.scope.tickers] },
         stages: {
           A: { mode: A.mode, version: A.version, criteria: { class_in: A.onlySelected ? ["selected"] : ["selected", "not_selected"], min_score: isNum(A.minScore) ? A.minScore : null } },
           B: { mode: this.stages.B.mode, version: this.stages.B.version, criteria: crit(this.stages.B) },
@@ -100,8 +102,44 @@ function pipeline() {
       }
       try {
         const r = await api("/api/preflight", { method: "POST", body });
-        this.warnings = r.warnings; this.error = "";
-      } catch (e) { this.error = e.message; }
+        this.warnings = r.warnings; this.error = ""; this.scopeInfo = r.scope;
+      } catch (e) { this.error = e.message; this.scopeInfo = null; }
+    },
+
+    /* ---------- ขอบเขตการลงทุน (ก่อนกล่อง A) ---------- */
+    setScope(mode) { this.scope.mode = mode; this.changed(); },
+    sectorList() {
+      const meta = Alpine.store("app").meta, cnt = {};
+      if (!meta) return [];
+      for (const t of meta.tickers) if (t.kind === "stock") { const e = meta.sector_etfs[t.sector]; if (e) cnt[e] = (cnt[e] || 0) + 1; }
+      return ["XLK", "XLC", "XLY", "XLP", "XLF", "XLV", "XLI", "XLE", "XLB", "XLRE", "XLU"].map((e) => ({
+        e, n: cnt[e] || 0, name: Object.keys(meta.sector_etfs).find((k) => meta.sector_etfs[k] === e) || e }));
+    },
+    toggleSector(e) {
+      const s = this.scope.sectors;
+      this.scope.sectors = s.includes(e) ? s.filter((x) => x !== e) : [...s, e].sort();
+      this.changed();
+    },
+    get scopeHits() { return searchTickers(this.scopeQ || "", 8).filter((h) => h.kind === "stock" && !this.scope.tickers.includes(h.t)); },
+    addScopeTicker(h) { if (h && !this.scope.tickers.includes(h.t)) this.scope.tickers = [...this.scope.tickers, h.t]; this.scopeQ = ""; this.scopeHi = 0; this.changed(); },
+    removeScopeTicker(t) { this.scope.tickers = this.scope.tickers.filter((x) => x !== t); this.changed(); },
+    scopeKey(e) {
+      const hits = this.scopeHits;
+      if (e.key === "ArrowDown") { e.preventDefault(); this.scopeHi = Math.min(this.scopeHi + 1, hits.length - 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); this.scopeHi = Math.max(this.scopeHi - 1, 0); }
+      else if ((e.key === "Enter" || e.key === "Tab") && hits.length && this.scopeQ) { e.preventDefault(); this.addScopeTicker(hits[this.scopeHi]); }
+      else if (e.key === "Backspace" && !this.scopeQ && this.scope.tickers.length) this.removeScopeTicker(this.scope.tickers[this.scope.tickers.length - 1]);
+    },
+    scopeProblem() {
+      if (this.scope.mode === "sectors" && !this.scope.sectors.length) return "เลือกอย่างน้อย 1 sector";
+      if (this.scope.mode === "tickers" && !this.scope.tickers.length) return "เลือกหุ้นอย่างน้อย 1 ตัว (พิมพ์ @ หรือชื่อบริษัท)";
+      return "";
+    },
+    scopeSummary() {
+      if (this.scopeProblem()) return this.scopeProblem();
+      const i = this.scopeInfo;
+      if (this.scope.mode === "all") return "ทั้งตลาด — หุ้นทุกตัวใน universe";
+      return i && i.n_members ? `${i.label} → ${i.n_members} ตัว` : "กำลังตรวจ…";
     },
     warnTag(w) {
       if (w.startsWith("SURVIVORSHIP")) return "SURVIVORSHIP";
@@ -193,6 +231,7 @@ function pipeline() {
     /* ---------- run ---------- */
     async runNow() {
       if (this.running) return;
+      if (this.scopeProblem()) { this.error = "ขอบเขต: " + this.scopeProblem(); Alpine.store("app").toast(this.error, "err", 5000); return; }
       try {
         const r = await api("/api/jobs", { method: "POST", body: this.config() });
         this.warnings = r.warnings; this.error = "";
@@ -259,7 +298,8 @@ function pipeline() {
       }
       this.wires = out;
       const aBox = box("A");
-      if (f && aBox) this.wires.push({ id: 9, d: "", mx: aBox.left - base.left + aBox.width / 2, my: aBox.top - base.top - 2, label: `universe ${fmtN(f.universe)} →` });
+      if (f && aBox) this.wires.push({ id: 9, d: "", mx: aBox.left - base.left + aBox.width / 2, my: aBox.top - base.top - 2,
+        label: `${f.market !== undefined ? "ขอบเขต" : "universe"} ${fmtN(f.universe)} →` });
     },
     wireSvg() {
       const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));

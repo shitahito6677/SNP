@@ -57,6 +57,42 @@
     </div>
   </div>
 
+  <!-- ขั้น 0: ขอบเขตการลงทุน (ก่อนกล่อง A) -->
+  <div class="panel scope-panel" id="scope-panel">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:16px">
+      <div>
+        <h3 style="margin:0 0 4px">ขั้น 0 — ขอบเขตการลงทุน</h3>
+        <p class="dim" style="font-size:12.5px;margin:0">อันดับของ A คำนวณจากทั้ง universe เสมอ แล้วค่อยกรองเหลือเฉพาะขอบเขต (ไม่จัดอันดับใหม่) · EW benchmark = EW ของหุ้นในขอบเขต · SPY = ตลาดรวม</p>
+      </div>
+      <div class="seg" style="flex:none">
+        <template x-for="[mode, label] in [['all','ทั้งตลาด (S&P 500)'],['sectors','เลือก Sector'],['tickers','เลือกหุ้นเอง']]">
+          <button :data-scope="mode" :class="{on: scope.mode===mode}" @click="setScope(mode)" x-text="label"></button>
+        </template>
+      </div>
+    </div>
+    <div x-show="scope.mode==='sectors'" style="margin-top:10px" class="row">
+      <template x-for="s in sectorList()" :key="s.e">
+        <button class="chip sector-chip" :data-sector="s.e" :class="{on: scope.sectors.includes(s.e)}" :title="s.name" @click="toggleSector(s.e)"
+          :style="scope.sectors.includes(s.e) ? `border-color:${SECTOR_COLORS[s.name]||'#94A3B8'};background:${(SECTOR_COLORS[s.name]||'#94A3B8')}22;color:var(--text)` : ''">
+          <b class="mono" x-text="s.e"></b><span class="dim" x-text="s.n"></span></button>
+      </template>
+    </div>
+    <div x-show="scope.mode==='tickers'" style="margin-top:10px" class="mention-box">
+      <div class="row" style="gap:5px">
+        <template x-for="t in scope.tickers" :key="t"><span class="chip B"><b class="mono" x-text="t"></b><a href="#" @click.prevent="removeScopeTicker(t)" style="color:inherit">×</a></span></template>
+        <input id="scope-search" x-model="scopeQ" @keydown="scopeKey($event)" placeholder="พิมพ์ @ticker หรือชื่อบริษัท แล้ว Enter" style="flex:1;min-width:220px">
+      </div>
+      <div class="mention-drop" x-show="scopeQ && scopeHits.length">
+        <template x-for="(h, i) in scopeHits" :key="h.t"><div class="item" :class="{on: i===scopeHi}" @mousedown.prevent="addScopeTicker(h)">
+          <b class="mono" x-text="h.t"></b><span class="muted" x-text="h.name"></span><span class="dim" style="margin-left:auto;font-size:11.5px" x-text="h.sector"></span></div></template>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px;font-size:12.5px">
+      <span class="light" :class="scopeProblem() ? 'none' : 'ready'" style="width:8px;height:8px"></span>
+      <span id="scope-summary" x-text="scopeSummary()"></span>
+    </div>
+  </div>
+
   <!-- กล่อง A B C + เงื่อนไข -->
   <div class="pipeline" x-ref="canvas">
     <svg class="flow-svg" x-ref="svg">
@@ -285,6 +321,8 @@
       </template>
     </div>
 
+    <template x-if="r?.empty_reason"><div class="warn orange" id="empty-reason" style="margin-bottom:14px"><b>พอร์ตว่าง</b><span x-text="r.empty_reason"></span></div></template>
+    <template x-if="r?.config?.scope && r.config.scope.mode !== 'all'"><div class="warn gray" id="scope-note" style="margin-bottom:14px"><b>ขอบเขต</b><span x-text="scopeText()"></span></div></template>
     <template x-if="r && !r.has_artifacts"><div class="warn"><b>NO ARTIFACTS</b><span>ไม่มีไฟล์ parquet ของการทดลองนี้ในเครื่อง (ไม่ได้อยู่ใน git) — แสดงได้เฉพาะ metrics/config; กด Re-run เพื่อสร้างใหม่</span></div></template>
 
     <div class="hero">
@@ -298,7 +336,7 @@
     </div>
 
     <div class="grid" style="grid-template-columns: 2fr 1fr; margin-top:16px">
-      <div class="panel"><h3>Equity curve — strategy vs SPY vs EW universe</h3><div class="chart tall" x-ref="eq"></div></div>
+      <div class="panel"><h3 x-text="'Equity curve — strategy vs SPY vs ' + ewLabel()"></h3><div class="chart tall" x-ref="eq"></div></div>
       <div class="panel"><h3>Funnel — หุ้นหายไปตรงไหน (เฉลี่ยต่อวัน)</h3><div class="chart tall" x-ref="sankey"></div></div>
     </div>
     <div class="grid g2" style="margin-top:16px">
@@ -322,7 +360,7 @@
     <div class="grid" style="grid-template-columns: 1fr 2fr; margin-top:16px">
       <div class="panel"><h3>Metrics เต็ม</h3>
         <div class="scroll" style="max-height:460px"><table class="t">
-          <thead><tr><th>metric</th><th class="n">strategy</th><th class="n">SPY</th><th class="n">EW</th></tr></thead>
+          <thead><tr><th>metric</th><th class="n">strategy</th><th class="n">SPY</th><th class="n" x-text="r?.metrics?.scope ? 'EW ขอบเขต' : 'EW'"></th></tr></thead>
           <tbody><template x-for="row in metricRows()"><tr><td x-text="row[0]"></td><td class="n" x-text="row[1]"></td><td class="n" x-text="row[2]"></td><td class="n" x-text="row[3]"></td></tr></template></tbody>
         </table></div>
         <template x-if="r?.metrics?.held_out"><p class="warn red" style="margin-top:10px"><b>SPLIT</b><span>รันคร่อม held-out — ดูตาราง pre/held-out ใน metrics.json (<span class="mono" x-text="'held-out Sharpe ' + fmtNum(r.metrics.held_out.strategy.sharpe)"></span>)</span></p></template>

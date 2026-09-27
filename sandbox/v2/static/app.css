@@ -309,3 +309,9 @@ table.t td.n, table.t th.n { text-align: right; font-family: var(--mono); font-v
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ขั้น 0: ขอบเขตการลงทุน */
+.scope-panel { margin-bottom: 20px; }
+button.chip { cursor: pointer; background: transparent; font-family: inherit; }
+.sector-chip { padding: 4px 10px; gap: 6px; font-size: 12.5px; }
+.sector-chip.on { box-shadow: 0 0 0 1px currentColor inset; }
