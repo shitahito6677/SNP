@@ -39,3 +39,10 @@
 - แก้ระหว่างทาง: parent ไม่รู้ว่า condition process ตาย (ตอน spawn ล้ม) → เพิ่มเช็ค `is_alive()` ทุก 0.2 วิ + ปิด child pipe ฝั่ง parent
 - ข้อจำกัด: B on-demand มีแค่ interface ใน registry (ไม่มี B จริงให้ทดสอบ — engine ยังไม่เรียก infer.py); หุ้นที่ condition ให้ซื้อวันที่ไม่มีราคา → ข้าม (log) และไม่ลองซ้ำวันถัดไปถ้าเป้าไม่เปลี่ยน
 - DoD: ✅
+
+## W4 — Persistence ✅
+- ทำ: `experiments_store.py` (save/list/load/trades แบ่งหน้า/delete ต้อง confirm/bundle zip/diff re-run/compare), API `/api/experiments*`, `/api/results/<run|exp>/<id>[/trades]`, `/api/compare`
+- git policy: commit ได้ `config.json`, `condition_snapshot.py`, `metrics.json`, `provenance.json`, `summary.json` (การ์ด+sparkline เล็ก) — parquet/round_trips.json/zip gitignored
+- แก้ระหว่างทาง: re-run ได้ metrics ต่างกันระดับ 1e-14 → สาเหตุ: ลำดับการบวกเลขตามลำดับ `set` ที่สุ่มต่อ process (hash randomization) → เรียงทุกจุด + `PYTHONHASHSEED=0` ให้ job/condition process
+- DoD test (`tests/test_persistence.py`): รัน → save → restart server → เปิด → `metrics` และ equity ตรงกัน 100% ✅; re-run → `identical: true` ✅ (รันซ้ำ 3 ครั้ง ผ่านทุกครั้ง); ลบต้อง confirm ✅
+- tests รวม 20/20 ผ่าน

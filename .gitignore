@@ -41,5 +41,6 @@ sandbox/v2/jobs.db
 sandbox/v2/jobs.db-*
 sandbox/v2/experiments/*/*.parquet
 sandbox/v2/experiments/*/*.zip
+sandbox/v2/experiments/*/round_trips.json
 sandbox/v2/static/vendor/monaco/
 sandbox/v2/screenshots/*.tmp

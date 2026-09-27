@@ -109,7 +109,8 @@ def submit(conf: dict, warnings: list) -> str:
                      json.dumps(warnings, ensure_ascii=False), str(out)))
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     logf = open(RUNS_DIR / f"{job_id}.stderr.log", "w")
-    p = subprocess.Popen([sys.executable, "-m", "sandbox.v2.jobs", "run", job_id], cwd=cfg.REPO,
+    env = dict(os.environ, PYTHONHASHSEED="0")  # reproducible: ลำดับ set/dict เหมือนเดิมทุกครั้ง
+    p = subprocess.Popen([sys.executable, "-m", "sandbox.v2.jobs", "run", job_id], cwd=cfg.REPO, env=env,
                          stdout=logf, stderr=subprocess.STDOUT, start_new_session=True)
     update(job_id, pid=p.pid)
     return job_id

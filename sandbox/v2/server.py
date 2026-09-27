@@ -10,10 +10,11 @@ from __future__ import annotations
 import json
 import threading
 import time
+from pathlib import Path
 
 from flask import Flask, Response, jsonify, request
 
-from sandbox.v2 import condition_registry, config as cfg, jobs, registry
+from sandbox.v2 import condition_registry, config as cfg, experiments_store as xs, jobs, registry
 
 
 def create_app() -> Flask:
@@ -122,6 +123,101 @@ def create_app() -> Flask:
                     return
                 time.sleep(0.5)
         return Response(gen(), mimetype="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    # ------------------------------------------------------------ results / experiments
+    def _result_dir(kind, rid):
+        if kind == "run":
+            d = jobs.get(rid, with_logs=False)
+            if d is None or d["status"] != "done":
+                raise KeyError("run นี้ยังไม่เสร็จหรือไม่พบ")
+            return Path(d["result_dir"])
+        return xs.path(rid)
+
+    @app.get("/api/results/<kind>/<rid>")
+    def api_result(kind, rid):
+        try:
+            if kind == "exp":
+                return jsonify(xs.load(rid))
+            out = xs.load_dir(_result_dir("run", rid))
+            out["job_id"] = rid
+            return jsonify(out)
+        except KeyError as e:
+            return jsonify({"error": str(e).strip("'\"")}), 404
+
+    @app.get("/api/results/<kind>/<rid>/trades")
+    def api_result_trades(kind, rid):
+        try:
+            d = _result_dir(kind, rid)
+        except KeyError as e:
+            return jsonify({"error": str(e).strip("'\"")}), 404
+        a = request.args
+        return jsonify(xs.trades(d, a.get("q", ""), a.get("side", ""), a.get("ticker", ""),
+                                 int(a.get("offset", 0)), min(int(a.get("limit", 200)), 2000)))
+
+    @app.post("/api/experiments")
+    def api_exp_save():
+        body = request.get_json(force=True)
+        try:
+            exp_id = xs.save(_result_dir("run", body.get("job_id", "")), body.get("name", ""))
+        except (KeyError, FileNotFoundError) as e:
+            return jsonify({"error": str(e).strip("'\"")}), 400
+        return jsonify({"id": exp_id}), 201
+
+    @app.get("/api/experiments")
+    def api_exp_list():
+        return jsonify(xs.list_all())
+
+    @app.delete("/api/experiments/<exp_id>")
+    def api_exp_delete(exp_id):
+        try:
+            xs.delete(exp_id, request.args.get("confirm", ""))
+        except KeyError as e:
+            return jsonify({"error": str(e).strip("'\"")}), 404
+        except PermissionError as e:
+            return jsonify({"error": str(e)}), 400
+        return jsonify({"ok": True})
+
+    @app.get("/api/experiments/<exp_id>/bundle")
+    def api_exp_bundle(exp_id):
+        try:
+            data = xs.bundle(exp_id)
+        except KeyError as e:
+            return jsonify({"error": str(e).strip("'\"")}), 404
+        return Response(data, mimetype="application/zip",
+                        headers={"Content-Disposition": f"attachment; filename={exp_id}.zip"})
+
+    @app.post("/api/experiments/<exp_id>/rerun")
+    def api_exp_rerun(exp_id):
+        try:
+            d = xs.path(exp_id)
+        except KeyError as e:
+            return jsonify({"error": str(e).strip("'\"")}), 404
+        conf = json.loads((d / "config.json").read_text())
+        conf["condition"] = {"id": conf["condition"].get("id"),
+                             "source": (d / "condition_snapshot.py").read_text(encoding="utf-8")}
+        if conf["held_out"].get("touched"):  # ผลนี้แตะ held-out ไปแล้ว — รันซ้ำ config เดิมไม่เพิ่มข้อมูลใหม่
+            conf["held_out"] = {"enabled": True, "confirm": cfg.HELD_OUT_CONFIRM_TEXT}
+        try:
+            conf2, warnings = _prepare(conf)
+        except Exception as e:  # noqa: BLE001
+            return _err(e)
+        conf2["name"] = f"re-run of {exp_id}"
+        return jsonify({"job_id": jobs.submit(conf2, warnings)}), 201
+
+    @app.get("/api/experiments/<exp_id>/rerun/<job_id>")
+    def api_exp_rerun_diff(exp_id, job_id):
+        try:
+            return jsonify(xs.diff_runs(xs.path(exp_id), _result_dir("run", job_id)))
+        except KeyError as e:
+            return jsonify({"error": str(e).strip("'\"")}), 404
+
+    @app.get("/api/compare")
+    def api_compare():
+        ids = [x for x in request.args.get("ids", "").split(",") if x]
+        try:
+            return jsonify(xs.compare(ids))
+        except KeyError as e:
+            return jsonify({"error": str(e).strip("'\"")}), 404
 
     return app
 

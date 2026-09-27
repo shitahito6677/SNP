@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import multiprocessing as mp
+import os
 import platform
 import subprocess
 import time
@@ -142,6 +143,7 @@ class ConditionRunner:
     """คุม process ของ condition — timeout ต่อ decide(), kill ได้ทุกเมื่อ"""
 
     def __init__(self, source, columns, sector_of, timeout=cfg.DECIDE_TIMEOUT_SEC):
+        os.environ["PYTHONHASHSEED"] = "0"  # ลำดับของ set/dict ในโค้ดผู้ใช้ต้องเหมือนเดิมทุกครั้งที่รัน
         ctx = mp.get_context("spawn")
         self.parent, child = ctx.Pipe()
         from sandbox.v2 import condition_worker
@@ -337,8 +339,9 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
         w = order["weights"]
         pxrow = adj.iloc[i]
         V = value_at(i)
-        tradable = {t for t in set(w) | set(units) if not np.isnan(pxrow.get(t, np.nan))}
-        frozen = {t for t in set(w) | set(units) if t not in tradable}
+        names = sorted(set(w) | set(units))  # เรียงเสมอ → ลำดับการบวกเลขเหมือนเดิมทุก process (reproducible)
+        tradable = [t for t in names if not np.isnan(pxrow.get(t, np.nan))]
+        frozen = [t for t in names if t not in set(tradable)]
         for t in frozen:
             if abs(w.get(t, 0) - (units.get(t, 0) * last_px.get(t, 0)) / V) > 1e-9:
                 log(f"{cal[i].date()} {t}: ไม่มีราคาวันนี้ — ข้ามการซื้อขายตัวนี้")
@@ -353,7 +356,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
             c_tot = c_new
         Vp = V - c_tot
         spent = 0.0
-        for t in sorted(tradable, key=lambda x: desired[x] - cur[x]):  # ขายก่อนซื้อ
+        for t in sorted(tradable, key=lambda x: (desired[x] - cur[x], x)):  # ขายก่อนซื้อ
             d = desired[t] - cur[t]
             if abs(d) < 1e-7 * V:
                 continue
@@ -438,12 +441,12 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
                     passA = sorted(k for k in passed if k in hp)
                 else:
                     passA = has_px
-                a_recs = {k: snap.get(k) for k in set(passA) | set(held) if snap.get(k) is not None}
+                a_recs = {k: snap.get(k) for k in sorted(set(passA) | set(held)) if snap.get(k) is not None}
             else:
                 passA = has_px
             fun["after_A"] = len(passA)
             if "B" in asof:
-                for k in set(passA) | set(held):
+                for k in sorted(set(passA) | set(held)):
                     b_recs[k] = asof["B"].at(k, t)
                 passB = [k for k in passA if st["B"]["mode"] != "filter" or _crit_event(b_recs.get(k), st["B"]["criteria"])]
                 b_recs = {k: v for k, v in b_recs.items() if v is not None}
@@ -478,7 +481,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
                     same = target is not None and set(w) == set(target) and all(abs(w[k] - target[k]) < 1e-9 for k in w)
                     if not same:
                         reasons = {}
-                        for tk in set(w) | set(units):
+                        for tk in sorted(set(w) | set(units)):
                             rs = []
                             if "A" in asof:
                                 rs.append(_chip("A", label["A"], a_recs.get(tk) or asof["A"].at(tk, t)))
