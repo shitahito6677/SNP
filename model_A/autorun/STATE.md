@@ -3,7 +3,8 @@
 - อัปเดตล่าสุด: 2026-09-27 — ครบ round 001–006 + round 007 (universe top-1500, ⚠️ เสี่ยง survivorship สูง) + **เดโม sandbox** (ตามคำสั่งผู้ใช้)
 - branch: feature/model-a-rebuild (push เฉพาะ branch นี้)
 - **git remote ถอด token แล้ว** (`https://github.com/shitahito6677/SNP.git`); สแกนไฟล์ทุก branch + ทุก commit + ข้อความ commit: ไม่พบ `ghp_`/`github_pat_`
-- **ยังไม่ push commit ล่าสุด** — รอผู้ใช้เพิกถอน token เดิมและล็อกอินใหม่ (ผู้ใช้สั่ง)
+- push แล้ว (2026-09-27) ผ่าน credential ใน macOS Keychain (ผู้ใช้เลือกใช้ token เดิมไปก่อน; token ไม่อยู่ใน URL ของ remote)
+- ⚠️ แนะนำ: เพิกถอน token เดิมเมื่อสะดวก เพราะเคยถูกแสดงในบทสนทนา
 - เกณฑ์ล็อกใน: `model_A/PREREG_AUTORUN.md` (ห้ามแก้) — ความเบี่ยงเบน/บั๊ก: `autorun/DEVIATIONS.md`
 - held-out lock: `lib/guard.py` (cutoff 2023-06-30) — **ยังไม่เคยใช้ FINAL_EVAL**
 - trial สะสม: **115** (v1 12 + r001 33 + r002 12 + r003 16 + r004 12 + r005 6 + r006 2 + r007 22) — `model_A/trials.csv`
