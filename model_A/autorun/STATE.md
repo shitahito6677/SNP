@@ -1,7 +1,9 @@
 # AUTORUN STATE (อ่านไฟล์นี้ก่อนทำงานทุกครั้ง)
 
 - อัปเดตล่าสุด: 2026-09-27 — ครบ round 001–006 + round 007 (universe top-1500, ⚠️ เสี่ยง survivorship สูง) + **เดโม sandbox** (ตามคำสั่งผู้ใช้)
-- branch: feature/model-a-rebuild (push เฉพาะ branch นี้; ปิดบัง token ใน output ของ git)
+- branch: feature/model-a-rebuild (push เฉพาะ branch นี้)
+- **git remote ถอด token แล้ว** (`https://github.com/shitahito6677/SNP.git`); สแกนไฟล์ทุก branch + ทุก commit + ข้อความ commit: ไม่พบ `ghp_`/`github_pat_`
+- **ยังไม่ push commit ล่าสุด** — รอผู้ใช้เพิกถอน token เดิมและล็อกอินใหม่ (ผู้ใช้สั่ง)
 - เกณฑ์ล็อกใน: `model_A/PREREG_AUTORUN.md` (ห้ามแก้) — ความเบี่ยงเบน/บั๊ก: `autorun/DEVIATIONS.md`
 - held-out lock: `lib/guard.py` (cutoff 2023-06-30) — **ยังไม่เคยใช้ FINAL_EVAL**
 - trial สะสม: **115** (v1 12 + r001 33 + r002 12 + r003 16 + r004 12 + r005 6 + r006 2 + r007 22) — `model_A/trials.csv`
@@ -26,6 +28,10 @@
 - คะแนนมีเฉพาะก่อน 2023-06-30 (held-out ยังล็อก); วิธีต่อ sandbox อยู่ใน `export/README.md` — **ยังไม่ได้แก้ไฟล์ใน sandbox/**
 - ห้ามใช้ผลใน sandbox เลือก/ปรับกฎ
 - `stress_cases/`: รูปแบบเคสหุ้นเจ๊งที่ผู้ใช้ใส่เอง — ห้ามปนกับข้อมูลคัดเลือกกฎ (ไม่มีโค้ดวิจัยใดอ่านโฟลเดอร์นี้)
+
+## การตัดสินใจของผู้ใช้ (2026-09-27)
+- ไม่ซื้อข้อมูลเพิ่ม, ไม่ freeze, ไม่แตะ held-out (ไม่มีกฎผ่าน S1–S6)
+- README.md / REPORT.md ฉบับสมบูรณ์เขียนแล้ว (ผลลบ ระดับ C ทั้งหมด, ตาราง 5 อันดับแรก, อภิธานศัพท์)
 
 ## ถ้าจะทำต่อ (ต้องให้ผู้ใช้ตัดสิน — ห้ามลดเกณฑ์)
 - งาน S&P 1500 หยุดตามคำสั่งผู้ใช้; ข้อมูล/โค้ดยังอยู่ (`lib/universe1500.py`, `lib/panel1500.py`, `lib/build1500.py`)
