@@ -68,3 +68,24 @@
 - **ความแม่นยำ auto-detect (10 ข้อความ `tests/mention_samples.json`, `scripts/eval_mentions.py`): ถูก 14 · ผิด 1 (Nasdaq→NDAQ) · พลาด 1 (Target) · precision 0.93 / recall 0.93 · แนะนำมหภาคถูก 10/10**
 - tests: 23/23 (เพิ่ม `test_manual_news.py`: ข่าว manual เข้า pipeline เฉพาะเมื่อ toggle, เสาร์→จันทร์, ไม่แตะ training data); UI smoke รวมหน้าข่าว (พิมพ์ @nvi → Enter, ยืนยัน Apple, บันทึก, นำเข้า CSV) console errors 0
 - DoD: ✅
+
+## W8 — เอกสาร + End-to-End ✅ (ยังไม่ push/PR — รอผู้ใช้ยืนยัน)
+- `README.md` (รันคำสั่งเดียว, คำเตือน security, เพิ่ม version, เขียน condition, held-out, เปลี่ยน PRICE_START, test, git policy); หน้า About/Methodology ในเว็บ (ทำใน W5)
+- `tests/test_e2e.py`: A1 (จริง) + B stub + C rulebase-exp03 + equal_weight_A → run → save → restart server → load → metrics/equity/funnel ตรงกัน 100%, badge STUB+NEGATIVE, provenance ครบ, reasons ทุก trade มี A — **ผ่าน**
+- tests ทั้งหมด **24/24 ผ่าน** · UI smoke console errors **0** · sandbox v1: diff = 0 บรรทัด, `sandbox.scripts.smoke_test` ผ่าน
+
+# สรุปรวม
+**ทำครบ W0–W8** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
+
+**ตรวจแล้วด้วยการรันจริง**
+- signal Model A ทั้ง 5 กฎ reproduce NAV ของ backtest เดิมเป๊ะ (≤ 6e-15); engine ของ sandbox ตาม NAV ของ A1 (corr รายวัน 0.99999)
+- hold_SPY = SPY buy&hold − cost (< 0.01%); look-ahead/held-out guard มี test ที่พยายามโกงแล้ว fail; บันทึก→restart→เปิด ตัวเลขตรง 100%; re-run ได้ผลเดิมทุกหลัก
+- auto-detect ข่าว: precision/recall 0.93 บน 10 ตัวอย่าง (ชุดเล็ก)
+
+**ข้อจำกัด / ยังไม่ได้ทำ**
+- B on-demand (`runtime: on_demand` + `infer.py`): registry validate ได้ แต่ **engine ยังไม่เรียก infer.py** (ไม่มี B จริงให้ทดสอบ) — on_demand version ตอนนี้ = ไม่มีสัญญาณ
+- ราคา default 5 ปี → A รายปี 2 รอบก่อน held-out (DECISIONS #2)
+- หุ้นที่เงื่อนไขสั่งซื้อในวันที่ไม่มีราคา → ข้าม และไม่ลองซ้ำถ้าเป้าไม่เปลี่ยน
+- sector ของหุ้นที่หลุด index แล้ว (44 ตัว) = "Unknown" (ไม่มี GICS ย้อนหลัง) → C ไม่มีผลกับหุ้นกลุ่มนี้
+- screenshot PNG ชุดแรก (8 MB) อยู่ใน history ของ commit W5 (เปลี่ยนเป็น JPEG ใน W6)
+- push branch + เปิด PR: รอผู้ใช้ยืนยัน (ห้าม merge เอง)
