@@ -1,13 +1,13 @@
 # AUTORUN STATE (อ่านไฟล์นี้ก่อนทำงานทุกครั้ง)
 
-- อัปเดตล่าสุด: 2026-09-27 — ครบ round 001–006 + round 007 (universe top-1500, ⚠️ เสี่ยง survivorship สูง) + **เดโม sandbox** (ตามคำสั่งผู้ใช้)
+- อัปเดตล่าสุด: 2026-09-28 — ครบ round 001–012 + **round 013 BMF20** (ไอเดียผู้ใช้ `BMF20.md`) + เดโม sandbox (ตามคำสั่งผู้ใช้)
 - branch: feature/model-a-rebuild (push เฉพาะ branch นี้)
 - **git remote ถอด token แล้ว** (`https://github.com/shitahito6677/SNP.git`); สแกนไฟล์ทุก branch + ทุก commit + ข้อความ commit: ไม่พบ `ghp_`/`github_pat_`
 - push แล้ว (2026-09-27) ผ่าน credential ใน macOS Keychain (ผู้ใช้เลือกใช้ token เดิมไปก่อน; token ไม่อยู่ใน URL ของ remote)
 - ⚠️ แนะนำ: เพิกถอน token เดิมเมื่อสะดวก เพราะเคยถูกแสดงในบทสนทนา
 - เกณฑ์ล็อกใน: `model_A/PREREG_AUTORUN.md` (ห้ามแก้) — ความเบี่ยงเบน/บั๊ก: `autorun/DEVIATIONS.md`
 - held-out lock: `lib/guard.py` (cutoff 2023-06-30) — **ยังไม่เคยใช้ FINAL_EVAL**
-- trial สะสม: **125** (… + r007 22 + r008 3 + r009 1 + r010 2 + r011 2 + r012 2) — `model_A/trials.csv`
+- trial สะสม: **127** (… + r007 22 + r008 3 + r009 1 + r010 2 + r011 2 + r012 2 + r013 2) — `model_A/trials.csv`
 - ผู้เข้ารอบ (S1+S2+S3+S6): **ไม่มี** — 7 trial ผ่าน S1+S2+S6 (รวม r011_LOWACC_INSIDER_TILT) แต่ตก S3 (DSR สูงสุด 0.61)
 - ระดับผล: ทุกกฎ = C
 - ตระกูลที่ held-out ถูกใช้แล้ว: ไม่มี
@@ -15,6 +15,7 @@
 ## round
 | round | ตระกูล | trial | ผล |
 |---|---|---|---|
+| 013 | BMF20 (ไอเดียผู้ใช้): BM + F-score คัด 20 ตัว 2 กฎ + การลงทุน 5 แบบ (ข้อมูลอธิบาย) | 2 | ไม่มีผู้เข้ารอบ; Sharpe 0.405 / 0.415 vs EW 0.640 (ชนะช่วง 2011–16); S6 ตกโดยโครงสร้าง (20 ตัว); DSR 0.001 / 0.003 |
 | 012 | EXPLORE2 T4 Lazy Prices (10-K 9,210 ฉบับครบ) | 2 | ไม่มีผู้เข้ารอบ; Item 1A Sharpe 0.688 vs EW 0.614 (S2 95%) ตก S1; ทั้งเอกสาร 0.637 |
 | 001 | A สัญญาณเดี่ยว | 33 | ไม่มีผู้เข้ารอบ |
 | 002 | B คะแนนรวม | 12 | ไม่มีผู้เข้ารอบ |
@@ -48,4 +49,11 @@
 T0 diagnostic · T1 (008) · T2 (009) · T5 (010) · T3 (011) · T4 (012) · รายงานสรุป (README 5 บรรทัด, วิธีทดสอบ, ความคาดหวัง, ตารางแนวคิดจากงานวิจัย,
 top-5 lump-sum/DCA/ซื้อครั้งเดียว, LEADERBOARD คอลัมน์ใหม่, REPORT ข้อ 3b, notebooks+html+figures round 008–012)
 - ไม่มีกฎผ่าน S1–S6 → ไม่ freeze, ไม่แตะ held-out
-- งานถัดไป: รอคำสั่งผู้ใช้ (แนวคิดใหม่ต้องเขียน HYPOTHESIS ก่อน และนับ trial ต่อจาก 125)
+- งานถัดไป: รอคำสั่งผู้ใช้ (แนวคิดใหม่ต้องเขียน HYPOTHESIS ก่อน และนับ trial ต่อจาก 127)
+
+## BMF20 — round 013 (2026-09-28, ผู้ใช้สั่งด้วย `model_A/BMF20.md`) ✅
+- HYPOTHESIS commit ก่อนรัน (`b71cd9e`); 2 trial `r013_BMF20_FUNNEL`, `r013_BMF20_WEIGHTED` → ระดับ C ทั้งคู่ (ตก S1, S2, S3, S6)
+- 5 โหมดการลงทุน × 2 จุดเริ่ม + Y3 ทุกปีเริ่ม 2011–2022 = ข้อมูลอธิบาย (ไม่นับ trial, ห้ามใช้เลือกกฎ) — `rounds/round_013/modes.py`
+- export `bmf20-funnel`, `bmf20-weighted` (experimental-not-frozen, ถึง 2023-06-30) — ผ่าน validation แบบ registry ของ sandbox v2 (ไม่ได้แก้ `sandbox/`)
+- หมายเหตุ: `export/DATA_CONTRACT.md` และ export A1–A5 อยู่บน branch `feature/sandbox-v2` (ยังไม่ merge มา branch นี้) — BMF20 ใช้รูปแบบเดียวกัน
+- ข้อสังเกตข้อมูล: หุ้นทั้ง 410 ตัวใน universe v1 มีราคาถึง 2023-06-30 ครบ → "ออกจากตลาด = เงินสด" ไม่เคยเกิด (survivorship)
