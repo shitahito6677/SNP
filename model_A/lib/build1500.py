@@ -110,3 +110,59 @@ if __name__ == "__main__":
           "none", t["ticker"].isna().sum(), flush=True)
     prices()
     print("DONE", round(time.time() - t0), flush=True)
+
+
+def splits():
+    """ประวัติ split ของทุก ticker ที่มีราคา (จำเป็นต่อ market cap แบบ PIT — บทเรียนบั๊ก v1)"""
+    from lib import prices as P
+    st = pd.read_parquet(P_STATUS)
+    names = list(st.loc[st["n_days"] > 0, "yahoo"])
+    return P.download_splits(names)
+
+
+def retry_prices(passes: int = 3, batch: int = 20, pause: float = 3.0):
+    """ดาวน์โหลดซ้ำ ticker ที่ได้ 0 วัน (บั๊กที่พบ: batch ใหญ่ล้มเหลวแบบเงียบ — TSLA/GOOG/JPM/UNH/SPY ได้ 0 วัน)
+    และใช้ข้อมูลจาก price store หลัก (ตรวจแล้วใน v0) สำหรับ ticker ที่มีอยู่แล้ว"""
+    from lib import prices as P
+    status = pd.read_parquet(P_STATUS)
+    frames = {k: pd.read_parquet(p) for k, p in (("close", P_CLOSE), ("adj", P_ADJ), ("vol", P_VOL))}
+    main_close, main_adj = pd.read_parquet(P.CLOSE_FILE), pd.read_parquet(P.ADJ_FILE)
+    for p_ in range(passes):
+        zero = sorted(status.loc[status["n_days"] == 0, "yahoo"])
+        print(f"pass {p_ + 1}: zero-day tickers {len(zero)}", flush=True)
+        if not zero:
+            break
+        for i in range(0, len(zero), batch):
+            chunk = zero[i:i + batch]
+            try:
+                d = yf.download(chunk, start="2008-01-01", auto_adjust=False, actions=False, progress=False, threads=False,
+                                group_by="column")
+            except Exception as e:  # noqa: BLE001
+                print("error", e, flush=True)
+                time.sleep(pause * 5)
+                continue
+            if d.empty:
+                time.sleep(pause * 3)
+                continue
+            for k, col in (("close", "Close"), ("adj", "Adj Close"), ("vol", "Volume")):
+                x = d[col].reindex(columns=chunk)
+                for c in chunk:
+                    if x[c].notna().any():
+                        frames[k][c] = x[c].reindex(frames[k].index.union(x.index))
+            for c in chunk:
+                n = int(frames["close"][c].notna().sum()) if c in frames["close"] else 0
+                status.loc[status["yahoo"] == c, "n_days"] = n
+            time.sleep(pause)
+        for k, p in (("close", P_CLOSE), ("adj", P_ADJ), ("vol", P_VOL)):
+            frames[k].sort_index().to_parquet(p)
+        status.to_parquet(P_STATUS)
+    # เติม close/adj จาก store หลักถ้ายังว่าง
+    for c in status.loc[status["n_days"] == 0, "yahoo"]:
+        if c in main_close.columns and main_close[c].notna().any():
+            frames["close"][c] = main_close[c].reindex(frames["close"].index)
+            frames["adj"][c] = main_adj[c].reindex(frames["adj"].index)
+            status.loc[status["yahoo"] == c, "n_days"] = int(main_close[c].notna().sum())
+    for k, p in (("close", P_CLOSE), ("adj", P_ADJ), ("vol", P_VOL)):
+        frames[k].sort_index().to_parquet(p)
+    status.to_parquet(P_STATUS)
+    print("still zero:", int((status["n_days"] == 0).sum()), "with data:", int((status["n_days"] > 0).sum()), flush=True)

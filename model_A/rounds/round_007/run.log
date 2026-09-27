@@ -1,0 +1,85 @@
+Q_GPA done
+Q_ROIC done
+Q_LOWACC done
+V_BM done
+V_EP done
+V_EBITEV done
+V_FCFP done
+I_LOWISS done
+I_LOWAG done
+A_FSCORE done
+A_GSCORE done
+A_ALTMANZ done
+A_SHY done
+A_STAB done
+A_LOWLEV done
+B_QV done
+B_QUAL done
+B_SHYQ done
+C_MOM done
+C_LOWVOL done
+SP500 Q_GPA done
+SP500 Q_ROIC done
+SP500 Q_LOWACC done
+SP500 V_BM done
+SP500 V_EP done
+SP500 V_EBITEV done
+SP500 V_FCFP done
+SP500 I_LOWISS done
+SP500 I_LOWAG done
+SP500 A_FSCORE done
+SP500 A_GSCORE done
+SP500 A_ALTMANZ done
+SP500 A_SHY done
+SP500 A_STAB done
+SP500 A_LOWLEV done
+SP500 B_QV done
+SP500 B_QUAL done
+SP500 B_SHYQ done
+SP500 C_MOM done
+SP500 C_LOWVOL done
+                trial_id  dec_sharpe  dec_sharpe_ew  dec_sharpe_spy  dec_cagr  dec_cagr_ew  dec_maxdd  dec_maxdd_ew  S1_10  S1_25  S1_50  S2_share    DSR  S6_avg_n  S6_min_n  info_sharpe  info_sharpe_ew  dec50_sharpe  dec50_sharpe_ew
+0       r007_U1500_Q_GPA       0.620          0.525           0.681     0.136        0.109     -0.397        -0.399  False  False  False     1.000  0.103   156.583        82        1.009           0.950         0.610            0.519
+1      r007_U1500_Q_ROIC       0.698          0.525           0.681     0.146        0.109     -0.359        -0.399  False  False  False     1.000  0.201   176.500        86        1.071           0.950         0.686            0.519
+2    r007_U1500_Q_LOWACC       0.562          0.525           0.681     0.127        0.109     -0.413        -0.399  False  False  False     0.973  0.044   201.833       107        0.625           0.950         0.544            0.519
+3        r007_U1500_V_BM       0.418          0.525           0.681     0.094        0.109     -0.510        -0.399  False  False  False     0.432  0.005   200.583       106        0.892           0.950         0.407            0.519
+4        r007_U1500_V_EP       0.497          0.525           0.681     0.116        0.109     -0.490        -0.399  False  False  False     0.486  0.024   202.167       107        0.947           0.950         0.481            0.519
+5    r007_U1500_V_EBITEV       0.517          0.525           0.681     0.124        0.109     -0.491        -0.399  False  False  False     0.541  0.036   139.250        64        0.874           0.950         0.502            0.519
+6      r007_U1500_V_FCFP       0.494          0.525           0.681     0.114        0.109     -0.460        -0.399  False  False  False     0.486  0.018   192.167        99        0.917           0.950         0.479            0.519
+7    r007_U1500_I_LOWISS       0.603          0.525           0.681     0.131        0.109     -0.436        -0.399  False  False  False     0.757  0.090   196.000        96        1.115           0.950         0.586            0.519
+8     r007_U1500_I_LOWAG       0.545          0.525           0.681     0.119        0.109     -0.414        -0.399  False  False  False     0.486  0.018   202.750       107        0.879           0.950         0.523            0.519
+9    r007_U1500_A_FSCORE       0.542          0.525           0.681     0.115        0.109     -0.410        -0.399  False  False  False     0.541  0.017   167.750        50        1.146           0.950         0.518            0.519
+10   r007_U1500_A_GSCORE       0.666          0.525           0.681     0.132        0.109     -0.350        -0.399  False  False  False     0.973  0.052   199.917       100        1.129           0.950         0.651            0.519
+11  r007_U1500_A_ALTMANZ       0.543          0.525           0.681     0.118        0.109     -0.454        -0.399  False  False  False     0.568  0.012   170.500        79        0.849           0.950         0.532            0.519
+12      r007_U1500_A_SHY       0.642          0.525           0.681     0.146        0.109     -0.445        -0.399  False  False  False     0.757  0.108   203.083       107        1.205           0.950         0.625            0.519
+13     r007_U1500_A_STAB       0.575          0.525           0.681     0.110        0.109     -0.401        -0.399  False  False  False     0.189  0.003   165.000         5        1.370           0.950         0.559            0.519
+14   r007_U1500_A_LOWLEV       0.398          0.525           0.681     0.082        0.109     -0.436        -0.399  False  False  False     0.297  0.001   201.750       106        0.735           0.950         0.386            0.519
+15       r007_U1500_B_QV       0.487          0.525           0.681     0.110        0.109     -0.451        -0.399  False  False  False     0.514  0.012   202.333       107        0.890           0.950         0.471            0.519
+16     r007_U1500_B_QUAL       0.638          0.525           0.681     0.133        0.109     -0.348        -0.399  False  False  False     0.595  0.063   202.167       106        0.777           0.950         0.624            0.519
+17     r007_U1500_B_SHYQ       0.664          0.525           0.681     0.147        0.109     -0.422        -0.399  False  False  False     0.865  0.196   202.417       107        1.146           0.950         0.649            0.519
+18      r007_U1500_C_MOM       0.447          0.525           0.681     0.095        0.109     -0.359        -0.399  False  False  False     0.595  0.002   200.000       107        0.688           0.950         0.423            0.519
+19   r007_U1500_C_LOWVOL       0.620          0.525           0.681     0.103        0.109     -0.349        -0.399  False  False  False     0.135  0.002   201.000       107        1.676           0.950         0.602            0.519
+20      r007_SP500_C_MOM       0.422          0.640           0.681     0.080        0.125     -0.337        -0.376  False  False  False     0.108  0.000    63.583        51        0.769           1.137         0.393            0.635
+21   r007_SP500_C_LOWVOL       0.664          0.640           0.681     0.103        0.125     -0.327        -0.376  False  False  False     0.135  0.001    63.667        51        1.440           1.137         0.640            0.635
+                trial_id  dec_sharpe  dec_sharpe_ew  dec_sharpe_spy  dec_cagr  info_sharpe  info_sharpe_ew  S1_10  S1_25  S1_50
+0       r007_SP500_Q_GPA       0.775           0.64           0.681     0.161        1.006           1.137  False  False  False
+1      r007_SP500_Q_ROIC       0.817           0.64           0.681     0.165        0.942           1.137  False  False  False
+2    r007_SP500_Q_LOWACC       0.863           0.64           0.681     0.186        0.787           1.137   True   True   True
+3        r007_SP500_V_BM       0.484           0.64           0.681     0.109        1.116           1.137  False  False  False
+4        r007_SP500_V_EP       0.475           0.64           0.681     0.103        0.991           1.137  False  False  False
+5    r007_SP500_V_EBITEV       0.553           0.64           0.681     0.124        1.099           1.137  False  False  False
+6      r007_SP500_V_FCFP       0.629           0.64           0.681     0.137        1.031           1.137  False  False  False
+7    r007_SP500_I_LOWISS       0.651           0.64           0.681     0.136        1.090           1.137  False  False  False
+8     r007_SP500_I_LOWAG       0.638           0.64           0.681     0.130        1.099           1.137  False  False  False
+9    r007_SP500_A_FSCORE       0.584           0.64           0.681     0.115        1.048           1.137  False  False  False
+10   r007_SP500_A_GSCORE       0.793           0.64           0.681     0.147        1.190           1.137  False  False  False
+11  r007_SP500_A_ALTMANZ       0.783           0.64           0.681     0.162        1.000           1.137  False  False  False
+12      r007_SP500_A_SHY       0.751           0.64           0.681     0.168        1.236           1.137  False  False  False
+13     r007_SP500_A_STAB       0.627           0.64           0.681     0.111        1.392           1.137  False  False  False
+14   r007_SP500_A_LOWLEV       0.622           0.64           0.681     0.126        0.953           1.137  False  False  False
+15       r007_SP500_B_QV       0.509           0.64           0.681     0.112        1.017           1.137  False  False  False
+16     r007_SP500_B_QUAL       0.755           0.64           0.681     0.151        0.890           1.137  False  False  False
+17     r007_SP500_B_SHYQ       0.821           0.64           0.681     0.176        1.211           1.137  False  False  False
+18      r007_SP500_C_MOM       0.422           0.64           0.681     0.080        0.769           1.137  False  False  False
+19   r007_SP500_C_LOWVOL       0.664           0.64           0.681     0.103        1.440           1.137  False  False  False
+CANDIDATES: []

@@ -30,11 +30,13 @@ def leaderboard(top: int = 30) -> str:
              f"จำนวน trial สะสม: **{len(t)}** · เรียงตาม Sharpe ช่วงตัดสิน (2017–2022, net 10 bps) · แสดง {min(top, len(t))} อันดับแรก", "",
              "เกณฑ์ย่อ: S1 = Sharpe ≥ EW+0.15 และ ≥ SPY+0.15, CAGR ≥ EW+2pt, MDD ไม่แย่กว่า EW เกิน 5pt (ที่ 10 และ 25 bps) · "
              "S2 = ชนะ EW ≥ 70% ของหน้าต่าง 36 เดือน · S6 = ถือเฉลี่ย ≥ 30, ต่ำสุด ≥ 20 · S3 (DSR) อยู่ใน results ของแต่ละ round", "",
+             "⚠️ แถวตระกูล `U1500` (round 007, universe top-1500) = **เสี่ยง survivorship สูง — ห้ามใช้เป็นหลักฐานหลัก** (coverage ต่ำกว่า S&P 500 อย่างมีนัย)", "",
              "| # | trial | ตระกูล | Sharpe | EW | SPY | CAGR | MDD | S1(10/25) | S2 | S6 (เฉลี่ย/ต่ำสุด) | Sharpe 2011–16 (EW) |",
              "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for i, r in enumerate(t.head(top).itertuples(), 1):
+        fam = f"{r.family} ⚠️ เสี่ยง survivorship สูง" if str(r.family).startswith("U1500") else r.family
         lines.append(
-            f"| {i} | `{r.trial_id}` | {r.family} | {r.dec_sharpe:.3f} | {r.dec_sharpe_ew:.3f} | {r.dec_sharpe_spy:.3f} | "
+            f"| {i} | `{r.trial_id}` | {fam} | {r.dec_sharpe:.3f} | {r.dec_sharpe_ew:.3f} | {r.dec_sharpe_spy:.3f} | "
             f"{r.dec_cagr * 100:.1f}% | {r.dec_maxdd * 100:.1f}% | {'✅' if _b(r.S1_10) else '❌'}/{'✅' if _b(r.S1_25) else '❌'} | "
             f"{r.S2_share:.0%} | {r.S6_avg_n:.0f}/{r.S6_min_n:.0f} | {r.info_sharpe:.3f} ({r.info_sharpe_ew:.3f}) |")
     text = "\n".join(lines) + "\n"

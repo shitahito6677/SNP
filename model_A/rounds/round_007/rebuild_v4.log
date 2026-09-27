@@ -1,0 +1,56 @@
+still zero: 3596 with data: 4016
+splits_v2 50/1338
+splits_v2 100/1338
+splits_v2 150/1338
+splits_v2 200/1338
+splits_v2 250/1338
+splits_v2 300/1338
+splits_v2 350/1338
+splits_v2 400/1338
+splits_v2 450/1338
+splits_v2 500/1338
+splits_v2 550/1338
+splits_v2 600/1338
+splits_v2 650/1338
+splits_v2 700/1338
+splits_v2 750/1338
+splits_v2 800/1338
+splits_v2 850/1338
+splits_v2 900/1338
+splits_v2 950/1338
+splits_v2 1000/1338
+splits_v2 1050/1338
+splits_v2 1100/1338
+splits_v2 1150/1338
+splits_v2 1200/1338
+splits_v2 1250/1338
+splits_v2 1300/1338
+splits_v2 1338/1338
+SPLITS2 DONE
+2011-06-30 candidates 1369 rows so far 1289
+2012-06-29 candidates 6728 rows so far 5035
+2013-06-28 candidates 7952 rows so far 9150
+2014-06-30 candidates 7726 rows so far 13321
+2015-06-30 candidates 7551 rows so far 17577
+2016-06-30 candidates 7281 rows so far 21831
+2017-06-30 candidates 6814 rows so far 25993
+2018-06-29 candidates 6490 rows so far 30060
+2019-06-28 candidates 6283 rows so far 34113
+2020-06-30 candidates 6092 rows so far 38134
+2021-06-30 candidates 6133 rows so far 42249
+2022-06-30 candidates 6895 rows so far 46626
+PANEL DONE
+mcap/float: n=8664, median=1.040, <0.7=0.75%, >1.5=14.49%
+             R  pool_recent_10k  float_top1500  coverage_price_%  of_which_in_U_%  U1500_size  top1500_mcap_rows  removed_by_liquidity  financial_in_top1500  mcap_cutoff_$bn
+0   2011-06-30             1369           1260              56.7             41.5         540                734                    14                   185             0.08
+1   2012-06-29             6728           1500              56.7             41.5         881               1500                   326                   399             0.07
+2   2013-06-28             7952           1500              58.9             43.6         964               1500                   231                   381             0.16
+3   2014-06-30             7726           1500              61.7             45.6        1064               1500                    95                   377             0.29
+4   2015-06-30             7551           1500              63.6             46.6        1087               1500                    64                   376             0.39
+5   2016-06-30             7281           1500              64.8             47.9        1083               1500                    59                   386             0.40
+6   2017-06-30             6814           1500              68.3             50.3        1102               1500                    32                   379             0.56
+7   2018-06-29             6490           1500              71.1             51.7        1105               1500                    29                   378             0.76
+8   2019-06-28             6283           1500              74.5             54.9        1108               1500                    26                   378             0.78
+9   2020-06-30             6092           1500              76.3             55.0        1121               1500                    29                   363             0.72
+10  2021-06-30             6133           1500              79.3             58.4        1148               1500                    19                   340             1.52
+11  2022-06-30             6895           1500              82.8             60.3        1144               1500                    25                   339             1.36

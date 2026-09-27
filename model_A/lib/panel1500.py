@@ -28,8 +28,10 @@ class Ctx1500:
         self.close = guard.clip(pd.read_parquet(build1500.P_CLOSE).sort_index())
         self.adj = guard.clip(pd.read_parquet(build1500.P_ADJ).sort_index())
         self.vol = guard.clip(pd.read_parquet(build1500.P_VOL).sort_index())
-        us = self.adj["SPY"].dropna().index
-        self.close, self.adj, self.vol = self.close.loc[us], self.adj.loc[us], self.vol.loc[us]
+        main_adj = prices.load_adj_close()
+        us = main_adj["SPY"].dropna().index  # ปฏิทินสหรัฐและ SPY จาก price store หลัก (ตรวจแล้วใน v0)
+        self.close, self.adj, self.vol = (x.reindex(us) for x in (self.close, self.adj, self.vol))
+        self.adj["SPY"] = main_adj["SPY"].reindex(us)
         self.splits = prices.load_splits()
         rss = sec_rss.load_all()
         self.rss10k = rss[rss["form"].isin({"10-K", "10-K/A", "10-KT"})][["cik", "filed"]]

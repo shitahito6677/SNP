@@ -16,24 +16,31 @@ import requests
 from lib.paths import INTERIM, SEC_DIR, SEC_USER_AGENT
 
 FRAMES = SEC_DIR / "frames"
-URL = "https://data.sec.gov/api/xbrl/frames/dei/EntityPublicFloat/USD/CY{y}Q2I.json"
+URL = "https://data.sec.gov/api/xbrl/frames/dei/EntityPublicFloat/USD/CY{y}Q{q}I.json"
 
 
 def frames_float(years=range(2009, 2023)) -> pd.DataFrame:
     FRAMES.mkdir(parents=True, exist_ok=True)
     rows = []
+    # public float วัด ณ สิ้นไตรมาส 2 ของ "ปีบัญชี" แต่ละบริษัท → ตกคนละไตรมาสปฏิทิน (Apple = มี.ค. = CY Q1)
+    # บั๊กที่พบก่อนประเมิน round 007: ใช้แค่ CY Q2 ทำให้บริษัทที่ปีบัญชีไม่จบ ธ.ค. (เช่น AAPL) หายจาก pool → ใช้ครบ 4 ไตรมาส
     for y in years:
-        p = FRAMES / f"dei_EntityPublicFloat_USD_CY{y}Q2I.json"
-        if not p.exists():
-            r = requests.get(URL.format(y=y), headers={"User-Agent": SEC_USER_AGENT}, timeout=120)
-            r.raise_for_status()
-            p.write_bytes(r.content)
-            time.sleep(0.2)
-        d = json.loads(p.read_text())
-        df = pd.DataFrame(d["data"])
-        df["year"] = y
-        rows.append(df[["cik", "entityName", "loc", "end", "val", "year"]])
-    return pd.concat(rows, ignore_index=True)
+        for q in (1, 2, 3, 4):
+            p = FRAMES / f"dei_EntityPublicFloat_USD_CY{y}Q{q}I.json"
+            if not p.exists():
+                r = requests.get(URL.format(y=y, q=q), headers={"User-Agent": SEC_USER_AGENT}, timeout=120)
+                if r.status_code == 404:
+                    continue
+                r.raise_for_status()
+                p.write_bytes(r.content)
+                time.sleep(0.2)
+            d = json.loads(p.read_text())
+            df = pd.DataFrame(d["data"])
+            df["year"] = y
+            rows.append(df[["cik", "entityName", "loc", "end", "val", "year"]])
+    f = pd.concat(rows, ignore_index=True)
+    # 1 ค่าต่อบริษัทต่อปี (ค่าล่าสุดของปีนั้น)
+    return f.sort_values("end").groupby(["cik", "year"], as_index=False).last()
 
 
 def pool(top: int = 3000) -> pd.DataFrame:
