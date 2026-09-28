@@ -92,3 +92,11 @@
 - ข่าว manual (toggle รวมข่าว manual): `score` = label -2..+2 (เดิม label/2 ตาม #14) ให้ตรงสัญญา B
 - ตัวเลข "ผ่าน N ตัว" ก่อนรัน = ณ วันทำการสุดท้ายของช่วงที่เลือก (ไม่ใช่ค่าเฉลี่ย) — หลังรันเปลี่ยนเป็นค่าเฉลี่ยต่อวันจาก funnel
 - `AsOf`: `max_age_days: 0` เดิมถูกตีความเป็น "ไม่กำหนด" (3,650 วัน) → แก้ให้ 0 = point-in-time (ไม่มี version เดิมใดใช้ 0)
+
+## 16. (G2) B version จากข่าว manual — build อัตโนมัติ ไม่ commit
+- สร้างโดย `sandbox/v2/manual_labels.py` → `model_B/export/manual-labels/{manifest.json, signals.parquet}` จาก `manual_news.jsonl` (ข้อมูลส่วนตัว gitignored) → **gitignore ผลที่สร้างด้วย** (`model_B/export/manual-labels*/`); build ใหม่ตอน server start, หลังเพิ่ม/ลบ/นำเข้าข่าว และตอนกด Rescan (เขียนไฟล์เฉพาะเมื่อ `content_sha256` เปลี่ยน)
+- `created_at` ของ manifest = เวลาของข่าวล่าสุดที่ใช้ (ไม่ใช่เวลา build) → rebuild ด้วยข่าวชุดเดิมไม่ทำให้ Re-run บอกว่า "signal ถูกสร้างใหม่"
+- **point-in-time** (`max_age_days: 0`) ตามสเปค — วันที่ของสัญญาณ = `effective_date` ของข่าว (วันทำการที่ข่าวมีผล; ข่าวเสาร์-อาทิตย์ → จันทร์) — เหตุผลอยู่ใน manifest `notes`
+- ข่าวหลายรายการของหุ้นเดียวกันในวันเดียว (key ซ้ำไม่ได้) → label เฉลี่ยปัดครึ่งออกจาก 0 + reasons เก็บทุกข่าวและบอกวิธีรวม — ถ้าต้องการกติกาอื่น (เช่น ตัวแรงสุด) แก้ `_rows()`
+- ไม่มีข่าวเลย → version ยังอยู่ (เลือกได้) แต่ว่าง + คำเตือน; ทุกวัน applicable False
+- test ใช้โฟลเดอร์ export ชั่วคราว (`tests/conftest.py`) ไม่ทับไฟล์ที่ build จากข่าวจริง

@@ -46,3 +46,6 @@ sandbox/v2/experiments/*/round_trips.json
 sandbox/v2/static/vendor/monaco/
 sandbox/v2/static/vendor/plotly.min.js
 sandbox/v2/screenshots/*.tmp
+
+# sandbox v2 — B version ที่ build จากข่าว manual ของผู้ใช้ (gitignored data) — สร้างใหม่อัตโนมัติ
+model_B/export/manual-labels*/

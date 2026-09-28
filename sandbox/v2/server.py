@@ -59,9 +59,20 @@ def _asset_version() -> str:
     return str(int(max((f.stat().st_mtime for f in fs if f.exists()), default=0)))
 
 
+def rebuild_manual_labels():
+    """B version จากข่าว manual (model_B/export/manual-labels*) — build ใหม่ทุกครั้งที่ข่าวเปลี่ยน; พังแล้วไม่ล้มทั้ง request"""
+    from sandbox.v2 import manual_labels
+    try:
+        return manual_labels.build()
+    except Exception:  # noqa: BLE001
+        log.exception("rebuild manual-labels failed")
+        return None
+
+
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static", template_folder="templates")
     app.json.ensure_ascii = False
+    rebuild_manual_labels()
 
     @app.errorhandler(Exception)
     def on_error(e):
@@ -81,6 +92,7 @@ def create_app() -> Flask:
 
     @app.post("/api/registry/rescan")
     def api_rescan():
+        rebuild_manual_labels()
         snap = registry.scan()
         snap["conditions"] = condition_registry.list_conditions()
         return jsonify(snap)
@@ -259,14 +271,19 @@ def create_app() -> Flask:
     def api_news_add():
         from sandbox.v2 import news
         try:
-            return jsonify(news.add(request.get_json(force=True))), 201
+            row = news.add(request.get_json(force=True))
         except (ValueError, KeyError) as e:
             return jsonify({"error": str(e)}), 400
+        rebuild_manual_labels()
+        return jsonify(row), 201
 
     @app.delete("/api/news/<nid>")
     def api_news_delete(nid):
         from sandbox.v2 import news
-        return (jsonify({"ok": True}), 200) if news.delete(nid) else (jsonify({"error": "ไม่พบข่าว"}), 404)
+        if not news.delete(nid):
+            return jsonify({"error": "ไม่พบข่าว"}), 404
+        rebuild_manual_labels()
+        return jsonify({"ok": True})
 
     @app.post("/api/news/csv/preview")
     def api_news_csv_preview():
@@ -298,6 +315,8 @@ def create_app() -> Flask:
             except Exception as e:  # noqa: BLE001 — แถวเดียวพังไม่ให้ทั้งไฟล์พัง
                 resp, _ = fail(e, "บันทึกแถวนี้ไม่สำเร็จ")
                 errors.append({"row": r.get("row"), "error": resp.get_json()["error"]})
+        if saved:
+            rebuild_manual_labels()
         return jsonify({"saved": len(saved), "errors": errors, "ids": [x["id"] for x in saved]})
 
     # ------------------------------------------------------------ results / experiments

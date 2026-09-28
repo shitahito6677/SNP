@@ -110,7 +110,10 @@ def scan() -> dict:
             mf = d / "manifest.json"
             if not mf.exists():
                 continue
-            rel = str(d.relative_to(cfg.REPO))
+            try:
+                rel = str(d.relative_to(cfg.REPO))
+            except ValueError:  # export นอก repo (เช่นโฟลเดอร์ชั่วคราวระหว่าง test) → เก็บ path เต็ม
+                rel = str(d)
             try:
                 m = json.loads(mf.read_text())
             except Exception as e:  # noqa: BLE001

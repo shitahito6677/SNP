@@ -122,6 +122,14 @@
 - tests รวม **89/89 ผ่าน**
 - DoD: ✅
 
+## G2 — B version `manual-labels` ✅
+- `manual_labels.py`: ข่าว manual → signal ต่อ (ticker, วันที่มีผล): score = label -2..+2, applicable True, point-in-time (`max_age_days 0`); manifest `result_badge: "manual"`, coverage = วันที่/ticker ที่มีข่าวจริง, notes อธิบาย point-in-time; rebuild อัตโนมัติ (server start / ข่าวเปลี่ยน / Rescan) — DECISIONS #16
+- registry: badge `manual`/`oracle`, export นอก repo ได้ (test)
+- build จากข่าวจริงของผู้ใช้ (อ่านอย่างเดียว): 463 แถว, 71 ticker, 2021-10-20 → 2023-06-28, score -2:32 · -1:22 · 0:160 · +1:147 · +2:102
+- test `tests/test_manual_labels.py` 4 ข้อ: import META → เลือก B = manual-labels → รันจริง: condition assert ทุกวันว่า `ctx.b["META"]` = label ในไฟล์เป๊ะในวันที่มีข่าว และ `applicable False` วันอื่น; rebuild ตามการเพิ่ม/ลบข่าว; ข่าวซ้ำวันเดียวกันเฉลี่ย; ไม่มีข่าว = version ว่างแต่ valid
+- ผ่านเว็บจริง: กล่อง B เลือก "B-manual · Manual labels … [MANUAL]" ได้, badge MANUAL (?) + tooltip, คำเตือน MANUAL — screenshot `screenshots/G2_manual_labels.jpg`
+- DoD: ✅
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
