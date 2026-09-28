@@ -159,10 +159,12 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
     """ตรวจ + เติมค่า default → (config, warnings) ; ผิด = ConfigError"""
     c = json.loads(json.dumps(c))  # deep copy
     warnings = []
-    start = pd.Timestamp(c.get("start") or cfg.PRICE_START)
+    first_px = prices.data_start()
+    start = pd.Timestamp(c.get("start") or max(pd.Timestamp(cfg.DECISION_START), first_px))  # ค่าเริ่มต้น = วัน rebalance ของ A
     end = pd.Timestamp(c.get("end") or cfg.DEFAULT_END)
-    if start < pd.Timestamp(cfg.PRICE_START):
-        raise ConfigError(f"วันเริ่ม {start.date()} ก่อนข้อมูลราคา ({cfg.PRICE_START}) — เปลี่ยน PRICE_START ใน config.py แล้วรัน update_prices")
+    if start < first_px:
+        raise ConfigError(f"วันเริ่ม {start.date()} ก่อนข้อมูลราคาที่มีในเครื่อง ({first_px.date()}) — "
+                          "รัน python3 -m sandbox.v2.scripts.update_prices --backfill-only")
     if end <= start:
         raise ConfigError("วันจบต้องหลังวันเริ่ม")
     ho = c.get("held_out") or {}
@@ -171,6 +173,18 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
         raise prices.HeldOutError(
             f"ช่วงวันที่ถึง {end.date()} เข้า held-out (≥ {cfg.HELD_OUT_START}) — ต้องเปิด toggle และพิมพ์ "
             f"'{cfg.HELD_OUT_CONFIRM_TEXT}' ก่อน (ผลจะติดธง held_out_touched ถาวร)")
+    # warm-up: ราคาก่อนวันเริ่ม ให้ indicator ของ condition มีค่าตั้งแต่วันแรก — ไม่ซื้อขาย ไม่นับในผล
+    # (config ของผลเก่าที่ไม่มี key "warmup" → re-run ใส่ days 0 = พฤติกรรมเดิม)
+    want = int((c.get("warmup") or {}).get("days", cfg.INDICATOR_WARMUP_DAYS))
+    if want < 0:
+        raise ConfigError("warm-up ต้อง ≥ 0 วัน")
+    before = prices.calendar(first_px, start - pd.Timedelta(days=1), touched) if start > first_px else pd.DatetimeIndex([])
+    got = min(want, len(before))
+    warmup = {"days": got, "requested": want, "start": str(before[-got].date()) if got else None,
+              "end": str(before[-1].date()) if got else None}
+    if got < want:
+        warnings.append(f"WARMUP: มีราคาก่อนวันเริ่ม {start.date()} แค่ {got} วันทำการ (ต้องการ {want}) — indicator ช่วงต้น "
+                        f"(เช่น SMA50 ต้องใช้ 50 วัน) อาจยังไม่มีค่า/ไม่แม่น")
     scope = normalize_scope(c.get("scope"))
     members = scope_members(scope)
     if members is not None:
@@ -224,6 +238,7 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
         "cost": float(c.get("cost") if c.get("cost") is not None else cfg.TRANSACTION_COST),
         "execution": cfg.EXECUTION,
         "held_out": {"enabled": bool(ho.get("enabled")), "touched": bool(touched)},
+        "warmup": warmup,
         "scope": scope,
         "stages": stages,
         **({"legacy_migration": legacy} if legacy else {}),
@@ -432,6 +447,16 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
     progress("condition", 14, None, "เริ่ม process ของ condition")
     runner = ConditionRunner(conf["condition"]["source"], columns, sector_of)
     log(f"condition: {conf['condition']['name']}")
+    wu = conf.get("warmup") or {}
+    if wu.get("days"):  # ส่งราคา warm-up ให้ condition (ไม่ตัดสินใจ ไม่ซื้อขาย ไม่อยู่ใน equity/metrics)
+        ws, we = pd.Timestamp(wu["start"]), pd.Timestamp(wu["end"])
+        wcal = prices.calendar(ws, we, allow)
+        wadj = prices.load("adj", None, ws, we, allow).reindex(wcal).reindex(columns=columns)
+        wclose = prices.load("close", None, ws, we, allow).reindex(wcal).reindex(columns=columns)
+        wvol = prices.load("volume", None, ws, we, allow).reindex(wcal).reindex(columns=columns)
+        for i in range(len(wcal)):
+            runner.prices_only({"date": str(wcal[i].date()), "prices": _price_row(wadj, wclose, wvol, i)})
+        log(f"warm-up: ส่งราคา {len(wcal)} วันทำการ ({ws.date()} → {we.date()}) ให้ condition — ไม่ซื้อขาย ไม่นับในผล")
 
     # ---- simulate
     n = len(cal)
@@ -648,6 +673,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "git": _git(),
         "data_hash": prices.data_hash(used, start, end, allow),
+        **({"warmup_data_hash": prices.data_hash(used, wu["start"], wu["end"], allow)} if wu.get("days") else {}),
         "universe_manifest_hash": prices.manifest().get("data_hash"),
         "price_start_config": cfg.PRICE_START,
         "n_tickers_priced": len(used),
@@ -766,7 +792,7 @@ def dry_run(conf: dict, date=None, history_days: int = 260) -> dict:
     if not len(cal_all):
         raise ConfigError("ไม่มีวันทำการในช่วงที่เลือก")
     t = cal_all[-1]
-    hstart = max(pd.Timestamp(cfg.PRICE_START), t - pd.Timedelta(days=int(history_days * 1.5)))
+    hstart = max(prices.data_start(), t - pd.Timedelta(days=int(history_days * 1.5)))
     cal = prices.calendar(hstart, t, allow)
     adj = prices.load("adj", None, hstart, t, allow).reindex(cal)
     close = prices.load("close", None, hstart, t, allow).reindex(cal)

@@ -14,7 +14,7 @@ function pipeline() {
       B: { mode: "off", version: null },
       C: { mode: "off", version: null },
     },
-    scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null, boxStats: null,
+    scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null, boxStats: null, warmup: null,
     condId: "equal_weight_A", condDesc: "", source: "", dirty: false,
     run: { start: "", end: "", capital: 1000000, costPct: 0.1, heldOut: false, confirm: "", includeManual: false, name: "" },
     warnings: [], error: "", validation: null, validating: false,
@@ -32,7 +32,7 @@ function pipeline() {
     },
     async setup() {
       const meta = Alpine.store("app").meta;
-      this.run.start = meta.config.price_start; this.run.end = meta.config.default_end;
+      this.run.start = meta.config.decision_start; this.run.end = meta.config.default_end;  // เริ่มซื้อขายที่รอบ rebalance ของ A
       this.run.capital = meta.config.capital; this.run.costPct = meta.config.cost * 100;
       this.fixVersions();
       await this.loadCondition();
@@ -102,7 +102,7 @@ function pipeline() {
       }
       try {
         const r = await api("/api/preflight", { method: "POST", body });
-        this.warnings = r.warnings; this.error = ""; this.scopeInfo = r.scope; this.boxStats = r.box_stats || null;
+        this.warnings = r.warnings; this.error = ""; this.scopeInfo = r.scope; this.boxStats = r.box_stats || null; this.warmup = r.warmup || null;
       } catch (e) { this.error = e.message; this.scopeInfo = null; this.boxStats = null; }
     },
     /* ตัวเลขบนกล่อง: หลังรัน = เฉลี่ยต่อวันจาก funnel · ก่อนรัน = ณ วันสุดท้ายของช่วง (จาก preflight) — ไว้ดู ไม่ใช่ไว้กด */
@@ -232,14 +232,20 @@ function pipeline() {
     tlPos(d) {
       const m = Alpine.store("app").meta;
       if (!m || !d) return 0;
-      const a = +new Date(m.config.price_start), b = +new Date(m.latest_trading_day);
+      const a = +new Date(m.config.data_start), b = +new Date(m.latest_trading_day);
       return Math.max(0, Math.min(100, (+new Date(d) - a) / (b - a) * 100));
     },
     tlYears() {
       const m = Alpine.store("app").meta;
       if (!m) return [];
-      const y0 = +m.config.price_start.slice(0, 4) + 1, y1 = +m.latest_trading_day.slice(0, 4);
+      const y0 = +m.config.data_start.slice(0, 4) + 1, y1 = +m.latest_trading_day.slice(0, 4);
       const out = []; for (let y = y0; y <= y1; y++) out.push(y); return out;
+    },
+    startText() {
+      const w = this.warmup, sd = Alpine.store("app").meta?.config?.start_dates;
+      const trade = `เริ่มซื้อขายจริง: ${this.run.start}` + (sd && this.run.start === sd.decision_start ? ` (รอบ rebalance ของ ${sd.anchor.split("_")[0]})` : "");
+      if (!w) return trade;
+      return (w.days ? `ราคาเริ่มมี: ${w.start} (warm-up indicator ${w.days} วันทำการ — ไม่ซื้อขาย ไม่นับในผล) · ` : "ไม่มี warm-up · ") + trade;
     },
     touchesHeldOut() { const m = Alpine.store("app").meta; return m && this.run.end >= m.config.held_out_start; },
 

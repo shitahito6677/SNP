@@ -340,3 +340,5 @@ select.label-sel.pos { color: var(--pos); } select.label-sel.neg { color: var(--
 .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 600px) { .stock-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
 .sector-tag { margin-top: 6px; font-size: 10.5px; display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.start-dates { font-size: 12px; color: var(--text-2); }
+.timeline .wu { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, rgba(148, 163, 184, .18) 0 4px, transparent 4px 8px); border-radius: 4px; }

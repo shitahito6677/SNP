@@ -75,7 +75,7 @@ def main():
 
             # คลิก trade แรก → หน้าหุ้น
             pg.locator("table.t tbody tr td a").first.click()
-            pg.wait_for_selector(".stock-chart canvas", timeout=20000)
+            pg.wait_for_function("() => [...document.querySelectorAll('.stock-chart canvas')].some(c => c.width > 100)", timeout=20000)  # canvas ตัวแรกของ lightweight-charts กว้าง 0 เสมอ
             pg.wait_for_timeout(1500)
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "06_stock.jpg"), full_page=True)
 

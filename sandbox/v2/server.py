@@ -146,6 +146,7 @@ def create_app() -> Flask:
             log.exception("box_stats failed")
             stats = {}
         return jsonify({"ok": True, "warnings": warnings, "held_out_touched": conf["held_out"]["touched"], "box_stats": stats,
+                        "start": conf["start"], "warmup": conf["warmup"],
                         "scope": {"mode": sc["mode"], "label": engine.scope_label(sc), "sectors": sc["sectors"], "tickers": sc["tickers"],
                                   "n_members": len(sc["members"]) if "members" in sc else None}})
 
@@ -211,7 +212,9 @@ def create_app() -> Flask:
         tickers = [{"t": t, "name": r.get("name") or t, "sector": r.get("sector") or "Unknown", "status": r.get("status"),
                     "kind": r.get("kind")} for t, r in sorted(man["tickers"].items()) if r.get("status") in ("ok", "partial")]
         return jsonify({
-            "config": {"price_start": cfg.PRICE_START, "default_end": cfg.DEFAULT_END, "held_out_start": cfg.HELD_OUT_START,
+            "config": {"price_start": cfg.PRICE_START, "decision_start": cfg.DECISION_START, "start_dates": cfg.START_DATES,
+                       "data_start": str(prices.data_start().date()), "warmup_days": cfg.INDICATOR_WARMUP_DAYS,
+                       "default_end": cfg.DEFAULT_END, "held_out_start": cfg.HELD_OUT_START,
                        "confirm_text": cfg.HELD_OUT_CONFIRM_TEXT, "capital": cfg.INITIAL_CAPITAL, "cost": cfg.TRANSACTION_COST,
                        "execution": cfg.EXECUTION, "decide_timeout": cfg.DECIDE_TIMEOUT_SEC},
             "latest_trading_day": man.get("latest_trading_day"), "counts": man.get("counts"),
@@ -424,6 +427,7 @@ def create_app() -> Flask:
         except KeyError as e:
             return jsonify({"error": str(e).strip("'\"")}), 404
         conf = json.loads((d / "config.json").read_text())
+        conf.setdefault("warmup", {"days": 0})  # ผลก่อน J1 รันโดยไม่มี warm-up → รันซ้ำแบบเดิม (ผลตรงเดิม)
         conf["condition"] = {"id": conf["condition"].get("id"),
                              "source": (d / "condition_snapshot.py").read_text(encoding="utf-8")}
         if conf["held_out"].get("touched"):  # ผลนี้แตะ held-out ไปแล้ว — รันซ้ำ config เดิมไม่เพิ่มข้อมูลใหม่

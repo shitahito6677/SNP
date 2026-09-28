@@ -156,6 +156,17 @@
 - ผ่านเว็บจริงแบบ **ออฟไลน์** (Playwright บล็อกทุก request ที่ไม่ใช่ server ในเครื่อง): การ์ด 547, โลโก้จริง 383 / avatar 164, ไม่มี request ออกนอกเครื่อง, error 0, กรอง/ค้นหา/คลิกทำงานเหมือนเดิม — screenshot `screenshots/I2_gallery_logos.jpg`
 - DoD: ✅
 
+## J1 — วันเริ่มซื้อขายตรงรอบ rebalance ของ A + warm-up indicator ✅
+- `config.compute_start_dates()`: DECISION_START = รอบ A1 ล่าสุดที่ ≤ วันนี้ − 5 ปี (ไม่ใช้รอบใน held-out), PRICE_START = −90 วันทำการ (ปฏิทิน SPY จริง) — วันนี้ได้ 2021-06-30 / 2021-02-22; `IDEAL_LOOKBACK_YEARS`, `INDICATOR_WARMUP_DAYS` ใน config — DECISIONS #19
+- ราคา: `update_prices --backfill-only` เติม 87,723 แถว (ช่วง 2021-02-12 → 2021-09-24) แถวเดิมไม่เปลี่ยน (ตรวจกับสำรองครบ 575 ไฟล์); stub build ใหม่ครอบช่วงต้น (แถวเดิมตรงกัน)
+- engine: run ใหม่เริ่มที่ DECISION_START + warm-up 90 วัน (ส่งราคาให้ condition ก่อนวันแรก ไม่ซื้อขาย ไม่อยู่ในผล, `warmup_data_hash`), ราคาไม่พอ → ลด warm-up + คำเตือน; ผลเก่า re-run = ไม่มี warm-up (เหมือนเดิม)
+- UI: "ราคาเริ่มมี: 2021-02-22 (warm-up indicator 90 วันทำการ — ไม่ซื้อขาย ไม่นับในผล) · เริ่มซื้อขายจริง: 2021-06-30 (รอบ rebalance ของ A1)", แถบลายบน timeline, หน้าผลมีแถบ WARM-UP, หน้า About อธิบายที่มาของวันที่
+- test `tests/test_price_start_alignment.py` 12 ข้อ: "วันนี้" 5 ค่า → วัน rebalance จริงของ A1 เป๊ะ, held-out ข้าม/อนุญาต, PRICE_START = 90 วันทำการพอดี, default run, SMA50/EMA20/RSI14 มีค่าวันแรก (assert ใน condition), ซื้อครั้งแรกวันทำการถัดจาก DECISION_START, META = รอบที่ A1 เลือก, **ผลที่บันทึกในเครื่อง 2 รายการรันซ้ำ identical**
+- ผลรันจริง (experiments/log.md "J1"): 504 วันทำการแทน 443, รอบแรกครบ, ซื้อ 2021-07-01; META ว่างถึง 2022-07-01 เพราะ A1 ไม่เลือก META ในรอบ 2021 (ไม่ใช่วันเริ่ม)
+- ผ่านเว็บจริง: ช่องวันเริ่ม = 2021-06-30, บรรทัดสองวันที่แยกกัน, แถบ warm-up, รัน → หน้าผลแสดง WARM-UP, error 0 — screenshot `screenshots/J1_start_dates.jpg`
+- tests รวม **117/117 ผ่าน**
+- DoD: ✅
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

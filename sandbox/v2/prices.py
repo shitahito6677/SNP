@@ -80,6 +80,11 @@ def load(field: str, tickers=None, start=None, end=None, allow_held_out: bool = 
     return w.loc[pd.Timestamp(start):pd.Timestamp(end)]
 
 
+def data_start() -> pd.Timestamp:
+    """วันแรกที่มีราคาจริงในเครื่อง (วันทำการแรกของ SPY) — ขอบล่างจริงของทุกช่วง (warm-up/ผลเก่าที่เริ่มก่อน PRICE_START ปัจจุบัน)"""
+    return pd.Timestamp(_all()["close"][cfg.BENCHMARK].dropna().index.min())
+
+
 def calendar(start=None, end=None, allow_held_out: bool = False) -> pd.DatetimeIndex:
     """วันทำการของตลาดสหรัฐ (ตามวันที่ SPY มีราคา)"""
     return load("close", [cfg.BENCHMARK], start, end, allow_held_out).dropna().index

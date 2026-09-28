@@ -84,7 +84,7 @@ def build(ticker: str, kind=None, rid=None, start=None, end=None, versions=None)
                 notices.append(f"{ticker} ไม่มีการซื้อขายในการทดลองนี้ — แสดงราคาและสัญญาณอย่างเดียว")
         else:
             notices.append("ไม่มีไฟล์ trade ของการทดลองนี้ในเครื่อง (parquet ไม่อยู่ใน git) — กด Re-run เพื่อสร้างใหม่")
-    start = start or pd.Timestamp(cfg.PRICE_START)
+    start = start or pd.Timestamp(cfg.PRICE_START)  # หน้าหุ้นแสดงราคาตั้งแต่ช่วง warm-up (ดูราคาได้ ไม่ใช่ช่วงซื้อขาย)
     end = end or pd.Timestamp(cfg.DEFAULT_END)
     if start > end:
         raise StockError(f"วันเริ่ม {start.date()} อยู่หลังวันจบ {end.date()}", 400, "date")

@@ -207,12 +207,14 @@
     <div class="panel stack">
       <h2>Run config</h2>
       <div class="row">
-        <div><label class="lbl">เริ่ม</label><input type="date" x-model="run.start" :min="$store.app.meta?.config.price_start" @change="changed()"></div>
+        <div><label class="lbl">เริ่มซื้อขาย</label><input type="date" x-model="run.start" :min="$store.app.meta?.config.data_start" @change="changed()"></div>
         <div><label class="lbl">จบ</label><input type="date" x-model="run.end" :max="$store.app.meta?.latest_trading_day" @change="changed()"></div>
         <div><label class="lbl">ทุน</label><input type="number" x-model.number="run.capital" style="width:130px"></div>
         <div><label class="lbl">cost/ขา %</label><input type="number" step="0.01" x-model.number="run.costPct" style="width:80px"></div>
       </div>
+      <div class="mono start-dates" id="start-dates" x-text="startText()"></div>
       <div class="timeline" x-ref="timeline">
+        <div class="wu" x-show="warmup?.days" :style="`left:${tlPos(warmup?.start)}%;width:${Math.max(0.3, tlPos(run.start)-tlPos(warmup?.start))}%`" title="warm-up: ราคาสำหรับ indicator เท่านั้น"></div>
         <div class="ho" :style="`left:${tlPos($store.app.meta?.config.held_out_start)}%;right:0`"><span>HELD-OUT</span></div>
         <div class="sel" :style="`left:${tlPos(run.start)}%;width:${Math.max(0.5, tlPos(run.end)-tlPos(run.start))}%`"></div>
         <template x-for="y in tlYears()"><span class="tick" :style="`left:${tlPos(y+'-01-01')}%`" x-text="y"></span></template>
@@ -316,6 +318,8 @@
     </div>
 
     <template x-if="r?.empty_reason"><div class="warn orange" id="empty-reason" style="margin-bottom:14px"><b>พอร์ตว่าง</b><span x-text="r.empty_reason"></span></div></template>
+    <template x-if="r?.config?.warmup?.days"><div class="warn gray" id="warmup-note" style="margin-bottom:14px"><b>WARM-UP</b>
+      <span x-text="`ราคา ${r.config.warmup.start} → ${r.config.warmup.end} (${r.config.warmup.days} วันทำการ) ส่งให้ condition คำนวณ indicator เท่านั้น — ไม่ซื้อขาย ไม่อยู่ในกราฟ/metrics · ผลนับตั้งแต่ ${r.config.start}`"></span></div></template>
     <template x-if="r?.config?.scope && r.config.scope.mode !== 'all'"><div class="warn gray" id="scope-note" style="margin-bottom:14px"><b>ขอบเขต</b><span x-text="scopeText()"></span></div></template>
     <template x-if="r && !r.has_artifacts"><div class="warn"><b>NO ARTIFACTS</b><span>ไม่มีไฟล์ parquet ของการทดลองนี้ในเครื่อง (ไม่ได้อยู่ใน git) — แสดงได้เฉพาะ metrics/config; กด Re-run เพื่อสร้างใหม่</span></div></template>
 
@@ -695,7 +699,7 @@
       <ul class="muted">
         <li>Model A: 5 กฎอยู่ระดับ C (ไม่ผ่าน S3/DSR) และยังไม่ freeze; universe ของ Model A เองไม่มีหุ้นที่ Yahoo ไม่มีราคา (เช่น TWTR, ATVI) → survivorship บางส่วน</li>
         <li>Model A backtest เดิมซื้อที่ close วัน rebalance; sandbox ซื้อ close วันถัดไป → ผลต่างกันเล็กน้อย (A1 corr รายวัน 0.99999)</li>
-        <li>ราคาเริ่ม <span class="mono" x-text="$store.app.meta?.config.price_start"></span> → ก่อน held-out มีแค่ ~21 เดือน = A รายปีได้ 2 รอบ (เปลี่ยน PRICE_START ได้ ดู README)</li>
+        <li>ช่วงราคาไม่ hardcode: วันเริ่มซื้อขาย = รอบ rebalance ของ A1 ที่ใกล้ "วันนี้ − 5 ปี" ที่สุด (<span class="mono" x-text="$store.app.meta?.config.decision_start"></span>) และมีราคาย้อนไปอีก <span class="mono" x-text="$store.app.meta?.config.warmup_days"></span> วันทำการ (<span class="mono" x-text="$store.app.meta?.config.price_start"></span>) ไว้ warm-up indicator — ไม่ซื้อขาย/ไม่นับในผล (ปรับที่ IDEAL_LOOKBACK_YEARS / INDICATOR_WARMUP_DAYS ใน config.py)</li>
         <li>Model B = stub เท่านั้น (ยังไม่มี weights จริง)</li>
         <li>Model C rulebase = negative result, ช่วง 2021+ อยู่ใน test set ของ exp_03, vix_p90 ใช้ข้อมูลทั้งช่วง</li>
         <li>ราคาจาก yfinance: ดู DATA_QUALITY.md (เช่น PARA 2024 กระโดดผิดปกติ)</li>

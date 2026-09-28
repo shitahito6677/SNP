@@ -123,10 +123,11 @@ rebalance เฉพาะวันที่ผลลัพธ์เปลี่�
 ข้อมูลตั้งแต่ `2023-07-01` ล็อกไว้ (วันจบ default `2023-06-30`) — รันเข้าช่วงนี้ต้องเปิด toggle + พิมพ์ `ยืนยัน held-out`
 และผลจะติด `held_out_touched: true` + badge **HELD-OUT** ถาวร เหตุผล: ดูผลช่วง held-out แล้วกลับไปปรับเงื่อนไข = เอาข้อสอบมาติว
 
-## เปลี่ยนช่วงราคา
-
-แก้บรรทัดเดียวใน `config.py`: `PRICE_START = "2010-06-01"` แล้วรัน `python3 -m sandbox.v2.scripts.update_prices`
-(ดึงเฉพาะ ticker ที่ยังไม่ครอบคลุมช่วงใหม่ — ส่วนอื่นไม่ต้องแก้) · signal ของ Model A มีตั้งแต่ 2011-06 อยู่แล้ว
+## ช่วงราคา / วันเริ่ม (ไม่ hardcode)
+- `DECISION_START` = รอบ rebalance ของ A1 ล่าสุดที่ ≤ วันนี้ − `IDEAL_LOOKBACK_YEARS` (อ่านจาก signal ของ A1 จริง, ไม่ใช้รอบใน held-out) — ค่าเริ่มต้นของวันเริ่มซื้อขาย
+- `PRICE_START` = ถอยจากนั้น `INDICATOR_WARMUP_DAYS` วันทำการ — ราคา warm-up ส่งให้ condition คำนวณ indicator (ไม่ซื้อขาย ไม่นับในผล)
+- ปรับได้ที่ `config.py` แล้วรัน `python3 -m sandbox.v2.scripts.update_prices --backfill-only` (เติมเฉพาะช่วงต้นที่ขาด แถวเดิมไม่เปลี่ยน → ผลเก่ารันซ้ำได้ค่าเดิม)
+- ผลการทดลองเก่าเก็บ start/end/warm-up ของตัวเองใน config.json — ไม่ถูกสูตรใหม่คำนวณทับ
 
 ## ทดสอบ
 
