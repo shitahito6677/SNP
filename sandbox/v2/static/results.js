@@ -30,14 +30,13 @@ function results() {
       if (this.kind === "run") return "ผลการรัน (ยังไม่บันทึก)";
       return this.r.name || this.r.config?.name || this.id;
     },
-    badgeText(b) {
-      return {
-        held_out: "ผลนี้แตะช่วง held-out แล้ว — ห้ามใช้ผลนี้ย้อนไปปรับเงื่อนไข (ธงนี้ถาวร)",
-        stub: "สัญญาณจาก STUB (สุ่ม deterministic) — ตัวเลขไม่มีความหมายทางการลงทุน",
-        negative: "โมเดลนี้ผลทดสอบเป็น negative result (exp_03: 0/216 cells ผ่าน) — ใช้เพื่อทดสอบระบบ",
-        survivorship: "A ไม่ได้กรอง → universe = หุ้น S&P 500 ปัจจุบัน (รอดมาถึงวันนี้) ผลจะดีเกินจริง",
-        manual: "รวมข่าวที่ผู้ใช้พิมพ์เอง (source=manual) ไม่ใช่ output ของโมเดล",
-      }[b.kind] || "";
+    badgeText(b) { return resultBadgeTip(b.kind); },
+    isOracle() { return !!(this.r?.provenance?.contains_oracle_signal || (this.r?.badges || []).some((b) => b.kind === "oracle")); },
+    async rerunAsk() {
+      const notes = this.r?.legacy_notes || [];
+      if (notes.length && !confirm("config นี้ใช้เกณฑ์กรองในกล่องแบบเดิม ซึ่งย้ายไปอยู่ใน condition แล้ว:\n\n• " + notes.join("\n• ")
+        + "\n\nกด Re-run จะรันด้วยความหมายของระบบใหม่ ผลจะต่างจากผลที่บันทึกไว้ — ดำเนินการต่อ?")) return;
+      return this.rerun(notes.length ? "?force=1" : "");
     },
     ewLabel() { const sc = this.r?.metrics?.scope; return sc ? `EW ขอบเขต (${sc.ew_names} ตัว)` : "EW universe"; },
     scopeText() {
@@ -116,7 +115,7 @@ function results() {
       const first = !sc || sc.mode === "all" ? "ทั้งตลาด" : (sc.mode === "sectors" ? `ขอบเขต ${sc.sectors.join(" ")}` : `ขอบเขต ${sc.tickers.slice(0, 3).join(" ")}${sc.tickers.length > 3 ? "…" : ""}`);
       const seq = [[first, U, "#94A3B8", null]];
       const colors = { A: ["#10B981", "rgba(16,185,129,.45)"], B: ["#A855F7", "rgba(168,85,247,.45)"], C: ["#F97316", "rgba(249,115,22,.45)"] };
-      for (const m of ["A", "B", "C"]) if (st[m].mode !== "off") seq.push([`ผ่าน ${m}${st[m].mode === "score-only" ? " (แนบคะแนน)" : ""}`, f["after_" + m], colors[m][0], colors[m][1], m]);
+      for (const m of ["A", "B", "C"]) if (st[m].mode !== "off") seq.push([`ผ่าน ${m}${m !== "A" && st[m].mode !== "filter" ? " (แนบคะแนน)" : ""}`, f["after_" + m], colors[m][0], colors[m][1], m]);
       const lastN = seq[seq.length - 1][1];
       const H = Math.min(f.held ?? 0, lastN);
       seq.push(["ถือจริง", H, "#EAB308", "rgba(234,179,8,.55)"]);
@@ -147,10 +146,10 @@ function results() {
         location.hash = `#/results/exp/${r.id}`;
       } catch (e) { Alpine.store("app").toast(e.message, "err"); }
     },
-    async rerun() {
+    async rerun(qs = "") {
       this.rerunning = true; this.rerunDiff = null;
       try {
-        const { job_id } = await api(`/api/experiments/${this.id}/rerun`, { method: "POST" });
+        const { job_id } = await api(`/api/experiments/${this.id}/rerun${qs}`, { method: "POST" });
         Alpine.store("app").toast("กำลังรันซ้ำด้วย config + snapshot เดิม…");
         for (;;) {
           await new Promise((res) => setTimeout(res, 800));

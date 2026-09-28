@@ -59,7 +59,7 @@ def badges(conf, prov) -> list:
             out.append({"kind": "stub", "text": f"{m} STUB"})
         elif v.get("result_badge") == "negative":
             out.append({"kind": "negative", "text": f"{m} NEGATIVE"})
-    if conf["stages"]["A"]["mode"] != "filter":
+    if conf["stages"]["A"]["mode"] not in ("on", "filter"):  # "filter" = config ก่อน G1
         out.append({"kind": "survivorship", "text": "SURVIVORSHIP"})
     if conf.get("include_manual"):
         out.append({"kind": "manual", "text": "MANUAL NEWS"})
@@ -74,7 +74,7 @@ def chips(conf, prov) -> list:
             out.append(f"{m} off")
         else:
             lab = (prov.get("versions") or {}).get(m, {}).get("short_label", s["version"])
-            out.append(f"{lab}{' (score)' if s['mode'] == 'score-only' else ''}")
+            out.append(f"{lab}{' (กรองในกล่อง·เดิม)' if s['mode'] == 'filter' and m != 'A' else ''}")
     out.append(f"cond: {conf['condition'].get('id') or conf['condition'].get('name')}")
     sc = conf.get("scope") or {}
     if sc.get("mode") == "sectors":
@@ -82,6 +82,15 @@ def chips(conf, prov) -> list:
     elif sc.get("mode") == "tickers":
         out.insert(0, "scope: " + " ".join(sc["tickers"][:4]) + (f" +{len(sc['tickers']) - 4}" if len(sc["tickers"]) > 4 else ""))
     return out
+
+
+def _legacy(conf) -> list:
+    """ผลที่บันทึกด้วยกล่องแบบเดิม (ก่อน G1): เปิดดูได้ตามเดิม (ข้อมูลอยู่ในไฟล์) แต่ Re-run จะได้ความหมายใหม่"""
+    from sandbox.v2 import engine
+    try:
+        return engine.legacy_notes(conf.get("stages"))[1]
+    except Exception as e:  # noqa: BLE001
+        return [f"อ่าน config กล่องเดิมไม่ได้: {e}"]
 
 
 def empty_reason(conf, met) -> str | None:
@@ -95,7 +104,8 @@ def empty_reason(conf, met) -> str | None:
         return f"{who}ไม่มีราคาในช่วงเวลานี้ — พอร์ตว่างตลอดการทดลอง"
     for m, name in (("A", "A"), ("B", "B"), ("C", "C")):
         st = conf["stages"][m]
-        if st["mode"] == "filter" and not f.get(f"after_{m}"):
+        filters = st["mode"] in ("on", "filter") if m == "A" else st["mode"] == "filter"  # B/C กรองได้เฉพาะ config เดิม
+        if filters and not f.get(f"after_{m}"):
             return f"{who}ไม่ผ่านเกณฑ์ {name} ในช่วงเวลานี้ — กล่อง {name} กรองออกหมด พอร์ตจึงว่างตลอดการทดลอง"
     return "มีหุ้นผ่านทุกกล่อง แต่เงื่อนไข (condition) ไม่ได้ให้น้ำหนักหุ้นตัวใดเลย — พอร์ตว่างตลอดการทดลอง"
 
@@ -172,7 +182,7 @@ def load_dir(d: Path, exp_id: str | None = None) -> dict:
     src = (d / "condition_snapshot.py").read_text(encoding="utf-8")
     out = {"id": exp_id, "config": conf, "metrics": met, "provenance": prov, "condition_source": src,
            "badges": badges(conf, prov), "chips": chips(conf, prov), "has_artifacts": (d / "equity.parquet").exists(),
-           "empty_reason": empty_reason(conf, met)}
+           "empty_reason": empty_reason(conf, met), "legacy_notes": _legacy(conf)}
     if not out["has_artifacts"]:
         return out
     eq = pd.read_parquet(d / "equity.parquet")

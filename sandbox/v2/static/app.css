@@ -317,3 +317,11 @@ button.chip { cursor: pointer; background: transparent; font-family: inherit; }
 .sector-chip.on { box-shadow: 0 0 0 1px currentColor inset; }
 .strong { font-weight: 700; }
 select.label-sel.pos { color: var(--pos); } select.label-sel.neg { color: var(--neg); }
+/* ORACLE = label รู้ผลล่วงหน้า — สีม่วงบานเย็น ไม่ซ้ำ badge อื่น */
+.badge.oracle { color: #F5D0FE; border-color: #D946EF; background: rgba(217, 70, 239, .22); box-shadow: 0 0 12px rgba(217, 70, 239, .4); }
+.badge.legacy { color: #FED7AA; border-color: rgba(251, 146, 60, .65); background: rgba(251, 146, 60, .12); }
+.warn.oracle { background: rgba(217, 70, 239, .12); border-color: #D946EF; color: #F5D0FE; }
+.oracle-banner { font-size: 14px; padding: 12px 16px; margin-bottom: 14px; box-shadow: 0 0 22px rgba(217, 70, 239, .35); }
+.has-tip { cursor: help; }
+.box-stats { margin-top: 10px; }
+.stat-pill { display: inline-block; font: 600 12px var(--mono); padding: 3px 10px; border-radius: 20px; background: var(--panel-hi); border: 1px solid var(--line-hi); color: var(--text); }

@@ -83,6 +83,14 @@ def decide(ctx):                       # เรียกทุกวันทำ
 กติกา: long-only, น้ำหนัก ≥ 0 รวม ≤ 1, ticker ต้องอยู่ใน universe / SPY + sector ETF / ที่ถืออยู่ ·
 rebalance เฉพาะวันที่ผลลัพธ์เปลี่ยนจากครั้งก่อน · `decide()` เกิน 10 วินาที/ครั้ง หรือ job เกิน 30 นาที → job fail
 
+## กล่อง A / B / C = แหล่งสัญญาณ (เปิด/ปิด + version เท่านั้น)
+- **A เปิด** = ใช้ผลเลือกหุ้นของ version ตรง ๆ (`class == "selected"` และ `applicable`) — ไม่มีเกณฑ์เพิ่มจากเว็บ; A ปิด = universe ทั้งหมด (ติดธง SURVIVORSHIP)
+- **B เปิด** = ไม่ตัดหุ้น แนบ `ctx.b[ticker]` ให้ทุกตัวที่รอดจาก A: `score` -2..+2, `class`, `applicable`; ไม่มีข่าว ณ วันนั้น = `{"applicable": False, "score": None, "class": None}` (ไม่เดาค่า)
+- **C เปิด** = ไม่ตัดหุ้น แนบสัญญาณราย sector ทาง `ctx.c[etf]` / `ctx.c_for(ticker)`
+- การกรอง/threshold ทั้งหมดอยู่ใน **Condition Editor** — template: `exclude_negative_B` (แทนปุ่ม "ตัด negative"), `a_score_threshold` (แทนช่อง "score ≥"), `B_filter_then_EW`, `c_veto_dca_buyback`
+- บนกล่องแสดง "ผ่าน N ตัว" (ก่อนรัน = ณ วันสุดท้ายของช่วง, หลังรัน = เฉลี่ยต่อวัน) + การกระจาย class ของ B/C — ไว้ดู ไม่ใช่ไว้กด
+- ผลที่บันทึกด้วยกล่องแบบเดิม (มีเกณฑ์กรองในกล่อง) เปิดดูได้ตามเดิม (แถบ LEGACY); Re-run ต้องกดยืนยันเพราะจะรันด้วยความหมายใหม่ — config ที่เทียบเท่าพอดี (A กรอง selected + B/C แนบคะแนน/ปิด) รันซ้ำได้โดยไม่ต้องยืนยันและได้ผลเดิม
+
 ## ขอบเขตการลงทุน (ขั้น 0 ก่อนกล่อง A)
 - หน้า Pipeline → "ขั้น 0 — ขอบเขตการลงทุน": `ทั้งตลาด (S&P 500)` (ค่าเริ่มต้น) / `เลือก Sector` (11 GICS ETF, เลือกได้หลายตัว) / `เลือกหุ้นเอง` (พิมพ์ `@ticker` หรือชื่อบริษัท แล้ว Enter)
 - **A จัดอันดับจากทั้ง universe เสมอ** แล้วค่อยกรองเหลือ scope — record ของ A (class/score/เหตุผล) ที่เงื่อนไขเห็นเป็นค่าเดียวกับตอนไม่จำกัด scope
@@ -94,7 +102,7 @@ rebalance เฉพาะวันที่ผลลัพธ์เปลี่�
 ## นำเข้าข่าว CSV
 - จับคู่ column จากคำในชื่อ (มีวงเล็บ/คำไทยนำหน้าได้ เช่น `ข่าวแบบย่อ (short_news)`) — หน้า preview แก้ mapping เองได้ก่อนบันทึก
 - **label 5 ระดับ `-2..+2` คือค่าหลักของข่าว manual** (-2 negative แรงมาก · -1 negative · 0 neutral (ไม่ค่อยมีผล) · +1 positive · +2 positive แรงมาก) — ใช้ตลอดระบบ: หน้า preview (dropdown 5 ค่า), ฟอร์มพิมพ์เอง, trade reasons (`B: … label -2 negative แรงมาก · … [MANUAL]`), hover/marker บนหน้าหุ้น (`M-2`), `ctx.b[t]["label"]` / `ctx.c[etf]["label"]` ในเงื่อนไข
-- `class` 3 กลุ่ม (≤-1 negative, 0 neutral, ≥1 positive) และ `score = label/2` **derive เพิ่ม** ใน record ของ signal เพื่อให้เกณฑ์กรองแบบ Model B (ตัด negative/neutral, score ≥) ใช้ได้เท่านั้น — ไม่เขียนทับ label
+- record ของ signal: `score` = label -2..+2 (สัญญา B) และ `class` 3 กลุ่ม (≤-1 negative, 0 neutral, ≥1 positive) **derive เพิ่ม** สำหรับ condition ที่อ่านแบบ Model B — ไม่เขียนทับ label
 - label สเกลอื่น (เช่น ±1, ±5) → เทียบเป็น -2..+2 และเก็บค่าในไฟล์ไว้ที่ `label_raw`; ข้อความ positive/neutral/negative → +1/0/-1
 - column อื่น (`source_url`, `label_reason`, …) เก็บเป็น `extra` ต่อแถว; แถวที่อ่านไม่ได้ถูกข้ามพร้อมเหตุผล ไม่ทำให้ทั้งไฟล์ fail
 

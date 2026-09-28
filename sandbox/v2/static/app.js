@@ -21,6 +21,26 @@ function newsLabels() { return (window.Alpine && Alpine.store("app").meta?.news_
 function newsLabelOf(n) { return isNum(n?.label) ? n.label : ({ positive: 1, neutral: 0, negative: -1 }[n?.sentiment] ?? 0); }
 function labelTag(v) { const t = (newsLabels().find((x) => x[0] === v) || [v, ""])[1]; return `${v > 0 ? "+" : ""}${v} ${t}`.trim(); }
 function labelCls(v) { return v >= 2 ? "pos strong" : v >= 1 ? "pos" : v <= -2 ? "neg strong" : v <= -1 ? "neg" : "dim"; }
+/* badge ของ version/ผลลัพธ์ — badge ที่ไม่ใช่ REAL ต้องมีคำอธิบายเสมอ (hover หรือ (?)) */
+const BADGE_INFO = {
+  real: ["REAL", ""],
+  stub: ["STUB", "STUB = ยังไม่มีผลวิเคราะห์จริง ระบบสุ่มค่าเพื่อทดสอบว่า pipeline เดินได้ครบเท่านั้น ห้ามใช้ตัดสินใจลงทุนจริง"],
+  negative: ["NEGATIVE", "NEGATIVE = โมเดลนี้ทดสอบแล้วไม่ผ่าน (negative result) ยังเปิดให้ใช้เพื่อทดสอบระบบ/เปรียบเทียบ ไม่ใช่สัญญาณที่เชื่อถือได้"],
+  manual: ["MANUAL", "MANUAL = มาจาก label ที่ผู้ใช้/Claude ระบุไว้ในข่าว manual ไม่ใช่โมเดลที่เทรน (label ณ วันข่าว ไม่รู้ผลราคาล่วงหน้า)"],
+  oracle: ["ORACLE", "Oracle test — label รู้ผลราคาจริงล่วงหน้าแล้ว ใช้หาเพดานบนว่า B ที่แม่นสมบูรณ์จะช่วยได้แค่ไหน ผลตอบแทนที่ได้ไม่ใช่สิ่งที่ทำได้จริง ห้ามอ้างเป็นผลจริง"],
+  held_out: ["HELD-OUT", "ผลนี้แตะช่วง held-out แล้ว — ห้ามใช้ผลนี้ย้อนไปปรับเงื่อนไข (ธงนี้ถาวร)"],
+  survivorship: ["SURVIVORSHIP", "A ปิด → universe = หุ้น S&P 500 ปัจจุบัน (รอดมาถึงวันนี้) ผลจะดีเกินจริง"],
+  legacy: ["LEGACY", "ผลนี้บันทึกด้วยกล่องแบบเดิม (มีเกณฑ์กรองในกล่อง) — เปิดดูได้ตามเดิม แต่ Re-run จะใช้ความหมายใหม่"],
+};
+/* badge ของผลการทดลอง (experiments_store.badges) — kind "manual" = เปิด toggle รวมข่าว manual */
+const RESULT_BADGE_TIPS = {
+  held_out: BADGE_INFO.held_out[1], stub: BADGE_INFO.stub[1], negative: BADGE_INFO.negative[1], survivorship: BADGE_INFO.survivorship[1],
+  manual: "รวมข่าวที่ผู้ใช้พิมพ์/นำเข้าเอง (source=manual) ผ่าน toggle — ไม่ใช่ output ของโมเดล",
+  manual_labels: BADGE_INFO.manual[1], oracle: BADGE_INFO.oracle[1], legacy: BADGE_INFO.legacy[1],
+};
+function resultBadgeTip(k) { return RESULT_BADGE_TIPS[k] || ""; }
+function badgeLabel(b) { return (BADGE_INFO[b] || [String(b || "").toUpperCase()])[0]; }
+function badgeTip(b) { return (BADGE_INFO[b] || ["", ""])[1]; }
 const LABEL_COLORS = { "-2": "#EF4444", "-1": "#FCA5A5", "0": "#94A3B8", "1": "#86EFAC", "2": "#22C55E" };
 function fmtN(x) { return isNum(x) ? Math.round(x).toLocaleString("en-US") : "—"; }
 function fmtMoney(x) { return isNum(x) ? (x < 0 ? "−" : "") + Math.abs(x).toLocaleString("en-US", { maximumFractionDigits: 0 }) : "—"; }

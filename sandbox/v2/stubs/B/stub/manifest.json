@@ -8,7 +8,7 @@
   "signals.parquet"
  ],
  "source_experiment": "none — deterministic sha256 stub",
- "created_at": "2026-09-27T05:47:52+00:00",
+ "created_at": "2026-09-28T04:17:19+00:00",
  "warnings": [
   "STUB: สุ่มแบบ deterministic ไม่ใช่โมเดล — ผลใด ๆ ที่ได้ไม่มีความหมายทางการลงทุน"
  ],
@@ -24,7 +24,7 @@
   "neutral",
   "negative"
  ],
- "score_meaning": "confidence สุ่ม [0.34, 1]",
+ "score_meaning": "สุ่ม -2..+2 ตามสัญญา B (class positive → +1/+2, neutral → 0, negative → -1/-2)",
  "coverage": {
   "start": "2021-09-27",
   "end": "2026-09-25",

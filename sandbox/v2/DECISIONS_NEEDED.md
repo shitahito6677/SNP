@@ -79,3 +79,16 @@
 - ข่าวที่พิมพ์เอง: ฟอร์มเปลี่ยนเป็น 5 ปุ่ม; API ยังรับ `sentiment` แบบเดิม (→ +1/0/-1) เพื่อไม่ให้ของเดิมพัง
 - **ข่าวที่บันทึกไว้แล้วไม่ต้องแก้ไฟล์:** `label_of()` อ่านได้ทุกรูปแบบ — `label` → ใช้เลย; `label_raw` + `label_scale` (ข่าว 463 แถวที่ผู้ใช้นำเข้าช่วง F1 แรก เวลา 06:19) → คืนความแรงเดิม (ตรวจแล้ว: ทั้ง 463 แถว label = label_raw, กระจาย -2:32 · -1:22 · 0:160 · +1:147 · +2:102); `sentiment` อย่างเดียว (ข่าวพิมพ์เองรุ่นเก่า) → +1/0/-1 (ความแรงเดิมไม่มีให้กู้)
 - ผลต่อ backtest: ข่าว manual ที่พิมพ์เอง "negative" เดิม score -1.0 → ตอนนี้ label -1 → score -0.5 (ความแรง -1.0 สงวนไว้ให้ -2) — มีผลเฉพาะเงื่อนไขที่ใช้ `min_score` หรืออ่าน `score` ของข่าว manual
+
+## 15. (G1) กล่อง A/B/C = เปิด/ปิด + version — ผลเก่าที่ใช้เกณฑ์ในกล่อง
+- **mode ใหม่:** `off` / `on` เท่านั้น; A on = `class == selected AND applicable` ของ version ตรง ๆ; B/C on = แนบสัญญาณ ไม่ตัดหุ้น (C เดิมมีปุ่มกรองแบบเดียวกับ B → เอาออกด้วย)
+- **ผลเก่า (config มี `filter`/`score-only`/`criteria`):** เลือกทาง **read-only + ยืนยันก่อน Re-run** (ไม่ auto-migrate เป็น condition snippet) — เหตุผล: การห่อ condition เดิมด้วยตัวกรองเปลี่ยนทั้ง funnel, `ctx.universe` ที่ condition เห็น และ reasons ของ trade ทำให้ผลไม่เท่าเดิมอยู่ดีในหลายกรณี และเสี่ยงสร้างโค้ดที่ผู้ใช้ไม่ได้เขียน
+  - เปิดผลเก่า: กราฟ/metrics/trade มาจากไฟล์ที่บันทึกไว้ → เหมือนเดิมทุกอย่าง + แถบ LEGACY บอกว่าอะไรเปลี่ยน
+  - config ที่ **เทียบเท่าพอดี** (A filter + เกณฑ์ default selected, B/C score-only หรือ off) → แปลงเงียบ ๆ เป็น on/off และ **รันซ้ำได้ผลเดิมทุกไบต์** (ตรวจแล้ว 4 config เทียบ engine ก่อน G1: metrics/equity/trades/funnel/positions ตรงกัน) — ผลจริงในเครื่อง `20260928-065141_elk-nonb` (A1 + XLK) อยู่กลุ่มนี้
+  - ที่ทำแบบเดิมไม่ได้ (A min_score / class_in อื่น, A score-only → รันเป็น A ปิด, B/C filter → รันเป็นแนบคะแนน) → API `/rerun` คืน 409 พร้อมรายการ; UI ถามยืนยัน → `?force=1` → config ใหม่มี `legacy_migration` + คำเตือน LEGACY
+  - ย้อนกลับ/ทำ migration จริงทีหลัง: `engine.legacy_notes()` มีข้อมูลเกณฑ์เดิมครบ
+- **B ไม่มีข่าว → `applicable: False` (score/class = None, date = None)** แทนการไม่มี key — ไม่ใส่ date ของวันนี้ เพื่อไม่ให้ condition ที่เช็ค "ข่าววันนี้" (`b["date"] == ctx.date`) ทำงานผิด
+- **สัญญา B: score -2..+2** → B stub เดิมเก็บ "ความมั่นใจ" 0.34–0.99 → แปลงในที่ (class เดิมทุกแถว): positive → +1/+2, negative → -1/-2 (ความมั่นใจ ≥ 2/3 = แรง), neutral → 0; `build_stubs.py` ใช้สูตรเดียวกัน; registry ปฏิเสธ B ที่ score นอก -2..+2 — ผลเก่าที่ใช้ B stub: metrics เท่าเดิมถ้า condition ใช้ `class` (เช่น B_filter_then_EW) แต่ตัวเลข score ใน reasons เปลี่ยน
+- ข่าว manual (toggle รวมข่าว manual): `score` = label -2..+2 (เดิม label/2 ตาม #14) ให้ตรงสัญญา B
+- ตัวเลข "ผ่าน N ตัว" ก่อนรัน = ณ วันทำการสุดท้ายของช่วงที่เลือก (ไม่ใช่ค่าเฉลี่ย) — หลังรันเปลี่ยนเป็นค่าเฉลี่ยต่อวันจาก funnel
+- `AsOf`: `max_age_days: 0` เดิมถูกตีความเป็น "ไม่กำหนด" (3,650 วัน) → แก้ให้ 0 = point-in-time (ไม่มี version เดิมใดใช้ 0)

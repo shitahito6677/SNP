@@ -17,7 +17,9 @@ from sandbox.v2 import config as cfg
 
 REQUIRED = ["model", "version", "short_label", "display_name", "is_stub", "result_badge", "signal_files",
             "coverage", "rebalance", "source_experiment", "created_at"]
-BADGES = {"real", "stub", "negative"}
+BADGES = {"real", "stub", "negative", "manual", "oracle"}
+BADGE_ORDER = {"real": 0, "manual": 1, "oracle": 2, "negative": 3, "stub": 4}
+SCORE_RANGE = {"B": (-2.0, 2.0)}  # สัญญา B: score = ความแรงข่าว -2..+2 (class derive: ≥1 positive, 0 neutral, ≤-1 negative)
 REBALANCE = {"annual_june", "monthly", "event", "daily"}
 KEY_OF = {"A": "ticker", "B": "ticker", "C": "sector"}
 SIGNAL_COLS = ["date", "class", "score", "applicable", "reasons", "model_version", "is_stub"]
@@ -90,6 +92,12 @@ def _validate_signals(df: pd.DataFrame, m: dict) -> list:
         errs.append("`reasons` ต้องเป็น list ของข้อความ")
     if len(df) and bool(df["is_stub"].iloc[0]) != bool(m["is_stub"]):
         errs.append("`is_stub` ใน signal ไม่ตรงกับ manifest")
+    lo_hi = SCORE_RANGE.get(m["model"])
+    if lo_hi and len(df):
+        sc = pd.to_numeric(df.loc[df["applicable"].astype(bool), "score"], errors="coerce")
+        out = sc[(sc < lo_hi[0]) | (sc > lo_hi[1]) | sc.isna()]
+        if len(out):
+            errs.append(f"`score` ของ Model {m['model']} ต้องอยู่ใน {lo_hi[0]:g}..{lo_hi[1]:+g} เมื่อ applicable (ผิด {len(out)} แถว เช่น {out.iloc[0]!r})")
     return errs
 
 
@@ -132,9 +140,8 @@ def scan() -> dict:
 def snapshot() -> dict:
     if _state["scanned_at"] is None:
         scan()
-    order = {"real": 0, "negative": 1, "stub": 2}
     models = {m: sorted([v for v in _state["valid"].values() if v["model"] == m],
-                        key=lambda v: (order[v["result_badge"]], v["short_label"])) for m in "ABC"}
+                        key=lambda v: (BADGE_ORDER[v["result_badge"]], v["short_label"])) for m in "ABC"}
     return {"models": models, "invalid": _state["invalid"], "scanned_at": _state["scanned_at"]}
 
 

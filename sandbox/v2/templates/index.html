@@ -114,20 +114,22 @@
           </div>
           <span class="light" :class="statusOf(m).cls" :title="statusOf(m).text" style="margin-left:auto"></span>
         </div>
+        <!-- กล่องโมเดล = แหล่งสัญญาณ: เปิด/ปิด + version เท่านั้น — การกรอง/threshold ทั้งหมดอยู่ใน Condition Editor -->
         <div class="seg">
-          <template x-for="mode in ['off','filter','score-only']">
-            <button :data-mode="mode" :class="{on: stages[m].mode===mode}" @click="setMode(m, mode)" x-text="{off:'ปิด',filter:'กรอง','score-only':'แนบคะแนน'}[mode]"></button>
+          <template x-for="mode in ['off','on']">
+            <button :data-mode="mode" :class="{on: stages[m].mode===mode}" @click="setMode(m, mode)" x-text="{off:'ปิด',on:'เปิด'}[mode]"></button>
           </template>
         </div>
         <div class="field">
           <label class="lbl">version (สแกนอัตโนมัติ)</label>
           <select class="vsel" x-model="stages[m].version" @change="changed()">
             <template x-for="v in versions(m)" :key="v.id">
-              <option :value="v.id" x-text="`${v.short_label} · ${v.display_name}  [${v.result_badge.toUpperCase()}]`" :selected="v.id===stages[m].version"></option>
+              <option :value="v.id" x-text="`${v.short_label} · ${v.display_name}  [${badgeLabel(v.result_badge)}]`" :selected="v.id===stages[m].version"></option>
             </template>
           </select>
           <div class="row" style="margin-top:8px">
-            <template x-if="vmeta(m)"><span class="badge" :class="vmeta(m).result_badge" x-text="vmeta(m).result_badge==='real'?'REAL':(vmeta(m).result_badge==='stub'?'STUB':'NEGATIVE')"></span></template>
+            <template x-if="vmeta(m)"><span class="badge has-tip" :class="vmeta(m).result_badge" :data-badge="vmeta(m).result_badge" :title="badgeTip(vmeta(m).result_badge)"
+              x-text="badgeLabel(vmeta(m).result_badge) + (badgeTip(vmeta(m).result_badge) ? ' (?)' : '')"></span></template>
             <span class="chip" x-show="vmeta(m)" x-text="vmeta(m) && ({annual_june:'รายปี (มิ.ย.)',monthly:'รายเดือน',event:'ตามเหตุการณ์',daily:'รายวัน'}[vmeta(m).rebalance])"></span>
           </div>
           <div class="cov" x-show="vmeta(m)">
@@ -135,26 +137,14 @@
             <span x-text="statusOf(m).text"></span>
           </div>
         </div>
-        <div class="field" x-show="stages[m].mode!=='off'">
-          <label class="lbl">เกณฑ์กรอง</label>
-          <template x-if="m==='A'">
-            <div class="crit">
-              <label><input type="checkbox" x-model="stages.A.onlySelected" @change="changed()"> เฉพาะที่กฎเลือก (selected)</label>
-              <label>score ≥ <input type="number" min="0" max="100" step="5" style="width:70px" x-model.number="stages.A.minScore" @change="changed()" placeholder="—"></label>
-            </div>
-          </template>
-          <template x-if="m!=='A'">
-            <div class="crit">
-              <label><input type="checkbox" x-model="stages[m].exNeg" @change="changed()"> ตัด negative</label>
-              <label><input type="checkbox" x-model="stages[m].exNeu" @change="changed()"> ตัด neutral</label>
-              <label>ไม่มีสัญญาณ →
-                <select x-model="stages[m].missing" @change="changed()" style="padding:3px 6px"><option value="pass">ผ่าน</option><option value="drop">ตัด</option></select>
-              </label>
-            </div>
-          </template>
-          <p class="dim" style="font-size:12px;margin:6px 0 0" x-show="stages[m].mode==='score-only'">ส่งหุ้นทุกตัวต่อ แต่แนบคะแนนให้เงื่อนไขใช้ (ctx.<span x-text="m.toLowerCase()"></span>)</p>
+        <p class="dim box-role" style="font-size:12px;margin:10px 0 0" x-show="stages[m].mode!=='off'" x-text="{
+          A: 'ใช้ผลเลือกหุ้นของ version นี้ตรง ๆ (class = selected และ applicable) · อยากคัดเข้มขึ้นด้วย score → condition a_score_threshold',
+          B: 'ไม่ตัดหุ้น — แนบคะแนนข่าว -2..+2 ให้หุ้นที่รอดจาก A ทาง ctx.b[ticker] (ไม่มีข่าว = applicable False) · ตัดข่าวลบ → condition exclude_negative_B',
+          C: 'ไม่ตัดหุ้น — แนบสัญญาณมหภาคราย sector ทาง ctx.c / ctx.c_for(ticker) · การขาย/หลบ sector ทำใน condition (เช่น c_veto_dca_buyback)'}[m]"></p>
+        <div class="box-stats" :data-stats="m" x-show="stages[m].mode!=='off' && (funnel || boxStats?.[m])">
+          <div class="stat-pill" x-text="passText(m)"></div>
+          <div class="dim mono" style="font-size:11.5px;margin-top:6px" x-show="m!=='A' && boxStats?.[m]" x-text="distText(m)"></div>
         </div>
-        <div class="count-pill" x-show="funnel" x-text="funnel ? `ผ่าน ${fmtN(funnel['after_'+m])}` : ''"></div>
       </div>
     </template>
 
@@ -284,11 +274,13 @@
   <template x-if="loading"><div class="stack"><div class="skeleton" style="height:40px"></div><div class="skeleton" style="height:110px"></div><div class="skeleton" style="height:340px"></div></div></template>
   <template x-if="err"><div class="warn red"><b>ERROR</b><span x-text="err"></span></div></template>
   <div x-show="r && !loading">
+    <template x-if="isOracle()"><div class="warn oracle oracle-banner" id="oracle-banner"><b>ORACLE</b>
+      <span>ผลนี้มาจาก Oracle test (label รู้ผลราคาล่วงหน้า) — เป็นเพดานบนสมมติ ไม่ใช่ผลตอบแทนที่ทำได้จริง ห้ามอ้างเป็นผลจริง</span></div></template>
     <div class="page-head">
       <div>
         <h1 x-text="title()"></h1>
         <p><span class="mono" x-text="r?.config?.start + ' → ' + r?.config?.end"></span> · <span x-text="r?.chips?.join(' · ')"></span></p>
-        <div class="row" style="margin-top:8px"><template x-for="b in r?.badges || []"><span class="badge" :class="b.kind" x-text="b.text"></span></template></div>
+        <div class="row" style="margin-top:8px"><template x-for="b in r?.badges || []"><span class="badge has-tip" :class="b.kind" :title="badgeText(b)" x-text="b.text"></span></template></div>
       </div>
       <div class="row">
         <template x-if="kind==='run'">
@@ -296,7 +288,7 @@
         </template>
         <template x-if="kind==='exp'">
           <div class="row">
-            <button class="sm" @click="rerun()" :disabled="rerunning" x-text="rerunning ? 'กำลังรันซ้ำ…' : 'Re-run ตรวจ reproducibility'"></button>
+            <button class="sm" @click="rerunAsk()" :disabled="rerunning" x-text="rerunning ? 'กำลังรันซ้ำ…' : 'Re-run ตรวจ reproducibility'"></button>
             <a class="btn sm" :href="`/api/experiments/${id}/bundle`">Export bundle (.zip)</a>
             <button class="sm danger" @click="del()">ลบ</button>
           </div>
@@ -304,6 +296,8 @@
       </div>
     </div>
 
+    <template x-if="r?.legacy_notes?.length"><div class="warn orange" id="legacy-note" style="margin-bottom:14px"><b>LEGACY</b>
+      <span x-text="'บันทึกด้วยกล่องแบบเดิม — กราฟ/metrics ด้านล่างคือผลเดิม (อ่านอย่างเดียว) · Re-run จะใช้ความหมายใหม่: ' + r.legacy_notes.join(' · ')"></span></div></template>
     <template x-if="rerunDiff">
       <div class="warn" :class="rerunDiff.identical ? 'gray' : 'orange'" style="margin-bottom:14px">
         <b x-text="rerunDiff.identical ? 'REPRODUCED' : 'DIFFERENT'"></b>
@@ -317,7 +311,7 @@
 
     <div class="warnings" style="margin-bottom:14px">
       <template x-for="b in r?.badges || []">
-        <div class="warn" :class="{held_out:'red', stub:'gray', negative:'orange', survivorship:'', manual:'gray'}[b.kind]"><b x-text="b.text"></b><span x-text="badgeText(b)"></span></div>
+        <div class="warn" :class="{held_out:'red', stub:'gray', negative:'orange', survivorship:'', manual:'gray', manual_labels:'gray', oracle:'oracle', legacy:'orange'}[b.kind]"><b x-text="b.text"></b><span x-text="badgeText(b)"></span></div>
       </template>
     </div>
 
@@ -413,7 +407,7 @@
           <div><div class="dim" style="font-size:11px">MAX DD</div><div class="mono neg" x-text="fmtPct(e.metrics.max_dd)"></div></div>
         </div>
         <div class="row" style="margin-top:8px;gap:4px"><template x-for="c in e.chips"><span class="chip" :class="c[0]==='A'?'A':(c[0]==='B'?'B':(c[0]==='C'?'C':'cond'))" x-text="c"></span></template></div>
-        <div class="row" style="margin-top:6px;gap:4px"><template x-for="b in e.badges"><span class="badge" :class="b.kind" x-text="b.text"></span></template></div>
+        <div class="row" style="margin-top:6px;gap:4px"><template x-for="b in e.badges"><span class="badge has-tip" :class="b.kind" :title="resultBadgeTip(b.kind)" x-text="b.text"></span></template></div>
       </div>
     </template>
   </div>
@@ -424,7 +418,7 @@
   <div class="page-head"><div><h1>Compare</h1><p>equity (normalize = 1 ที่วันแรก) + metrics เทียบกัน</p></div><a class="btn" href="#/gallery">← กลับ</a></div>
   <div class="panel"><div class="chart tall" x-ref="chart"></div></div>
   <div class="panel" style="margin-top:16px"><table class="t">
-    <thead><tr><th>metric</th><template x-for="e in data?.experiments || []"><th class="n"><span x-text="e.name"></span><div class="row" style="justify-content:flex-end;gap:3px"><template x-for="b in e.badges"><span class="badge" :class="b.kind" x-text="b.text"></span></template></div></th></template></tr></thead>
+    <thead><tr><th>metric</th><template x-for="e in data?.experiments || []"><th class="n"><span x-text="e.name"></span><div class="row" style="justify-content:flex-end;gap:3px"><template x-for="b in e.badges"><span class="badge has-tip" :class="b.kind" :title="resultBadgeTip(b.kind)" x-text="b.text"></span></template></div></th></template></tr></thead>
     <tbody><template x-for="k in keys"><tr><td x-text="k[1]"></td><template x-for="e in data?.experiments || []"><td class="n" x-text="k[2](e.metrics[k[0]])"></td></template></tr></template></tbody>
   </table></div>
 </section>
@@ -587,10 +581,10 @@
     <template x-for="m in ['A','B','C']"><div class="panel stack">
       <h2 x-text="'Model ' + m"></h2>
       <template x-for="v in $store.app.registry?.models?.[m] || []" :key="v.id"><div class="panel" style="padding:12px">
-        <div class="row" style="justify-content:space-between"><b x-text="v.short_label + ' · ' + v.display_name"></b><span class="badge" :class="v.result_badge" x-text="v.result_badge"></span></div>
+        <div class="row" style="justify-content:space-between"><b x-text="v.short_label + ' · ' + v.display_name"></b><span class="badge has-tip" :class="v.result_badge" :title="badgeTip(v.result_badge)" x-text="badgeLabel(v.result_badge) + (badgeTip(v.result_badge) ? ' (?)' : '')"></span></div>
         <div class="dim mono" style="font-size:12px" x-text="v.path"></div>
         <div class="cov" x-text="`coverage ${v.coverage.start} → ${v.coverage.end}` + (v.coverage.valid_through ? ` (ใช้ได้ถึง ${v.coverage.valid_through})` : '') + ` · ${v.rebalance}`"></div>
-        <template x-for="w in v.warnings || []"><div class="warn" :class="v.result_badge==='stub'?'gray':(v.result_badge==='negative'?'orange':'')" style="margin-top:6px;font-size:12px"><span x-text="w"></span></div></template>
+        <template x-for="w in v.warnings || []"><div class="warn" :class="{stub:'gray', negative:'orange', oracle:'oracle', manual:'gray'}[v.result_badge] || ''" style="margin-top:6px;font-size:12px"><span x-text="w"></span></div></template>
         <div class="dim" style="font-size:12px;margin-top:6px" x-text="v.notes"></div>
         <template x-if="v.research_stats"><div class="mono dim" style="font-size:11.5px;margin-top:4px" x-text="`ผลวิจัยเดิม: Sharpe ${fmtNum(v.research_stats.dec_sharpe)} (EW ${fmtNum(v.research_stats.dec_sharpe_ew)}), DSR ${fmtNum(v.research_stats.DSR)}, S3 ${v.research_stats.S3}`"></div></template>
       </div></template>
@@ -626,10 +620,12 @@
     <div class="panel stack">
       <h2>ความหมายของ badge</h2>
       <div class="row"><span class="badge real">REAL</span><span>output จริงของโมเดล (ไม่ได้แปลว่าชนะตลาด)</span></div>
-      <div class="row"><span class="badge stub">STUB</span><span>สุ่มแบบ deterministic — ไว้ทดสอบระบบเท่านั้น</span></div>
+      <div class="row"><span class="badge stub">STUB</span><span x-text="badgeTip('stub')"></span></div>
+      <div class="row"><span class="badge manual">MANUAL</span><span x-text="badgeTip('manual')"></span></div>
+      <div class="row"><span class="badge oracle">ORACLE</span><span x-text="badgeTip('oracle')"></span></div>
       <div class="row"><span class="badge negative">NEGATIVE</span><span>โมเดลที่ทดสอบแล้วไม่ผ่านเกณฑ์ (C rulebase exp_03: 0/216 cells ผ่าน |rho|&gt;0.3)</span></div>
       <div class="row"><span class="badge held_out">HELD-OUT</span><span>ผลนี้แตะช่วง held-out แล้ว</span></div>
-      <div class="row"><span class="badge survivorship">SURVIVORSHIP</span><span>A ไม่ได้กรอง → universe = S&amp;P 500 ปัจจุบัน ผลจะดีเกินจริง</span></div>
+      <div class="row"><span class="badge survivorship">SURVIVORSHIP</span><span>A ปิด → universe = S&amp;P 500 ปัจจุบัน ผลจะดีเกินจริง</span></div>
       <div class="row"><span class="badge manual">MANUAL NEWS</span><span>รวมข่าวที่ผู้ใช้พิมพ์เอง (ไม่ใช่ output โมเดล ไม่ใช่ training data)</span></div>
       <h2>ข้อจำกัดที่รู้แล้ว</h2>
       <ul class="muted">

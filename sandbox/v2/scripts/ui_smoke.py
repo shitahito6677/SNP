@@ -49,8 +49,8 @@ def main():
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "01_pipeline.jpg"), full_page=True)
 
             # เปิด B stub (กรอง) + C rulebase (กรอง) ผ่าน UI
-            pg.click(".box.B .seg button[data-mode=filter]")
-            pg.click(".box.C .seg button[data-mode=filter]")
+            pg.click(".box.B .seg button[data-mode=on]")
+            pg.click(".box.C .seg button[data-mode=on]")
             pg.wait_for_timeout(1200)
             pg.fill("#run-name", "UI smoke: A1 + B stub + C rb03 + EW")
             pg.click("button.run-btn")

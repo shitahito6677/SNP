@@ -111,6 +111,17 @@
 - tests รวม **75/75 ผ่าน**
 - DoD: ✅
 
+## G1 — กล่อง A/B/C เหลือ เปิด/ปิด + version ✅
+- engine: `MODES = off/on`; A on = `class == selected AND applicable` ของ version ตรง ๆ; B/C on = แนบสัญญาณ ไม่ตัดหุ้น (funnel after_B = after_C = after_A); B ไม่มีข่าว → record `applicable: False` (ไม่เดาค่า); ลบ `criteria` ออกจาก config; `legacy_notes()` + `LegacyConfigError` สำหรับ config เก่า (DECISIONS #15); `box_stats()` ตัวเลขบนกล่อง
+- สัญญา B: `score` -2..+2 (registry ตรวจ) → แปลง B stub ในที่ (class เดิม) + `build_stubs.py`; ข่าว manual score = label; `AsOf` รองรับ `max_age_days: 0`
+- UI: กล่องมีแค่ ปิด/เปิด + version + badge (tooltip `(?)`) + คำอธิบายบทบาท + "ผ่าน N ตัว · ณ วันที่" + การกระจาย B/C (positive · neutral · negative · ไม่มีข้อมูล); tooltip ของทุก badge (pipeline, registry, ผลลัพธ์, gallery, compare, About); หน้าผลเก่า: แถบ LEGACY + Re-run ถามยืนยัน
+- condition template ใหม่: `exclude_negative_B` (score < 0 → ไม่ถือ, ปรับ `CUT_BELOW`/`CUT_IF_NO_SIGNAL` ได้), `a_score_threshold` (`MIN_SCORE = 90`) — มี comment "เดิมเคยเป็นปุ่มในกล่อง ตอนนี้ย้ายมาที่นี่"
+- ตรวจ compat: config ที่เทียบเท่าพอดี 4 แบบ (A only / A+B+C แนบ / B_filter_then_EW / A filter แบบเก่า) → metrics/equity/trades/funnel/positions ตรงกับ engine ก่อน G1 ทุกไบต์
+- test `tests/test_boxes.py` 14 ข้อ: HTML/JS ไม่มี field เกณฑ์กรอง, config/preflight/registry API ไม่มี criteria, "ผ่าน N" ของ A = นับ selected+applicable เอง, B/C ไม่ตัดหุ้น + ไม่มีข่าว = applicable False, template ทั้งสองให้ผลตรงชื่อ (ทุกการซื้อผ่านเกณฑ์ ณ วันตัดสินใจ), config เก่า 5 แบบ, ผลที่บันทึกในเครื่องเปิดได้ทั้งหมด, ผลเก่าแบบ B กรอง เปิดได้ + Re-run 409, tooltip STUB; อัปเดต test เดิม (mode, score ของข่าว manual, look-ahead ยอมรับ record ไม่มีข้อมูล)
+- ผ่านเว็บจริง (Playwright): กล่อง A/B/C มีปุ่ม ปิด/เปิด + select version 1 อัน ไม่มี input อื่น; A "ผ่าน 75 ตัว · ณ 2023-06-30", B "positive 15 · neutral 10 · negative 10 · ไม่มีข้อมูล 40"; STUB tooltip ขึ้น; template ใหม่อยู่ในรายการ; `ui_smoke` console errors 0 — screenshot `screenshots/G1_boxes.jpg`
+- tests รวม **89/89 ผ่าน**
+- DoD: ✅
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

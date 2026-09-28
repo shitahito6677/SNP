@@ -42,7 +42,8 @@ class AsOf:
         self.vid = vid
         self.key = self.m["key"]
         self.kind = "event" if self.m["rebalance"] == "event" else "rebalance"
-        self.max_age = pd.Timedelta(days=(self.m.get("asof") or {}).get("max_age_days") or 3650)
+        age = (self.m.get("asof") or {}).get("max_age_days")
+        self.max_age = pd.Timedelta(days=3650 if age is None else age)  # 0 = point-in-time (ใช้ได้เฉพาะวันที่มีสัญญาณเป๊ะ ๆ)
         vt = self.m["coverage"].get("valid_through")
         self.valid_through = pd.Timestamp(vt) if vt else None
         df = registry.signals(vid)
@@ -143,9 +144,9 @@ def load_manual_news(kind: str) -> list:
             continue
         lab = label_of(n)  # ค่าหลัก -2..+2
         for k in targets:
-            # class 3 กลุ่ม derive จาก label เพื่อให้เกณฑ์กรองแบบ Model B (ตัด negative/neutral) ใช้ได้; score = label/2 ∈ [-1, 1]
+            # score = label -2..+2 ตามสัญญา B; class 3 กลุ่ม derive จาก label สำหรับ condition ที่อ่านแบบ Model B
             out.append({"date": n["effective_date"], ("ticker" if kind == "b" else "sector"): k,
-                        "class": label_class(lab), "score": lab / 2, "label": lab, "label_text": LABELS[lab], "applicable": True,
+                        "class": label_class(lab), "score": float(lab), "label": lab, "label_text": LABELS[lab], "applicable": True,
                         "reasons": [f"MANUAL {n['effective_date']} [{label_tag(lab)}]: {n['headline'][:140]}"],
                         "model_version": "manual", "is_stub": False, "source": "manual"})
     return out

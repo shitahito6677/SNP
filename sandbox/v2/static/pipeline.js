@@ -10,11 +10,11 @@ const WIRE_COLORS = ["#10B981", "#A855F7", "#F59E0B"];
 function pipeline() {
   return {
     stages: {
-      A: { mode: "filter", version: null, onlySelected: true, minScore: null },
-      B: { mode: "off", version: null, exNeg: true, exNeu: false, missing: "pass" },
-      C: { mode: "off", version: null, exNeg: true, exNeu: false, missing: "pass" },
+      A: { mode: "on", version: null },
+      B: { mode: "off", version: null },
+      C: { mode: "off", version: null },
     },
-    scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null,
+    scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null, boxStats: null,
     condId: "equal_weight_A", condDesc: "", source: "", dirty: false,
     run: { start: "", end: "", capital: 1000000, costPct: 0.1, heldOut: false, confirm: "", includeManual: false, name: "" },
     warnings: [], error: "", validation: null, validating: false,
@@ -69,6 +69,7 @@ function pipeline() {
       if (this.stages[m].mode === "off") return { cls: "stub", text: "ปิด (bypass) — ส่งหุ้นทั้งหมดต่อ" };
       if (!v) return { cls: "none", text: "ไม่มีข้อมูล — ไม่พบ version ใน registry" };
       const s = new Date(this.run.start), e = new Date(this.run.end);
+      if (!v.coverage.start) return { cls: "none", text: "ยังไม่มีข้อมูล (version นี้ว่าง)" };
       const cs = new Date(v.coverage.start), ce = new Date(v.coverage.valid_through || v.coverage.end);
       const cov = `coverage ${v.coverage.start} → ${v.coverage.valid_through || v.coverage.end}`;
       if (ce < s || cs > e) return { cls: "none", text: `ไม่มีข้อมูลในช่วงที่เลือก (${cov})` };
@@ -81,16 +82,15 @@ function pipeline() {
     },
 
     config() {
-      const A = this.stages.A, crit = (s) => ({ exclude_classes: [s.exNeg && "negative", s.exNeu && "neutral"].filter(Boolean), missing: s.missing, min_score: null });
       const src = LAB.editor ? LAB.editor.getValue() : this.source;
       return {
         name: this.run.name, start: this.run.start, end: this.run.end, capital: this.run.capital, cost: this.run.costPct / 100,
         held_out: { enabled: this.run.heldOut, confirm: this.run.confirm }, include_manual: this.run.includeManual,
         scope: { mode: this.scope.mode, sectors: [...this.scope.sectors], tickers: [...this.scope.tickers] },
         stages: {
-          A: { mode: A.mode, version: A.version, criteria: { class_in: A.onlySelected ? ["selected"] : ["selected", "not_selected"], min_score: isNum(A.minScore) ? A.minScore : null } },
-          B: { mode: this.stages.B.mode, version: this.stages.B.version, criteria: crit(this.stages.B) },
-          C: { mode: this.stages.C.mode, version: this.stages.C.version, criteria: crit(this.stages.C) },
+          A: { mode: this.stages.A.mode, version: this.stages.A.version },
+          B: { mode: this.stages.B.mode, version: this.stages.B.version },
+          C: { mode: this.stages.C.mode, version: this.stages.C.version },
         },
         condition: this.dirty ? { id: null, source: src } : { id: this.condId },
       };
@@ -102,8 +102,20 @@ function pipeline() {
       }
       try {
         const r = await api("/api/preflight", { method: "POST", body });
-        this.warnings = r.warnings; this.error = ""; this.scopeInfo = r.scope;
-      } catch (e) { this.error = e.message; this.scopeInfo = null; }
+        this.warnings = r.warnings; this.error = ""; this.scopeInfo = r.scope; this.boxStats = r.box_stats || null;
+      } catch (e) { this.error = e.message; this.scopeInfo = null; this.boxStats = null; }
+    },
+    /* ตัวเลขบนกล่อง: หลังรัน = เฉลี่ยต่อวันจาก funnel · ก่อนรัน = ณ วันสุดท้ายของช่วง (จาก preflight) — ไว้ดู ไม่ใช่ไว้กด */
+    passText(m) {
+      if (this.funnel) return `ผ่าน ${fmtN(this.funnel["after_" + m])} ตัว (เฉลี่ยต่อวัน)`;
+      const s = this.boxStats?.[m];
+      return s ? `ผ่าน ${fmtN(s.pass)} ตัว · ณ ${this.boxStats.date}` : "";
+    },
+    distText(m) {
+      const d = this.boxStats?.[m]?.dist;
+      if (!d) return "";
+      const lab = m === "C" ? "sector ของหุ้น: " : "";
+      return lab + `positive ${d.positive} · neutral ${d.neutral} · negative ${d.negative} · ไม่มีข้อมูล ${d.none}`;
     },
 
     /* ---------- ขอบเขตการลงทุน (ก่อนกล่อง A) ---------- */
@@ -143,13 +155,16 @@ function pipeline() {
     },
     warnTag(w) {
       if (w.startsWith("SURVIVORSHIP")) return "SURVIVORSHIP";
+      if (w.startsWith("ORACLE")) return "ORACLE";
+      if (w.startsWith("LEGACY")) return "LEGACY";
+      if (w.startsWith("MANUAL")) return "MANUAL";
       if (/STUB/.test(w)) return "STUB";
       if (/NEGATIVE|0\/216/.test(w)) return "NEGATIVE";
       if (/ไม่มีข้อมูล|เหตุการณ์แรก|เหตุการณ์สุดท้าย|รอบแรก/.test(w)) return "COVERAGE";
       if (/test set|look-ahead/.test(w)) return "CAVEAT";
       return "NOTE";
     },
-    warnClass(w) { return { STUB: "gray", NEGATIVE: "orange", CAVEAT: "orange", COVERAGE: "", SURVIVORSHIP: "", NOTE: "gray" }[this.warnTag(w)]; },
+    warnClass(w) { return { STUB: "gray", NEGATIVE: "orange", CAVEAT: "orange", COVERAGE: "", SURVIVORSHIP: "", NOTE: "gray", ORACLE: "oracle", LEGACY: "orange", MANUAL: "gray" }[this.warnTag(w)]; },
 
     /* ---------- condition / editor ---------- */
     async loadCondition() {

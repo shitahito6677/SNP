@@ -20,7 +20,7 @@ CASES = {
 
 
 def _body(scope, name):
-    b = {"name": f"pytest scope {name}", "stages": {"A": {"mode": "filter", "version": A1}}, "condition": {"id": "equal_weight_A"}}
+    b = {"name": f"pytest scope {name}", "stages": {"A": {"mode": "on", "version": A1}}, "condition": {"id": "equal_weight_A"}}
     if scope:
         b["scope"] = scope
     return b
@@ -114,7 +114,7 @@ def test_saved_result_reopens_with_same_scope(runs, name):
 
 def test_A_ranking_comes_from_whole_universe():
     """A record ที่ condition เห็นใน scope = record เดียวกับตอนไม่จำกัด scope (ไม่จัดอันดับใหม่) และ passA(scope) = passA(all) ∩ scope"""
-    st = {"A": {"mode": "filter", "version": A1, "criteria": dict(engine.DEFAULT_CRITERIA["A"])},
+    st = {"A": {"mode": "on", "version": A1},
           "B": {"mode": "off"}, "C": {"mode": "off"}}
     asof = {"A": AsOf(A1)}
     t = pd.Timestamp("2022-09-01")

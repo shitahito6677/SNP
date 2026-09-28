@@ -8,8 +8,8 @@ from sandbox.v2.signals import AsOf
 
 WIN = {"start": "2022-01-03", "end": "2022-03-31"}
 A1 = "A:A1_r001_Q_LOWACC_overall"
-ALL_ON = {"A": {"mode": "filter", "version": A1}, "B": {"mode": "score-only", "version": "B:stub"},
-          "C": {"mode": "score-only", "version": "C:rulebase-exp03"}}
+ALL_ON = {"A": {"mode": "on", "version": A1}, "B": {"mode": "on", "version": "B:stub"},
+          "C": {"mode": "on", "version": "C:rulebase-exp03"}}
 
 
 def run_src(tmp_path, src, stages=None, **kw):
@@ -43,6 +43,9 @@ def test_signals_passed_to_condition_are_not_future(tmp_path):
         "    d = pd.Timestamp(ctx.date)\n"
         "    for box in (ctx.a, ctx.b, dict(ctx.c)):\n"
         "        for k, r in box.items():\n"
+        "            if r.get('date') is None:  # B ไม่มีข่าว ณ วันนี้ = record 'ไม่มีข้อมูล' (ไม่มีวันที่ ไม่ใช่สัญญาณ)\n"
+        "                assert r['applicable'] is False and r['score'] is None, r\n"
+        "                continue\n"
         "            assert pd.Timestamp(r['date']) <= d, ('future signal', k, r['date'], ctx.date)\n"
         "    return {}\n")
     run_src(tmp_path, src, stages=ALL_ON)

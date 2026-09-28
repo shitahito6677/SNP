@@ -104,14 +104,16 @@ def create_app() -> Flask:
         return jsonify({"ok": True, "file": str(p.relative_to(cfg.REPO))})
 
     # ------------------------------------------------------------ jobs
-    def _prepare(body):
+    def _prepare(body, allow_legacy=False):
         from sandbox.v2 import engine
-        conf, warnings = engine.normalize_config(body)
+        conf, warnings = engine.normalize_config(body, allow_legacy=allow_legacy)
         warnings += engine.coverage_warnings(conf)
         return conf, warnings
 
     def _err(e):
         from sandbox.v2 import engine, prices
+        if isinstance(e, engine.LegacyConfigError):
+            return jsonify({"error": str(e), "kind": "legacy", "notes": e.notes}), 409
         if isinstance(e, prices.HeldOutError):
             return jsonify({"error": str(e), "kind": "held_out"}), 403
         if isinstance(e, (engine.ConfigError, KeyError, ValueError)):
@@ -126,7 +128,12 @@ def create_app() -> Flask:
             return _err(e)
         from sandbox.v2 import engine
         sc = conf["scope"]
-        return jsonify({"ok": True, "warnings": warnings, "held_out_touched": conf["held_out"]["touched"],
+        try:
+            stats = engine.box_stats(conf)
+        except Exception:  # noqa: BLE001 — ตัวเลขบนกล่องเป็นแค่ภาพประกอบ ไม่ควรทำให้ preflight ล้ม
+            log.exception("box_stats failed")
+            stats = {}
+        return jsonify({"ok": True, "warnings": warnings, "held_out_touched": conf["held_out"]["touched"], "box_stats": stats,
                         "scope": {"mode": sc["mode"], "label": engine.scope_label(sc), "sectors": sc["sectors"], "tickers": sc["tickers"],
                                   "n_members": len(sc["members"]) if "members" in sc else None}})
 
@@ -357,6 +364,7 @@ def create_app() -> Flask:
 
     @app.post("/api/experiments/<exp_id>/rerun")
     def api_exp_rerun(exp_id):
+        force = request.args.get("force") == "1"  # config แบบเดิม (เกณฑ์กรองในกล่อง) → ต้องยืนยันก่อน เพราะผลจะต่างจากเดิม
         try:
             d = xs.path(exp_id)
         except KeyError as e:
@@ -367,7 +375,7 @@ def create_app() -> Flask:
         if conf["held_out"].get("touched"):  # ผลนี้แตะ held-out ไปแล้ว — รันซ้ำ config เดิมไม่เพิ่มข้อมูลใหม่
             conf["held_out"] = {"enabled": True, "confirm": cfg.HELD_OUT_CONFIRM_TEXT}
         try:
-            conf2, warnings = _prepare(conf)
+            conf2, warnings = _prepare(conf, allow_legacy=force)
         except Exception as e:  # noqa: BLE001
             return _err(e)
         conf2["name"] = f"re-run of {exp_id}"

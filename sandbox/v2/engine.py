@@ -30,7 +30,8 @@ from sandbox.v2 import condition_registry, config as cfg, metrics, prices, regis
 from sandbox.v2.signals import AsOf, load_manual_news
 
 STAGES = ["load", "A", "B", "C", "condition", "simulate", "metrics", "save"]
-MODES = ("off", "filter", "score-only")
+MODES = ("off", "on")  # กล่องโมเดล = แหล่งสัญญาณ: เปิด/ปิด + เลือก version เท่านั้น (เกณฑ์กรองทั้งหมดอยู่ใน condition)
+LEGACY_MODES = ("filter", "score-only")  # config ก่อน G1 — ดู legacy_notes()
 SCOPE_MODES = ("all", "sectors", "tickers")
 ALLOWED_ETFS = [cfg.BENCHMARK] + list(cfg.SECTOR_ETFS.values())
 
@@ -51,11 +52,57 @@ class Cancelled(RuntimeError):
 
 # ---------------------------------------------------------------- config
 
-DEFAULT_CRITERIA = {
+# เกณฑ์ของ config เดิม (ก่อน G1) — ใช้แค่ตรวจว่า config เก่าเทียบเท่าระบบใหม่หรือไม่
+LEGACY_DEFAULT_CRITERIA = {
     "A": {"class_in": ["selected"], "min_score": None},
     "B": {"exclude_classes": ["negative"], "min_score": None, "missing": "pass"},
     "C": {"exclude_classes": ["negative"], "min_score": None, "missing": "pass"},
 }
+
+
+class LegacyConfigError(ConfigError):
+    """config ใช้เกณฑ์กรองในกล่องแบบเดิม (ก่อน G1) ที่ระบบใหม่ทำแบบเดิมไม่ได้ — รันได้เมื่อผู้ใช้ยืนยันเท่านั้น"""
+
+    def __init__(self, notes):
+        super().__init__("config นี้ใช้เกณฑ์กรองในกล่องแบบเดิม ซึ่งย้ายไปอยู่ใน condition แล้ว: " + " · ".join(notes))
+        self.notes = notes
+
+
+def legacy_notes(stages_in: dict) -> tuple:
+    """แปลงกล่องแบบเดิม → (mode ใหม่ต่อกล่อง, รายการสิ่งที่ระบบใหม่ทำต่างไป)
+    เทียบเท่าพอดี: A filter + เกณฑ์ default (selected), B/C score-only, off  → ไม่มี note (รันซ้ำได้ผลเดิม)
+    ทำแบบเดิมไม่ได้: A score-only / A เกณฑ์อื่น, B/C filter → มี note"""
+    modes, notes = {}, []
+    for m in "ABC":
+        s = dict((stages_in or {}).get(m) or {})
+        mode = s.get("mode", "off")
+        crit = dict(LEGACY_DEFAULT_CRITERIA[m])
+        crit.update(s.get("criteria") or {})
+        if mode in MODES:
+            modes[m] = mode
+        elif mode == "filter" and m == "A":
+            modes[m] = "on"
+            if list(crit.get("class_in") or []) != ["selected"]:
+                notes.append(f"A: เดิมรับ class {crit.get('class_in')} — ตอนนี้ A เปิด = เฉพาะ selected + applicable")
+            if crit.get("min_score") is not None:
+                notes.append(f"A: เดิมกรอง score ≥ {crit['min_score']} ในกล่อง — ตอนนี้ต้องใช้ condition (template a_score_threshold)")
+        elif mode == "score-only" and m == "A":
+            modes[m] = "off"
+            notes.append("A: เดิม 'แนบคะแนน' (ไม่กรอง) — ระบบใหม่ไม่มีโหมดนี้ จะรันเป็น A ปิด (universe เท่าเดิม แต่ ctx.a ว่าง)")
+        elif mode == "filter":
+            modes[m] = "on"
+            ex = crit.get("exclude_classes") or []
+            what = [f"ตัด {'/'.join(ex)}"] if ex else []
+            if crit.get("min_score") is not None:
+                what.append(f"score ≥ {crit['min_score']}")
+            what.append("ไม่มีสัญญาณ → " + ("ผ่าน" if crit.get("missing", "pass") == "pass" else "ตัด"))
+            notes.append(f"{m}: เดิมกรองในกล่อง ({', '.join(what)}) — ตอนนี้ {m} แค่แนบคะแนน ไม่ตัดหุ้น "
+                         f"(ทำแบบเดิมได้ด้วย condition เช่น template exclude_negative_B)")
+        elif mode == "score-only":
+            modes[m] = "on"
+        else:
+            raise ConfigError(f"กล่อง {m}: mode ต้องเป็น {MODES} (ได้ {mode!r})")
+    return modes, notes
 
 
 def normalize_scope(raw) -> dict:
@@ -108,7 +155,7 @@ def scope_label(scope: dict | None) -> str:
     return "ทั้งตลาด (S&P 500)"
 
 
-def normalize_config(c: dict) -> tuple:
+def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
     """ตรวจ + เติมค่า default → (config, warnings) ; ผิด = ConfigError"""
     c = json.loads(json.dumps(c))  # deep copy
     warnings = []
@@ -139,13 +186,12 @@ def normalize_config(c: dict) -> tuple:
         if nopx:
             warnings.append(f"SCOPE: {len(nopx)} ตัวใน scope ไม่มีราคาในช่วงนี้: {' '.join(nopx[:10])}" + (" …" if len(nopx) > 10 else ""))
     stages = {}
+    modes, legacy = legacy_notes(c.get("stages"))
+    if legacy and not allow_legacy:
+        raise LegacyConfigError(legacy)
     for m in "ABC":
         s = dict((c.get("stages") or {}).get(m) or {})
-        mode = s.get("mode", "off")
-        if mode not in MODES:
-            raise ConfigError(f"กล่อง {m}: mode ต้องเป็น {MODES}")
-        crit = dict(DEFAULT_CRITERIA[m])
-        crit.update(s.get("criteria") or {})
+        mode = modes[m]
         vid = s.get("version")
         if mode != "off":
             if not vid:
@@ -156,8 +202,10 @@ def normalize_config(c: dict) -> tuple:
                 raise ConfigError(str(e)) from None
             if not vid.startswith(m + ":"):
                 raise ConfigError(f"กล่อง {m}: version {vid} ไม่ใช่ของ Model {m}")
-        stages[m] = {"mode": mode, "version": vid if mode != "off" else None, "criteria": crit}
-    if stages["A"]["mode"] != "filter":
+        stages[m] = {"mode": mode, "version": vid if mode != "off" else None}
+    if legacy:
+        warnings.append("LEGACY: รันด้วยความหมายของระบบใหม่ ผลจะต่างจากผลเดิม — " + " · ".join(legacy))
+    if stages["A"]["mode"] != "on":
         warnings.append("SURVIVORSHIP: กล่อง A ไม่ได้กรอง → universe = หุ้น S&P 500 ปัจจุบัน ∪ หุ้นที่เคยอยู่ใน export ของ A "
                         "(หุ้นที่ล้ม/ถูกถอดก่อนปัจจุบันส่วนใหญ่ไม่อยู่ในนี้) — ผลจะดีเกินจริง")
     cond = dict(c.get("condition") or {})
@@ -178,6 +226,7 @@ def normalize_config(c: dict) -> tuple:
         "held_out": {"enabled": bool(ho.get("enabled")), "touched": bool(touched)},
         "scope": scope,
         "stages": stages,
+        **({"legacy_migration": legacy} if legacy else {}),
         "include_manual": bool(c.get("include_manual")),
         "condition": {"id": cond.get("id"), "name": cond["name"], "source": cond["source"]},
     }
@@ -200,7 +249,7 @@ def coverage_warnings(conf: dict) -> list:
         man = registry.get(s["version"])
         for w in man.get("warnings") or []:
             out.append(f"{man['short_label']}: {w}")
-        if m == "A" and s["mode"] == "filter" and (conf.get("scope") or {}).get("mode", "all") != "all":
+        if m == "A" and (conf.get("scope") or {}).get("mode", "all") != "all":
             out += _scope_vs_A(conf, a, start, end)
     return out
 
@@ -213,8 +262,7 @@ def _scope_vs_A(conf, a, start, end) -> list:
     Rs = sorted(set(Rs + ([R0] if R0 is not None else [])))
     if not Rs:
         return []
-    crit = conf["stages"]["A"]["criteria"]
-    ever = sorted({k for R in Rs for k in members if _crit_A(a.at(k, R), crit)})
+    ever = sorted({k for R in Rs for k in members if _crit_A(a.at(k, R))})
     if not ever:
         return [f"SCOPE: หุ้นใน scope ไม่ผ่านเกณฑ์ A ในทุกรอบของช่วงนี้ ({len(Rs)} รอบ) → กล่อง A กรองออกหมด พอร์ตจะว่างตลอดการทดลอง"]
     if len(ever) < len(members):
@@ -295,28 +343,18 @@ def _git():
             "dirty": bool(run("status", "--porcelain", "--untracked-files=no"))}
 
 
-def _crit_A(rec, crit):
-    if rec is None or not rec.get("applicable"):
-        return False
-    if crit.get("class_in") and rec.get("class") not in crit["class_in"]:
-        return False
-    if crit.get("min_score") is not None and (rec.get("score") is None or rec["score"] < float(crit["min_score"])):
-        return False
-    return True
+def _crit_A(rec):
+    """A เปิด = ใช้ผลเลือกหุ้นของ version นั้นตรง ๆ (class == selected และ applicable) — ไม่มีเกณฑ์เพิ่มจากเว็บ"""
+    return rec is not None and bool(rec.get("applicable")) and rec.get("class") == "selected"
 
 
-def _crit_event(rec, crit):
-    if rec is None:
-        return crit.get("missing", "pass") == "pass"
-    if rec.get("class") in (crit.get("exclude_classes") or []):
-        return False
-    if crit.get("min_score") is not None and (rec.get("score") is None or rec["score"] < float(crit["min_score"])):
-        return False
-    return True
+def not_applicable(model: str, date) -> dict:
+    """ไม่มีสัญญาณของ key นี้ ณ วันนี้ → record ชัดเจนว่า "ไม่มีข้อมูล" (ห้ามเดาค่าให้)"""
+    return {"class": None, "score": None, "applicable": False, "reasons": ["ไม่มีข้อมูล"], "date": None, "model": model}
 
 
 def _chip(model, label, rec, extra=""):
-    if rec is None:
+    if rec is None or rec.get("applicable") is False:
         return f"{model}: {label} ไม่มีสัญญาณ"
     sc = rec.get("score")
     s = f" (score {sc:.1f})" if isinstance(sc, float) and model == "A" else (f" ({sc:+.2f})" if isinstance(sc, float) else "")
@@ -631,25 +669,19 @@ def stage_day(t, pxrow, stocks, held, asof, st, sector_of, scope=None):
     if "A" in asof:
         snap = asof["A"].snapshot(t)
         fun["a_rebalance"] = asof["A"].rebalance_date(t)
-        if st["A"]["mode"] == "filter":
-            passed = [k for k, r in snap.items() if _crit_A(r, st["A"]["criteria"]) and (scope is None or k in scope)]
-            hp = set(has_px)
-            fun["dropped_no_price"] = sum(1 for k in passed if k not in hp)
-            fun["a_signal_empty"] = not snap
-            passA = sorted(k for k in passed if k in hp)
-        else:
-            passA = has_px
+        passed = [k for k, r in snap.items() if _crit_A(r) and (scope is None or k in scope)]
+        hp = set(has_px)
+        fun["dropped_no_price"] = sum(1 for k in passed if k not in hp)
+        fun["a_signal_empty"] = not snap
+        passA = sorted(k for k in passed if k in hp)
         a_recs = {k: snap.get(k) for k in sorted(set(passA) | set(held)) if snap.get(k) is not None}
     else:
         passA = has_px
     fun["after_A"] = len(passA)
-    if "B" in asof:
+    if "B" in asof:  # B ไม่กรอง — แนบคะแนนให้หุ้นที่รอดจาก A (+ ที่ถืออยู่); ไม่มีข่าว = applicable False
         for k in sorted(set(passA) | set(held)):
-            b_recs[k] = asof["B"].at(k, t)
-        passB = [k for k in passA if st["B"]["mode"] != "filter" or _crit_event(b_recs.get(k), st["B"]["criteria"])]
-        b_recs = {k: v for k, v in b_recs.items() if v is not None}
-    else:
-        passB = passA
+            b_recs[k] = asof["B"].at(k, t) or not_applicable("B", t)
+    passB = passA
     fun["after_B"] = len(passB)
     c_recs = {}
     if "C" in asof:
@@ -657,14 +689,57 @@ def stage_day(t, pxrow, stocks, held, asof, st, sector_of, scope=None):
             r = asof["C"].at(e, t)
             if r is not None:
                 c_recs[e] = dict(r, sector=e)
-        if st["C"]["mode"] == "filter":
-            passC = [k for k in passB if _crit_event(c_recs.get(cfg.SECTOR_ETFS.get(sector_of.get(k), "")), st["C"]["criteria"])]
-        else:
-            passC = passB
-    else:
-        passC = passB
+    passC = passB  # C ไม่กรอง — แนบสัญญาณราย sector (ctx.c / ctx.c_for) ให้ condition ตัดสินใจ
     fun["after_C"] = len(passC)
     return passC, a_recs, b_recs, c_recs, fun
+
+
+_asof_cache: dict = {}
+
+
+def _asof(vid: str, manual=None):
+    """AsOf ของ version (cache ตาม created_at ของ manifest — rebuild แล้ว cache เก่าไม่ถูกใช้)"""
+    if manual:
+        return AsOf(vid, manual)
+    key = (vid, registry.get(vid).get("created_at"))
+    if key not in _asof_cache:
+        _asof_cache.clear() if len(_asof_cache) > 16 else None
+        _asof_cache[key] = AsOf(vid)
+    return _asof_cache[key]
+
+
+def box_stats(conf: dict) -> dict:
+    """ตัวเลขบนกล่อง A/B/C ในหน้า Pipeline ก่อนรัน — ณ วันทำการสุดท้ายของช่วงที่เลือก (ไม่ใช่ปุ่ม แค่ให้เห็นภาพ)
+    A: ผ่านกี่ตัว (class == selected และ applicable) · B/C: การกระจาย class ของหุ้นที่รอดจาก A (B/C ไม่กรอง)"""
+    from collections import Counter
+
+    allow = conf["held_out"]["touched"]
+    cal = prices.calendar(conf["start"], conf["end"], allow)
+    if not len(cal):
+        return {}
+    t = cal[-1]
+    adj = prices.load("adj", None, t, t, allow)
+    stocks = [x for x in prices.available_tickers("stock") if x in adj.columns]
+    st = conf["stages"]
+    asof = {m: _asof(st[m]["version"], load_manual_news(m.lower()) if conf["include_manual"] and m in "BC" else None)
+            for m in "ABC" if st[m]["mode"] != "off"}
+    members = scope_members(conf.get("scope"))
+    sector_of = {x: prices.sector_of(x) for x in stocks}
+    universe, a_recs, b_recs, c_recs, fun = stage_day(t, adj.iloc[-1], stocks, [], asof, st, sector_of,
+                                                     None if members is None else set(members))
+    out = {"date": str(t.date()), "universe": fun["universe"], "pass": len(universe)}
+    if "A" in asof:
+        R = fun.get("a_rebalance")
+        out["A"] = {"pass": fun["after_A"], "rebalance": str(pd.Timestamp(R).date()) if R is not None else None}
+    order = ["positive", "neutral", "negative", "none"]
+    if "B" in asof:
+        c = Counter((b_recs.get(k) or {}).get("class") if (b_recs.get(k) or {}).get("applicable") else "none" for k in universe)
+        out["B"] = {"pass": len(universe), "dist": {k: c.get(k, 0) for k in order}}
+    if "C" in asof:
+        c = Counter((c_recs.get(cfg.SECTOR_ETFS.get(sector_of.get(k), "")) or {}).get("class") or "none" for k in universe)
+        out["C"] = {"pass": len(universe), "dist": {k: c.get(k, 0) for k in order},
+                    "sectors": {e: r.get("class") for e, r in sorted(c_recs.items())}}
+    return out
 
 
 def dry_run(conf: dict, date=None, history_days: int = 260) -> dict:

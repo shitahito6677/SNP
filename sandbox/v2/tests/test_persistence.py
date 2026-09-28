@@ -39,8 +39,8 @@ def wait(job):
 
 def test_save_restart_reload_identical():
     body = {"name": "pytest persistence", "start": "2022-01-03", "end": "2023-06-30",
-            "stages": {"A": {"mode": "filter", "version": "A:A1_r001_Q_LOWACC_overall"},
-                       "C": {"mode": "score-only", "version": "C:rulebase-exp03"}},
+            "stages": {"A": {"mode": "on", "version": "A:A1_r001_Q_LOWACC_overall"},
+                       "C": {"mode": "on", "version": "C:rulebase-exp03"}},
             "condition": {"id": "follow_A_weights"}}
     p = start_server()
     try:

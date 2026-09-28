@@ -74,12 +74,15 @@ def build_b(cal, tickers):
             if sc % 15:
                 continue
             c = classes[(sc // 15) % 3]
-            rows.append({"date": d, "ticker": t, "class": c, "score": round(0.34 + 0.66 * ((sc // 45) % 1000) / 1000, 4),
+            conf = round(0.34 + 0.66 * ((sc // 45) % 1000) / 1000, 4)  # "ความมั่นใจ" สุ่ม → ความแรง 1 หรือ 2 ตามสัญญา B (-2..+2)
+            score = float({"positive": 1, "neutral": 0, "negative": -1}[c] * (2 if conf >= 2 / 3 else 1))
+            rows.append({"date": d, "ticker": t, "class": c, "score": score,
                          "applicable": True, "reasons": [f"B stub: ข่าวสมมติ {ds} → {c}"],
                          "model_version": "stub", "is_stub": True})
     write("B", pd.DataFrame(rows), {
         "display_name": "B stub (ข่าวสมมติ ~1.4 ครั้ง/เดือน/หุ้น)", "rule_id": "stub", "key": "ticker", "rebalance": "event",
-        "asof": {"max_age_days": 10}, "classes": classes, "score_meaning": "confidence สุ่ม [0.34, 1]",
+        "asof": {"max_age_days": 10}, "classes": classes,
+        "score_meaning": "สุ่ม -2..+2 ตามสัญญา B (class positive → +1/+2, neutral → 0, negative → -1/-2)",
         "coverage": {"n_tickers": len(tickers)}, "notes": "signal หมดอายุหลัง 10 วัน (ไม่มีข่าว = ไม่มีสัญญาณ)"})
 
 

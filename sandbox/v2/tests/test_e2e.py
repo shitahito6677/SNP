@@ -8,9 +8,9 @@ from sandbox.v2.tests.test_persistence import BASE, start_server, wait
 
 
 def test_e2e_real_A_stub_B_negative_C():
-    body = {"name": "pytest e2e", "stages": {"A": {"mode": "filter", "version": "A:A1_r001_Q_LOWACC_overall"},
-                                             "B": {"mode": "filter", "version": "B:stub"},
-                                             "C": {"mode": "filter", "version": "C:rulebase-exp03"}},
+    body = {"name": "pytest e2e", "stages": {"A": {"mode": "on", "version": "A:A1_r001_Q_LOWACC_overall"},
+                                             "B": {"mode": "on", "version": "B:stub"},
+                                             "C": {"mode": "on", "version": "C:rulebase-exp03"}},
             "condition": {"id": "equal_weight_A"}}
     p = start_server()
     try:

@@ -27,7 +27,7 @@ def decide(ctx):
 def _run(tmp, include):
     src = CHECK.replace("EXPECT_MANUAL", str(include))
     conf, _ = engine.normalize_config({"start": "2022-02-01", "end": "2022-03-31", "include_manual": include,
-                                       "stages": {"B": {"mode": "score-only", "version": "B:stub"}},
+                                       "stages": {"B": {"mode": "on", "version": "B:stub"}},
                                        "condition": {"source": src}})
     return engine.run(conf, tmp / f"run{include}", log=lambda m: None)
 

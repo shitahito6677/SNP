@@ -95,7 +95,7 @@ def test_five_label_levels_are_kept_distinct(client):
         by.setdefault(r["label"], r)
     assert set(by) == {-2, -1, 0, 1, 2}
     assert [by[v]["class"] for v in (-2, -1, 0, 1, 2)] == ["negative", "negative", "neutral", "positive", "positive"]
-    assert [by[v]["score"] for v in (-2, -1, 0, 1, 2)] == [-1.0, -0.5, 0.0, 0.5, 1.0]
+    assert [by[v]["score"] for v in (-2, -1, 0, 1, 2)] == [-2.0, -1.0, 0.0, 1.0, 2.0]  # สัญญา B: score = label -2..+2
     texts = [by[v]["label_text"] for v in (-2, -1, 0, 1, 2)]
     assert len(set(texts)) == 5 and texts[0] == "negative แรงมาก" and texts[4] == "positive แรงมาก"
     assert len({by[v]["reasons"][0].split("]")[0] for v in by}) == 5  # "[−2 negative แรงมาก]" ≠ "[−1 negative]" …
@@ -126,7 +126,7 @@ def decide(ctx):
     assert b["label"] in (-2, -1, 1, 2) and isinstance(b["label"], int), b
     return {"META": {2: 1.0, 1: 0.5}.get(b["label"], 0.0)}
 '''
-    conf, _ = engine.normalize_config({"include_manual": True, "stages": {"B": {"mode": "score-only", "version": "B:stub"}},
+    conf, _ = engine.normalize_config({"include_manual": True, "stages": {"B": {"mode": "on", "version": "B:stub"}},
                                        "condition": {"source": src}})
     engine.run(conf, tmp_path / "run", log=lambda m: None)
     tr = pd.read_parquet(tmp_path / "run" / "trades.parquet")
