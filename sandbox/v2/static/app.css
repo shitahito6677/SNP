@@ -325,3 +325,18 @@ select.label-sel.pos { color: var(--pos); } select.label-sel.neg { color: var(--
 .has-tip { cursor: help; }
 .box-stats { margin-top: 10px; }
 .stat-pill { display: inline-block; font: 600 12px var(--mono); padding: 3px 10px; border-radius: 20px; background: var(--panel-hi); border: 1px solid var(--line-hi); color: var(--text); }
+
+/* gallery หุ้นรายตัว */
+.stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.stock-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px; color: inherit; text-decoration: none; transition: transform .15s, box-shadow .15s, border-color .15s; }
+.stock-card:hover { transform: translateY(-2px); border-color: var(--line-hi); box-shadow: var(--shadow), 0 0 22px -8px rgba(96, 165, 250, .5); }
+.logo-wrap { width: 44px; height: 44px; flex: none; }
+.avatar { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font: 700 16px var(--mono); color: #0B1020; letter-spacing: .5px; }
+.logo-tile { width: 44px; height: 44px; border-radius: 12px; background: #fff; display: grid; place-items: center; overflow: hidden; }
+.logo-tile img { max-width: 38px; max-height: 38px; object-fit: contain; opacity: 1; transition: opacity .25s; }
+.logo-tile.loading { background: linear-gradient(90deg, rgba(40, 54, 90, .4) 25%, rgba(70, 90, 140, .5) 50%, rgba(40, 54, 90, .4) 75%); background-size: 200% 100%; animation: sk 1.3s infinite; }
+.logo-tile.loading img { opacity: 0; }
+.news-dot { font: 600 11px var(--mono); color: #7DD3FC; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 600px) { .stock-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+.sector-tag { margin-top: 6px; font-size: 10.5px; display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

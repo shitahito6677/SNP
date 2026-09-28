@@ -19,10 +19,11 @@ const STK = { chart: null, rsi: null };
 function stock() {
   return {
     d: null, err: "", q: "", hi: 0, hover: "", hoverItems: [], ctxLabel: "",
+    gallery: null, gErr: "", gSectors: [], gSort: "ticker", logoOk: {},
     layers: { trades: true, A: true, B: true, C: true, manual: true, sma: false, ema: false, vol: true, rsi: false },
     layerList: [["trades", "Trades ▲▼", "cond"], ["A", "ช่วงที่ A เลือก", "A"], ["B", "สัญญาณ B", "B"], ["C", "เหตุการณ์ C", "C"], ["manual", "ข่าว manual", "manual"],
       ["sma", "SMA 20/50", ""], ["ema", "EMA 20", ""], ["vol", "Volume", ""], ["rsi", "RSI 14", ""]],
-    _key: null, _focus: null,
+    _key: null, _focus: null, _inflight: null,
 
     get hits() { return searchTickers(this.q, 8); },
     init() {
@@ -33,15 +34,37 @@ function stock() {
       if (Alpine.store("app").meta) go(); else window.addEventListener("app-ready", go, { once: true });
     },
     go(t) { this.q = ""; const rt = Alpine.store("app").route; const keep = rt.query.kind ? `?kind=${rt.query.kind}&id=${rt.query.id}` : ""; location.hash = `#/stock/${t}${keep}`; },
+    /* ---------- gallery (ยังไม่เลือกหุ้น) ---------- */
+    async loadGallery() {
+      if (this.gallery) return;
+      try { this.gallery = await api("/api/stocks/gallery"); this.gErr = ""; } catch (e) { this.gErr = e.message; }
+    },
+    get gSectorList() {
+      const c = {};
+      for (const x of this.gallery?.tickers || []) c[x.sector] = (c[x.sector] || 0) + 1;
+      return Object.entries(c).sort((a, b) => a[0].localeCompare(b[0]));
+    },
+    get gItems() {
+      let xs = this.gallery?.tickers || [];
+      if (this.gSectors.length) xs = xs.filter((x) => this.gSectors.includes(x.sector));
+      const by = { ticker: (a, b) => a.t.localeCompare(b.t), name: (a, b) => a.name.localeCompare(b.name), news: (a, b) => b.news - a.news || a.t.localeCompare(b.t) }[this.gSort];
+      return [...xs].sort(by);
+    },
+    toggleGSector(s) { this.gSectors = this.gSectors.includes(s) ? this.gSectors.filter((x) => x !== s) : [...this.gSectors, s]; },
+    initials(t) { return t.replace(/[^A-Z]/g, "").slice(0, 2) || t.slice(0, 2); },
+    avatarStyle(x) { const c = SECTOR_COLORS[x.sector] || SECTOR_COLORS.Unknown; return `background:linear-gradient(135deg, ${c}, ${c}99);box-shadow:0 0 16px -4px ${c}`; },
+    logoSrc(x) { return `/static/logos/${x.t}.png`; },
+
     async load(rt) {
       const t = rt.params.ticker;
-      if (!t) { this.d = null; return; }
+      if (!t) { this.d = null; this.err = ""; this._key = null; this.loadGallery(); return; }
       const qs = new URLSearchParams();
       if (rt.query.kind) { qs.set("kind", rt.query.kind); qs.set("id", rt.query.id); }
       const key = t + "?" + qs;
       this._focus = rt.query.date || null;
       if (key === this._key && this.d) { this.$nextTick(() => { this.render(); if (this._focus) this.focus(this._focus); }); return; }
-      this._key = key; this.err = "";
+      if (key === this._inflight) return;  // navigation เดียวยิง event "route" 2 ครั้ง → ไม่โหลด/วาดซ้ำ
+      this._key = key; this.err = ""; this._inflight = key;
       try {
         if (!rt.query.kind) { qs.set("A", "A:A1_r001_Q_LOWACC_overall"); qs.set("C", "C:rulebase-exp03"); }
         this.d = await api(`/api/stock/${t}?${qs}`);
@@ -50,6 +73,7 @@ function stock() {
         this.render();
         if (this._focus) this.focus(this._focus);
       } catch (e) { this.err = e.message; this.d = null; }
+      finally { this._inflight = null; }
     },
     snap(dates, t) {  // วันที่ที่ไม่ใช่วันทำการ → วันทำการถัดไป
       let lo = 0, hi = dates.length - 1;

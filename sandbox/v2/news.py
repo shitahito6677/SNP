@@ -204,6 +204,16 @@ def list_news(limit=300) -> list:
     return [dict(r, label=label_of(r), label_method=label_method_of(r)) for r in reversed(_load()) if not r.get("deleted")][:limit]
 
 
+def ticker_counts() -> dict:
+    """จำนวนข่าว manual (ที่ยังไม่ถูกลบ) ต่อ ticker — ใช้ใน gallery หน้าหุ้นรายตัว"""
+    out = {}
+    for r in _load():
+        if not r.get("deleted"):
+            for t in r.get("tickers") or []:
+                out[t] = out.get(t, 0) + 1
+    return out
+
+
 def method_summary() -> dict:
     """จำนวนข่าวตามวิธี label + ข่าวที่ยังไม่ระบุ จัดกลุ่มตามชุดที่นำเข้า (import_batch หรือ นาทีที่บันทึก) ให้ผู้ใช้ระบุทีละชุด"""
     live = [r for r in _load() if not r.get("deleted")]

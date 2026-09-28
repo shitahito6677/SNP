@@ -434,6 +434,46 @@
     </div>
   </div>
   <template x-if="err"><div class="warn red"><b>โหลดหน้าหุ้นไม่ได้</b><span x-text="err"></span></div></template>
+  <!-- gallery: ยังไม่เลือกหุ้นและยังไม่พิมพ์ค้นหา -->
+  <div id="stock-gallery" x-show="!$store.app.route.params.ticker && !q">
+    <template x-if="gErr"><div class="warn red"><b>โหลดรายชื่อหุ้นไม่ได้</b><span x-text="gErr"></span></div></template>
+    <template x-if="!gallery && !gErr"><div class="stock-grid"><template x-for="i in 12"><div class="panel stock-card"><div class="skeleton" style="width:44px;height:44px;border-radius:12px"></div><div class="skeleton" style="flex:1"></div></div></template></div></template>
+    <template x-if="gallery">
+      <div>
+        <div class="row" style="justify-content:space-between;margin-bottom:10px">
+          <div class="muted" id="gallery-count" x-text="`ทั้งหมด ${fmtN(gallery.n)} หุ้นที่มีข้อมูล` + (gSectors.length ? ` · แสดง ${fmtN(gItems.length)}` : '')"></div>
+          <label class="row" style="gap:6px;font-size:12.5px">เรียงตาม <select x-model="gSort" style="padding:3px 6px"><option value="ticker">ticker (A-Z)</option><option value="name">ชื่อบริษัท</option><option value="news">ข่าว manual มากสุด</option></select></label>
+        </div>
+        <div class="row" style="gap:6px;margin-bottom:14px">
+          <template x-for="[s, n] in gSectorList" :key="s">
+            <button class="chip sector-chip" :data-gsector="s" :class="{on: gSectors.includes(s)}" @click="toggleGSector(s)"
+              :style="gSectors.includes(s) ? `border-color:${SECTOR_COLORS[s]};background:${SECTOR_COLORS[s]}22;color:var(--text)` : `border-color:${SECTOR_COLORS[s]}66`">
+              <span class="light" :style="`background:${SECTOR_COLORS[s]};width:8px;height:8px`"></span><span x-text="s"></span><span class="dim" x-text="n"></span></button>
+          </template>
+          <button class="chip" x-show="gSectors.length" @click="gSectors=[]">ล้างตัวกรอง</button>
+        </div>
+        <div class="stock-grid">
+          <template x-for="x in gItems" :key="x.t">
+            <a class="panel stock-card" :href="'#/stock/' + x.t" :data-ticker="x.t">
+              <div class="logo-wrap">
+                <div class="avatar" :style="avatarStyle(x)" x-show="!x.logo || logoOk[x.t] === false"><span x-text="initials(x.t)"></span></div>
+                <template x-if="x.logo && logoOk[x.t] !== false">
+                  <div class="logo-tile" :class="{loading: !logoOk[x.t]}"><img :src="logoSrc(x)" :alt="x.name" loading="lazy" decoding="async"
+                    @load="logoOk[x.t] = true" @error="logoOk[x.t] = false"></div>
+                </template>
+              </div>
+              <div style="min-width:0;flex:1">
+                <div class="row" style="gap:6px;justify-content:space-between"><b class="mono" x-text="x.t"></b>
+                  <span class="news-dot" x-show="x.news" :title="`มีข่าว manual ${x.news} ข่าว`" x-text="'● ' + x.news"></span></div>
+                <div class="muted ellipsis" style="font-size:12.5px" x-text="x.name" :title="x.name"></div>
+                <span class="chip sector-tag" :title="x.sector" :style="`border-color:${SECTOR_COLORS[x.sector]}88;color:${SECTOR_COLORS[x.sector]}`" x-text="x.etf ? x.sector + ' · ' + x.etf : x.sector"></span>
+              </div>
+            </a>
+          </template>
+        </div>
+      </div>
+    </template>
+  </div>
   <div class="grid" style="grid-template-columns: 3fr 1fr" x-show="d">
     <div class="panel">
       <div class="row" style="margin-bottom:10px">

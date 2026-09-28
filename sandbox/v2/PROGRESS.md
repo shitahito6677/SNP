@@ -140,6 +140,14 @@
 - ผ่านเว็บจริง (Playwright, สำรอง/คืนข่าวของผู้ใช้ + rebuild): กล่อง "ยังไม่ระบุ" แสดงชุด 463 ข่าว; นำเข้า CSV default unknown + ถามก่อน → เลือก hindsight → ทุกแถว hindsight; เพิ่มข่าว real-time 3 รายการผ่านฟอร์ม; รัน B = oracle → แถบ ORACLE บนสุด + badge; รัน B = realtime → ไม่มีแถบ ORACLE, badge B MANUAL; 5xx/page error = 0 — screenshot `screenshots/G2b_*.jpg`
 - DoD: ✅
 
+## I1 — gallery หุ้นรายตัว (หน้าเริ่มต้นแทนหน้าว่าง) ✅
+- API `/api/stocks/gallery`: หุ้น `status: ok` + `kind: stock` จาก `universe_manifest.json` (551 ตัว), จำนวนข่าว manual ต่อหุ้น (ไม่นับที่ลบแล้ว), `logo` = มีไฟล์ใน cache เครื่องแล้วเท่านั้น (ไม่ยิง network)
+- UI: grid การ์ด responsive (โลโก้/avatar, ticker, ชื่อ, chip สี GICS ชุดเดียวกับหน้าอื่น, จุด "● n" เมื่อมีข่าว manual), ตัวกรอง sector แบบ chip เลือกหลายอัน (ไม่เลือก = ทั้งหมด), "ทั้งหมด N หุ้นที่มีข้อมูล", เรียง ticker A-Z (เลือกเรียงตามชื่อ/จำนวนข่าวได้), skeleton ระหว่างโหลด; พิมพ์ค้นหา → ซ่อน gallery + autocomplete เดิม; คลิก → หน้ารายละเอียดเดิม
+- fallback avatar: สี่เหลี่ยมมุมโค้ง gradient สีตาม sector + อักษรย่อ ticker 2 ตัว (ใช้กับทุกหุ้นจนกว่าจะมีโลโก้จริงใน cache)
+- แก้ระหว่างทาง: การเปลี่ยนหน้าไปหุ้นตัวหนึ่งยิง event `route` 2 ครั้ง → โหลด/วาดกราฟซ้ำ 2 รอบ → กันด้วย `_inflight`; timeout ของสคริปต์ทดสอบ (รวมครั้งเดียวใน F1b) มาจาก selector `.stock-chart canvas` ไปเจอ canvas ภายในของ lightweight-charts ที่กว้าง 0 ไม่ใช่บั๊กของหน้าเว็บ
+- test `tests/test_stock_gallery.py`: รายชื่อ = status ok ทุกตัวพอดี, จำนวนข่าว, flag โลโก้; ผ่านเว็บจริง (Playwright): การ์ด 551 = API, กรอง Energy 21 / Energy+Utilities 51 ตรง, พิมพ์ "nvid" → gallery ซ่อน + autocomplete NVDA, คลิก XOM → หน้ารายละเอียด, error 0 — screenshot `screenshots/I1_gallery.jpg`
+- DoD: ✅ (โลโก้จริง → I2)
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

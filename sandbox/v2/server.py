@@ -222,6 +222,17 @@ def create_app() -> Flask:
                        "monaco": (cfg.V2 / "static/vendor/monaco/vs/loader.js").exists()},
         })
 
+    @app.get("/api/stocks/gallery")
+    def api_stock_gallery():
+        """หุ้นที่มีราคาครบ (status ok) สำหรับ gallery หน้าหุ้นรายตัว — logo = มีไฟล์ใน cache แล้ว (ไม่ยิง network)"""
+        from sandbox.v2 import news, prices
+        counts = news.ticker_counts()
+        rows = [{"t": t, "name": r.get("name") or t, "sector": r.get("sector") or "Unknown",
+                 "etf": cfg.SECTOR_ETFS.get(r.get("sector") or ""), "news": counts.get(t, 0),
+                 "logo": (cfg.LOGOS_DIR / f"{t}.png").exists()}
+                for t, r in sorted(prices.manifest()["tickers"].items()) if r.get("status") == "ok" and r.get("kind") == "stock"]
+        return jsonify({"tickers": rows, "n": len(rows)})
+
     @app.get("/api/stock/<ticker>")
     def api_stock(ticker):
         from sandbox.v2 import stock_view

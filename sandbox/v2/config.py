@@ -36,6 +36,7 @@ JOBS_DB = V2 / "jobs.db"                  # gitignored
 EXPERIMENTS_DIR = V2 / "experiments"
 CONDITIONS_DIR = V2 / "conditions"
 MANUAL_NEWS = DATA / "manual_news.jsonl"  # gitignored — ข่าว manual ของ v2 (source="manual")
+LOGOS_DIR = V2 / "static" / "logos"       # gitignored — โลโก้บริษัทที่ cache ไว้ (scripts/fetch_logos.py)
 
 # โฟลเดอร์ export ของแต่ละโมเดลที่ registry สแกนหา version (<root>/<version>/manifest.json)
 MODEL_EXPORT_ROOTS = {
