@@ -49,3 +49,4 @@ sandbox/v2/screenshots/*.tmp
 
 # sandbox v2 — B version ที่ build จากข่าว manual ของผู้ใช้ (gitignored data) — สร้างใหม่อัตโนมัติ
 model_B/export/manual-labels*/
+sandbox/v2/static/logos/

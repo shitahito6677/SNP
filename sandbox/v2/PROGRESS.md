@@ -148,6 +148,14 @@
 - test `tests/test_stock_gallery.py`: รายชื่อ = status ok ทุกตัวพอดี, จำนวนข่าว, flag โลโก้; ผ่านเว็บจริง (Playwright): การ์ด 551 = API, กรอง Energy 21 / Energy+Utilities 51 ตรง, พิมพ์ "nvid" → gallery ซ่อน + autocomplete NVDA, คลิก XOM → หน้ารายละเอียด, error 0 — screenshot `screenshots/I1_gallery.jpg`
 - DoD: ✅ (โลโก้จริง → I2)
 
+## I2 — โลโก้บริษัท ✅
+- `scripts/fetch_logos.py`: Wikidata P154 → Commons thumbnail 128px → PNG ที่ `static/logos/{ticker}.png` (gitignored) + `ATTRIBUTION.json` (license/ผู้สร้าง) + `_fetch_report.json` (เหตุผลที่ข้าม); ตรวจชื่อบริษัทก่อนใช้, ไม่ยิงซ้ำตัวที่ cache/ข้ามแล้ว — DECISIONS #18
+- ผลรันจริง: โลโก้ 382/547 (Public domain 371 · CC BY-SA 4.0 7 · CC BY-SA 3.0 3 · อื่น ๆ 4), ขนาดรวม 2.6 MB; รันซ้ำ → "ต้องหา 0" ไม่มี network request
+- หน้าเว็บ: `/api/stocks/gallery` บอก `logo` จากไฟล์ในเครื่องเท่านั้น → ไม่มีเน็ตก็ไม่ค้าง (ไม่มีไฟล์ = avatar ทันที, ไม่ยิงหา); skeleton ระหว่างโหลดรูป; เครดิต license ใน tooltip + บรรทัดเครดิตใต้ gallery
+- test (`tests/test_stock_gallery.py` +7): การจับคู่ชื่อ (ตรง/ticker/ticker ถูกใช้ซ้ำ/คำกว้าง ๆ/กำกวม)
+- ผ่านเว็บจริงแบบ **ออฟไลน์** (Playwright บล็อกทุก request ที่ไม่ใช่ server ในเครื่อง): การ์ด 547, โลโก้จริง 383 / avatar 164, ไม่มี request ออกนอกเครื่อง, error 0, กรอง/ค้นหา/คลิกทำงานเหมือนเดิม — screenshot `screenshots/I2_gallery_logos.jpg`
+- DoD: ✅
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

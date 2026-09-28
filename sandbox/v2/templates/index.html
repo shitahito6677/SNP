@@ -458,7 +458,7 @@
               <div class="logo-wrap">
                 <div class="avatar" :style="avatarStyle(x)" x-show="!x.logo || logoOk[x.t] === false"><span x-text="initials(x.t)"></span></div>
                 <template x-if="x.logo && logoOk[x.t] !== false">
-                  <div class="logo-tile" :class="{loading: !logoOk[x.t]}"><img :src="logoSrc(x)" :alt="x.name" loading="lazy" decoding="async"
+                  <div class="logo-tile" :class="{loading: !logoOk[x.t]}"><img :src="logoSrc(x)" :alt="x.name" :title="x.logo_credit || x.name" loading="lazy" decoding="async"
                     @load="logoOk[x.t] = true" @error="logoOk[x.t] = false"></div>
                 </template>
               </div>
@@ -471,6 +471,7 @@
             </a>
           </template>
         </div>
+        <p class="dim" style="font-size:11.5px;margin-top:14px" x-show="gallery.tickers.some(x => x.logo)">โลโก้จาก Wikimedia Commons (ผ่าน Wikidata) — license และผู้สร้างของแต่ละไฟล์ดูได้เมื่อชี้ที่โลโก้ / <span class="mono">sandbox/v2/static/logos/ATTRIBUTION.json</span> · โลโก้เป็นเครื่องหมายการค้าของแต่ละบริษัท ใช้เพื่อระบุบริษัทเท่านั้น · หุ้นที่ไม่มีโลโก้แสดงเป็นอักษรย่อสีตาม sector</p>
       </div>
     </template>
   </div>

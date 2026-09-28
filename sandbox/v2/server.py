@@ -227,9 +227,15 @@ def create_app() -> Flask:
         """หุ้นที่มีราคาครบ (status ok) สำหรับ gallery หน้าหุ้นรายตัว — logo = มีไฟล์ใน cache แล้ว (ไม่ยิง network)"""
         from sandbox.v2 import news, prices
         counts = news.ticker_counts()
+        af = cfg.LOGOS_DIR / "ATTRIBUTION.json"  # license/ผู้สร้างของโลโก้ที่ cache ไว้ (CC BY/BY-SA ต้องแสดงเครดิต)
+        attr = json.loads(af.read_text(encoding="utf-8")) if af.exists() else {}
+
+        def credit(t):
+            a = attr.get(t)
+            return (f"โลโก้: Wikimedia Commons — {a.get('file')} · {a.get('license')}" + (f" · {a['artist']}" if a.get("artist") else "")) if a else None
         rows = [{"t": t, "name": r.get("name") or t, "sector": r.get("sector") or "Unknown",
                  "etf": cfg.SECTOR_ETFS.get(r.get("sector") or ""), "news": counts.get(t, 0),
-                 "logo": (cfg.LOGOS_DIR / f"{t}.png").exists()}
+                 "logo": (cfg.LOGOS_DIR / f"{t}.png").exists(), "logo_credit": credit(t)}
                 for t, r in sorted(prices.manifest()["tickers"].items()) if r.get("status") == "ok" and r.get("kind") == "stock"]
         return jsonify({"tickers": rows, "n": len(rows)})
 

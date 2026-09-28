@@ -32,3 +32,25 @@ def test_gallery_news_counts_and_logo_flag(client):
     by = {x["t"]: x for x in client.get("/api/stocks/gallery").get_json()["tickers"]}
     assert by["AAPL"]["news"] == 2 and by["MSFT"]["news"] == 1 and by["NVDA"]["news"] == 0
     assert by["AAPL"]["logo"] is True and by["MSFT"]["logo"] is False
+
+
+@pytest.mark.parametrize("ours, theirs, ticker, ok", [
+    ("Apple Inc.", "Apple Inc.", "AAPL", True),
+    ("Advanced Micro Devices", "AMD", "AMD", True),            # label = ticker
+    ("Everpure", "Pandora", "P", False),                        # ticker ถูกใช้ซ้ำโดยบริษัทอื่น
+    ("American Tower", "American Airlines Group", "AMT", False),  # คำแรกกว้าง ๆ ไม่นับ
+    ("Carrier Global", "Carrier Corporation", "CARR", True),
+    ("KeyCorp", "KeyBank", "KEY", False),
+])
+def test_logo_name_match(ours, theirs, ticker, ok):
+    from sandbox.v2.scripts.fetch_logos import name_match
+    assert name_match(ours, theirs, ticker) is ok
+
+
+def test_logo_choose_refuses_ambiguous():
+    from sandbox.v2.scripts.fetch_logos import choose
+    c = [{"item": "Q1", "label": "Rockwell Automation", "file": "a.svg"}, {"item": "Q2", "label": "Rockwell International", "file": "b.svg"}]
+    got, why = choose("ROK", "Rockwell Automation", c)
+    assert got is None and "หลายบริษัท" in why
+    got, why = choose("X", "Foo Corp", [{"item": "Q3", "label": "Bar Inc", "file": "c.svg"}])
+    assert got is None and "ไม่ตรง" in why

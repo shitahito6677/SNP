@@ -107,3 +107,12 @@
 - `contains_oracle_signal` = ใช้ B/C version badge oracle **หรือ** toggle "รวมข่าว manual" ดึงข่าว hindsight เข้ามา (อีกทางที่ข่าวรู้ผลล่วงหน้าจะเข้าสู่ pipeline ได้) + `manual_label_methods` นับจำนวนตามวิธี; ผลเก่าที่ไม่มี field นี้ = false เว้นแต่ version เป็น oracle
 - ORACLE ติดเป็น badge แรกของผล (gallery/compare/หน้าผล) + แถบเตือนบนสุดของหน้าผล; preflight เตือน ORACLE / unknown ก่อนรัน
 - สี: ORACLE = ม่วงบานเย็น (#D946EF) ต่างจากทุก badge; MANUAL = ฟ้า
+
+## 18. (I2) แหล่งโลโก้บริษัท = Wikidata → Wikimedia Commons
+- ตัวเลือกที่พิจารณา: Clearbit Logo API (ปิดบริการ free logo แล้ว), logo API เชิงพาณิชย์อื่น (ต้องสมัคร key/ToS จำกัด), ชุดโลโก้ ticker บน GitHub (license ไม่ชัด) → **เลือก Wikidata (CC0) property P154 "logo image" ของบริษัทที่มี ticker (P249) บน NYSE/NASDAQ → ไฟล์บน Wikimedia Commons** (Commons รับเฉพาะไฟล์ที่ license อนุญาตให้ใช้ซ้ำ; เก็บ license/ผู้สร้างทุกไฟล์ใน `static/logos/ATTRIBUTION.json` และแสดงเครดิตเมื่อชี้ที่โลโก้ — จำเป็นสำหรับไฟล์ CC BY/BY-SA ~14 ไฟล์)
+- มารยาทกับ server: User-Agent ระบุโปรเจค (URL ของ repo — ไม่ใส่อีเมลผู้ใช้), ยิงทีละ request หน่วง 0.5 วินาที, 429/5xx ถอยแล้วหยุด, ดึงครั้งเดียวแล้ว cache (`scripts/fetch_logos.py`) — ตัวที่เคยข้ามไม่ยิงซ้ำ (ต้องสั่ง `--retry-skipped`)
+- **ไม่เดา mapping:** ใช้โลโก้เมื่อชื่อบริษัทใน Wikidata ตรงกับ universe_manifest (คำสำคัญตัวแรกตรง / คำทับกัน ≥ ครึ่งโดยไม่นับคำกว้าง ๆ เช่น American / label เป็น ticker เอง) และไม่กำกวมหลายบริษัท — เช่น `P` (Everpure) ไม่ใช้โลโก้ Pandora ที่เคยใช้ ticker เดียวกัน
+- ผล: โลโก้จริง 382/547 หุ้น status ok (public domain 371 ไฟล์), ที่เหลือ = avatar อักษรย่อสีตาม sector (ไม่พบใน Wikidata 86, ไม่มีชื่อบริษัทให้ตรวจ 61, ชื่อไม่ตรง 12, กำกวม 6, ภาพถ่ายไม่ใช่โลโก้ 1 = CTSH) — รายละเอียดใน `static/logos/_fetch_report.json`
+- ตรวจไฟล์ .jpg/.gif ทุกไฟล์ด้วยตา: CTSH เป็นภาพถ่ายป้ายบนอาคาร → ตัดออก (`EXCLUDE` ในสคริปต์)
+- โลโก้เป็นเครื่องหมายการค้าของแต่ละบริษัท ใช้เพื่อระบุบริษัทในเครื่องมือวิจัยส่วนตัวเท่านั้น; โฟลเดอร์ cache gitignored (derived asset จากภายนอก)
+- **ข้อผิดพลาดของผม:** ตอนเช็คว่าเข้าถึง Wikidata ได้ไหม (request ทดสอบ 1 ครั้ง) ผมใส่อีเมลของผู้ใช้ใน User-Agent — ไม่ควรทำ; สคริปต์จริงใช้ URL ของ repo แทน
