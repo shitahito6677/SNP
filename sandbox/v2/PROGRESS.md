@@ -167,8 +167,17 @@
 - tests รวม **117/117 ผ่าน**
 - DoD: ✅
 
+## K1 — import ไฟล์ข่าวที่โตขึ้นซ้ำได้โดยไม่เบิ้ล ✅
+- `news.py`: `content_hash()` / `hashes_for()` (normalize: trim · lower · ยุบช่องว่าง), `ensure_hashes()` migrate + สำรองไฟล์, `hash_index()` (dict O(1)), `dup_check()` → exact / review / new, `commit_rows()` batch + ตรวจซ้ำฝั่ง server, `make_row()` แยกจากการเขียนไฟล์ — DECISIONS #20 (H1/H2 ไม่มีใน repo → สร้าง flow ตรวจสอบเอง)
+- preview: สรุป "นำเข้าใหม่ X แถว · ข้ามอัตโนมัติเพราะซ้ำเป๊ะ Y แถว · ต้องตรวจสอบ Z แถว", ซ่อนแถวซ้ำเป๊ะ (ไม่มี popup), แถวต้องตรวจสอบแสดงข่าวเดิมที่ชน + เลือก ข้าม/แทนที่/เก็บทั้งคู่ (ไม่เลือก = ไม่บันทึก); หลังบันทึกแสดงผลจริงจาก server
+- แก้บั๊กที่เจอระหว่างทดสอบ: (1) เลือกไฟล์เดิมซ้ำด้วยปุ่ม "เลือกไฟล์" ไม่เกิด event change → รีเซ็ต input หลังอ่าน (workflow หลักของงานนี้) (2) ปิด preview หลังบันทึกเกิด page error `null.mapping` → guard ทุก binding (3) commit เดิมเขียนทั้งไฟล์ทุกแถว → batch
+- test `tests/test_csv_dedupe.py` 9 ข้อ: import ไฟล์ META 9 แถว → 9 ใหม่; ซ้ำ → 0 ใหม่ / ข้าม 9 ไม่มีอะไรให้เลือก; เพิ่ม 2 แถวท้ายไฟล์ → 2 ใหม่ / ข้าม 9 รวม 11; ตัวพิมพ์/ช่องว่างต่าง = ซ้ำเป๊ะ; ticker+วันที่ตรงแต่ headline ต่าง → review (ไม่เลือก/ข้าม/เก็บทั้งคู่/แทนที่); แก้ typo → review; ซ้ำในไฟล์เดียวกัน; migrate + backup; ฟอร์มปฏิเสธข่าวซ้ำ; 600 แถว 0.36 วินาที / import ซ้ำ 601 แถว 0.37 วินาที
+- ผ่านเว็บจริงกับข่าวจริงของผู้ใช้ (สำรอง/คืนไฟล์): ไฟล์ META 9 แถว → "นำเข้าใหม่ 0 · ข้ามอัตโนมัติ 9" (มีอยู่ใน 463 ข่าวแล้ว), เลือกไฟล์เดิมซ้ำ → เหมือนเดิม, ไฟล์ 20 แถว → ข้าม 20, ข่าวรวม 463 → 463, popup 0, page error 0; ไฟล์ผสม → "ใหม่ 1 · ข้าม 3 · ตรวจสอบ 1" — screenshot `screenshots/K1_dedupe_preview.jpg`
+- tests รวม **126/126 ผ่าน** · `ui_smoke` console errors 0
+- DoD: ✅
+
 # สรุปรวม
-**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
+**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
 **ตรวจแล้วด้วยการรันจริง**
 - signal Model A ทั้ง 5 กฎ reproduce NAV ของ backtest เดิมเป๊ะ (≤ 6e-15); engine ของ sandbox ตาม NAV ของ A1 (corr รายวัน 0.99999)

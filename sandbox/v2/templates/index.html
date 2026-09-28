@@ -571,47 +571,57 @@
     <div class="panel stack">
       <h2>นำเข้า CSV</h2>
       <div class="dropzone" :class="{over: dragOver}" @dragover.prevent="dragOver=true" @dragleave="dragOver=false" @drop.prevent="drop($event)">
-        ลากไฟล์ .csv มาวาง หรือ <label style="color:var(--a2);cursor:pointer">เลือกไฟล์<input type="file" accept=".csv,text/csv" style="display:none" @change="file($event.target.files[0])"></label>
+        ลากไฟล์ .csv มาวาง หรือ <label style="color:var(--a2);cursor:pointer">เลือกไฟล์<input type="file" accept=".csv,text/csv" style="display:none" @change="file($event.target.files[0]); $event.target.value = ''"></label>
         <div class="dim" style="font-size:12px;margin-top:6px">จับคู่ column จากคำในชื่อ (มีวงเล็บ/คำไทยนำหน้าได้): date/วันที่, headline/title/short_news/ข่าวแบบย่อ, full_news/body/ข่าวแบบเต็ม, ticker/symbol, label (ตัวเลข -2..+2 = 5 ระดับความแรง หรือ positive/neutral/negative → +1/0/-1) — column อื่นเก็บเป็น metadata · ไม่มี ticker = ตรวจจากข้อความให้</div>
       </div>
       <template x-if="csvErr"><div class="warn red"><b>CSV</b><span x-text="csvErr"></span></div></template>
+      <template x-if="csvResult"><div class="warn gray" id="csv-result"><b>ผลการนำเข้า</b><span x-text="`นำเข้าใหม่ ${csvResult.saved} แถว · ข้ามอัตโนมัติเพราะซ้ำเป๊ะ ${csvResult.skipped_exact} แถว · ต้องตรวจสอบ (ยังไม่ได้บันทึก) ${csvResult.review_pending} แถว` + (csvResult.replaced ? ` · แทนที่ข่าวเดิม ${csvResult.replaced}` : '')"></span></div></template>
       <template x-if="csv">
         <div class="stack">
           <div class="csv-map">
-            <div class="dim" style="font-size:12px;margin-bottom:4px"><span class="mono" x-text="csvName"></span> · <span x-text="csv.total_rows"></span> แถว — ระบบเดา mapping ไว้ ตรวจ/แก้ก่อนบันทึก</div>
+            <div class="dim" style="font-size:12px;margin-bottom:4px"><span class="mono" x-text="csvName"></span> · <span x-text="csv?.total_rows"></span> แถว — ระบบเดา mapping ไว้ ตรวจ/แก้ก่อนบันทึก</div>
             <div class="grid g2" style="gap:6px 12px">
-              <template x-for="[f, label] in csv.fields" :key="f">
+              <template x-for="[f, label] in (csv?.fields || [])" :key="f">
                 <label class="row" style="gap:6px;font-size:12.5px"><span style="width:120px" x-text="label"></span>
                   <select :data-map="f" style="flex:1;padding:3px 6px" @change="remap(f, $event.target.value)">
-                    <option value="" :selected="!csv.mapping[f]">— ไม่ใช้ —</option>
-                    <template x-for="c in csv.columns" :key="c"><option :value="c" :selected="csv.mapping[f]===c" x-text="c"></option></template>
+                    <option value="" :selected="!csv?.mapping?.[f]">— ไม่ใช้ —</option>
+                    <template x-for="c in (csv?.columns || [])" :key="c"><option :value="c" :selected="csv?.mapping?.[f]===c" x-text="c"></option></template>
                   </select></label>
               </template>
             </div>
-            <div class="dim" style="font-size:12px;margin-top:4px" x-show="csv.extra_columns.length" x-text="'เก็บเป็น metadata ต่อแถว: ' + csv.extra_columns.join(', ')"></div>
-            <div class="dim" style="font-size:12px" x-show="csv.label_scale" x-text="csv.label_scale == 2 ? 'label -2..+2 ใช้ตรง ๆ ทั้ง 5 ระดับ (ไม่ยุบรวม)' : `label สเกล ±${csv.label_scale} → เทียบเป็น -2..+2 (เก็บค่าดิบไว้ด้วย)`"></div>
+            <div class="dim" style="font-size:12px;margin-top:4px" x-show="csv?.extra_columns?.length" x-text="'เก็บเป็น metadata ต่อแถว: ' + (csv?.extra_columns || []).join(', ')"></div>
+            <div class="dim" style="font-size:12px" x-show="csv?.label_scale" x-text="csv?.label_scale == 2 ? 'label -2..+2 ใช้ตรง ๆ ทั้ง 5 ระดับ (ไม่ยุบรวม)' : `label สเกล ±${csv?.label_scale} → เทียบเป็น -2..+2 (เก็บค่าดิบไว้ด้วย)`"></div>
           </div>
           <div class="row" style="gap:8px;align-items:center"><b style="font-size:13px">วิธีตั้ง label ของไฟล์นี้</b>
             <select id="csv-method" :value="csvMethod" @change="setCsvMethod($event.target.value)" style="padding:4px 6px">
               <template x-for="[k, t] in methodList()" :key="k"><option :value="k" :selected="csvMethod===k" x-text="t"></option></template></select></div>
           <div class="warn orange" x-show="csvMethod==='unknown'"><b>ถามก่อนนำเข้า</b><span>label ในไฟล์นี้ตั้งตอนรู้ผลราคาแล้ว (hindsight — เช่น label_reason อ้าง % การเคลื่อนไหวจริง) หรือจากเนื้อข่าว ณ วันนั้น (real-time)? ถ้าไม่ระบุจะบันทึกเป็น unknown และไม่ถูกใช้ใน B version manual-labels จนกว่าจะระบุ (แก้ทีละแถวได้ในตาราง)</span></div>
-          <template x-for="p in csv.problems"><div class="warn orange"><b>MAPPING</b><span x-text="p"></span></div></template>
-          <template x-if="csv.rows.some(r=>r.skip_reasons.length)">
-            <div class="warn"><b>ข้าม</b><div><template x-for="r in csv.rows.filter(r=>r.skip_reasons.length)"><div x-text="`แถว ${r.row}: ${r.skip_reasons.join(' · ')}`"></div></template></div></div>
+          <template x-for="p in (csv?.problems || [])"><div class="warn orange"><b>MAPPING</b><span x-text="p"></span></div></template>
+          <div class="warn gray" id="dup-summary"><b>สรุป</b><span x-text="`นำเข้าใหม่ ${dupCounts().newRows} แถว · ข้ามอัตโนมัติเพราะซ้ำเป๊ะ ${dupCounts().exact} แถว · ต้องตรวจสอบ ${dupCounts().review} แถว (ticker+วันที่ตรงกันแต่ headline ต่างกัน)` + (dupCounts().invalid ? ` · อ่านไม่ได้ ${dupCounts().invalid} แถว` : '')"></span></div>
+          <div class="warn orange" x-show="dupCounts().reviewOpen"><b>ตรวจสอบ</b><span x-text="`${dupCounts().reviewOpen} แถวยังไม่ได้เลือกว่าจะ ข้าม / แทนที่ / เก็บทั้งคู่ — แถวที่ไม่เลือกจะไม่ถูกบันทึก`"></span></div>
+          <template x-if="(csv?.rows || []).some(r=>r.skip_reasons.length)">
+            <div class="warn"><b>ข้าม</b><div><template x-for="r in (csv?.rows || []).filter(r=>r.skip_reasons.length)"><div x-text="`แถว ${r.row}: ${r.skip_reasons.join(' · ')}`"></div></template></div></div>
           </template>
           <div class="scroll" style="max-height:380px"><table class="t">
             <thead><tr><th></th><th>วันที่</th><th>headline</th><th>หุ้น</th><th>label (-2..+2)</th><th>วิธี label</th></tr></thead>
-            <tbody><template x-for="r in csv.rows" :key="r.row"><tr :class="r.skip_reasons.length ? 'dim' : ''" :title="r.skip_reasons.join(' · ')">
-              <td><input type="checkbox" x-model="r.include"></td>
+            <tbody><template x-for="r in csvVisibleRows()" :key="r.row"><tr :class="[r.skip_reasons.length ? 'dim' : '', r.dup?.status === 'review' ? 'dup-review' : '']" :title="r.skip_reasons.join(' · ')" :data-row="r.row" :data-dup="r.dup?.status">
+              <td><input type="checkbox" x-model="r.include" :disabled="r.dup?.status === 'review'"></td>
               <td><input type="date" x-model="r.date" style="width:140px"><div class="dim" style="font-size:11px" x-show="r.effective_date && r.effective_date!==r.date" x-text="'มีผล ' + r.effective_date"></div></td>
-              <td x-text="r.headline"></td>
+              <td><div x-text="r.headline"></div>
+                <template x-if="r.dup?.status === 'review'"><div class="dup-box">
+                  <div class="dim" style="font-size:11.5px" x-text="r.dup.partial ? 'บาง ticker ของแถวนี้มีข่าวเดียวกันอยู่แล้ว:' : 'ticker + วันที่ตรงกับข่าวที่มีอยู่แล้ว (หัวข่าวต่างกัน):'"></div>
+                  <template x-for="m in r.dup.matches"><div class="mono" style="font-size:11.5px" x-text="`• ${m.date} ${m.tickers.join(',')} [${m.label > 0 ? '+' : ''}${m.label}] ${m.headline}`"></div></template>
+                  <select class="dup-action" @change="setDupAction(r, $event.target.value)" style="margin-top:4px;padding:3px 6px;font-size:12px">
+                    <option value="" :selected="!r.dup_action">— เลือก —</option><option value="skip">ข้าม (ไม่นำเข้า)</option>
+                    <option value="replace">แทนที่ข่าวเดิม</option><option value="keep_both">เก็บทั้งคู่ (คนละข่าว)</option></select>
+                </div></template></td>
               <td><input :value="r.tickers.join(', ')" @change="r.tickers = $event.target.value.split(/[ ,;]+/).filter(Boolean).map(x=>x.toUpperCase())" style="width:120px"><div class="dim" style="font-size:11px" x-text="r.ticker_source + (r.macro.suggest ? ' · มหภาค?' : '')"></div></td>
               <td><select class="label-sel" :class="labelCls(r.label)" x-model.number="r.label">
                   <template x-for="[v, t] in newsLabels()" :key="v"><option :value="v" :selected="r.label===v" x-text="(v>0?'+':'') + v + ' ' + t"></option></template></select>
                 <div class="dim mono" style="font-size:11px" x-show="r.label_raw !== null && r.label_raw !== undefined && r.label_raw !== r.label" x-text="'ค่าในไฟล์: ' + r.label_raw"></div></td>
               <td><select class="row-method" x-model="r.label_method" style="padding:3px 4px;font-size:12px"><option value="hindsight">hindsight</option><option value="real_time">real-time</option><option value="unknown">unknown</option></select></td>
             </tr></template></tbody></table></div>
-          <div class="row" style="justify-content:flex-end"><span class="muted" x-text="csv.rows.filter(r=>r.include).length + ' แถวที่จะบันทึก'"></span><button class="gold" @click="commitCsv()">บันทึกที่เลือก</button></div>
+          <div class="row" style="justify-content:flex-end"><span class="muted" x-text="(csv?.rows || []).filter(r=>r.include).length + ' แถวที่จะบันทึก'"></span><button class="gold" @click="commitCsv()">บันทึกที่เลือก</button></div>
         </div>
       </template>
     </div>

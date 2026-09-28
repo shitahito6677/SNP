@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import re
@@ -170,15 +171,25 @@ def detect(text: str) -> dict:
         t = m.group(1)
         if t in man and man[t].get("kind") == "stock" and t not in TICKER_STOPWORDS:
             add(t, m.group(0), "ticker", m.start(), m.end())
-    macro = [k for k, pat in MACRO_KEYWORDS if re.search(pat, text, re.I)]
-    sectors = [e for e, pat in SECTOR_KEYWORDS.items() if re.search(pat, text, re.I)]
-    return {"mentions": sorted(found.values(), key=lambda x: text.find(x["match"])),
-            "macro": {"keywords": macro, "suggest": bool(macro), "sectors": sectors}}
+    return {"mentions": sorted(found.values(), key=lambda x: text.find(x["match"])), "macro": macro_info(text)}
+
+
+def macro_info(text: str) -> dict:
+    """คำบ่งชี้ข่าวมหภาค (แนะนำเป็นข่าว C) — แยกจาก detect() เพราะถูกกว่ามาก (ใช้ตอนไฟล์มี column ticker อยู่แล้ว)"""
+    macro = [k for k, pat in MACRO_KEYWORDS if re.search(pat, text or "", re.I)]
+    sectors = [e for e, pat in SECTOR_KEYWORDS.items() if re.search(pat, text or "", re.I)]
+    return {"keywords": macro, "suggest": bool(macro), "sectors": sectors}
+
+
+@lru_cache(maxsize=2)
+def _calendar(mtime: float) -> pd.DatetimeIndex:
+    return pd.read_parquet(cfg.PRICES_DIR / f"{cfg.BENCHMARK}.parquet").index
 
 
 def trading_day_info(date: str) -> dict:
     d = pd.Timestamp(date).normalize()
-    cal = pd.read_parquet(cfg.PRICES_DIR / f"{cfg.BENCHMARK}.parquet").index
+    f = cfg.PRICES_DIR / f"{cfg.BENCHMARK}.parquet"
+    cal = _calendar(f.stat().st_mtime)  # อ่านไฟล์ครั้งเดียวต่อเวอร์ชัน (import CSV หลายร้อยแถวเรียกทุกแถว)
     if d <= cal[-1]:
         ok = d in cal
         nxt = cal[cal >= d][0] if not ok else d
@@ -198,6 +209,70 @@ def _load() -> list:
 def _write(rows):
     cfg.MANUAL_NEWS.parent.mkdir(parents=True, exist_ok=True)
     cfg.MANUAL_NEWS.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+
+
+# ---------------------------------------------------------------- content hash (กันข่าวซ้ำตอน import ไฟล์เดิมซ้ำ)
+HEADLINE_MAX = 500
+
+
+def normalize_headline(h: str) -> str:
+    """ตัดช่องว่างหัวท้าย · ตัวพิมพ์เล็ก · ยุบช่องว่างซ้อน — ใช้ความยาวเท่าที่บันทึกจริง (HEADLINE_MAX)"""
+    return " ".join((h or "").strip()[:HEADLINE_MAX].lower().split())
+
+
+def content_hash(ticker: str, publish_date: str, headline: str) -> str:
+    """sha256(ticker | publish_date | normalize(headline)) — ข่าวไม่มี ticker (มหภาค) ใช้ ticker = "macro" """
+    return hashlib.sha256(f"{ticker}|{publish_date}|{normalize_headline(headline)}".encode("utf-8")).hexdigest()
+
+
+def hashes_for(tickers, publish_date: str, headline: str) -> list:
+    return sorted(content_hash(t, publish_date, headline) for t in (sorted(set(tickers or [])) or ["macro"]))
+
+
+def ensure_hashes() -> int:
+    """migrate: ข่าวที่บันทึกก่อนมี content hash → เติม `content_hashes` (สำรองไฟล์เดิมไว้ก่อนเขียนครั้งแรก) — คืนจำนวนที่เติม"""
+    rows = _load()
+    todo = [r for r in rows if not r.get("content_hashes")]
+    if not todo:
+        return 0
+    bak = cfg.MANUAL_NEWS.with_name(cfg.MANUAL_NEWS.name + ".bak-before-content-hash")
+    if not bak.exists():
+        bak.write_bytes(cfg.MANUAL_NEWS.read_bytes())
+    for r in todo:
+        r["content_hashes"] = hashes_for(r.get("tickers"), r["date"], r.get("headline", ""))
+    _write(rows)
+    return len(todo)
+
+
+def hash_index(rows=None) -> tuple:
+    """(hash → id, (ticker, publish_date) → [ข่าว]) ของข่าวที่ยังไม่ถูกลบ — lookup O(1) ต่อแถว (ไฟล์โตได้หลายพันแถว)"""
+    by_hash, by_td = {}, {}
+    for r in (_load() if rows is None else rows):
+        if r.get("deleted"):
+            continue
+        for h in r.get("content_hashes") or hashes_for(r.get("tickers"), r["date"], r.get("headline", "")):
+            by_hash.setdefault(h, r["id"])
+        for t in r.get("tickers") or []:
+            by_td.setdefault((t, r["date"]), []).append(r)
+    return by_hash, by_td
+
+
+def dup_check(tickers, publish_date: str, headline: str, by_hash: dict, by_td: dict) -> dict:
+    """exact = ข่าวเดิมทุก ticker (ข้ามอัตโนมัติ) · review = ticker+วันที่ตรงแต่ headline ต่าง/ซ้ำบางส่วน (ผู้ใช้ตัดสินใจ) · new"""
+    hs = hashes_for(tickers, publish_date, headline)
+    hit = [h for h in hs if h in by_hash]
+    if hs and len(hit) == len(hs):
+        return {"status": "exact", "hashes": hs, "ids": sorted({by_hash[h] for h in hit})}
+    same_day = {}
+    for t in tickers or []:
+        for r in by_td.get((t, publish_date), []):
+            if content_hash(t, publish_date, headline) not in (r.get("content_hashes") or []):
+                same_day[r["id"]] = r
+    if hit or same_day:
+        return {"status": "review", "hashes": hs, "partial": bool(hit),
+                "matches": [{"id": r["id"], "headline": r.get("headline", ""), "tickers": r.get("tickers"), "date": r["date"],
+                             "label": label_of(r), "label_method": label_method_of(r)} for r in same_day.values()]}
+    return {"status": "new", "hashes": hs}
 
 
 def list_news(limit=300) -> list:
@@ -250,6 +325,73 @@ def set_label_method(ids: list, method: str) -> int:
 
 
 def add(item: dict) -> dict:
+    """เพิ่มข่าว 1 รายการ (ฟอร์มพิมพ์เอง) — ซ้ำเป๊ะกับข่าวที่มีอยู่ (ทุก ticker) = ValueError"""
+    rows = _load()
+    by_hash, _ = hash_index(rows)
+    row = make_row(item)
+    dup = [h for h in row["content_hashes"] if h in by_hash]
+    if dup and len(dup) == len(row["content_hashes"]) and not item.get("allow_duplicate"):
+        raise ValueError(f"ข่าวนี้มีอยู่แล้ว (ticker + วันที่ + หัวข่าวซ้ำเป๊ะกับข่าว {by_hash[dup[0]][:8]})")
+    rows.append(row)
+    _write(rows)
+    return row
+
+
+def commit_rows(items: list) -> dict:
+    """บันทึกแถวจากหน้า preview CSV แบบ batch (อ่าน/เขียนไฟล์ครั้งเดียว) — ตรวจข่าวซ้ำใหม่ฝั่ง server เสมอ:
+    exact → ข้ามอัตโนมัติ · review → ทำตาม dup_action ของผู้ใช้ (skip / replace / keep_both; ยังไม่เลือก = ไม่บันทึก) · new → บันทึกถ้าติ๊ก"""
+    ensure_hashes()
+    rows = _load()
+    by_hash, by_td = hash_index(rows)
+    by_id = {r["id"]: r for r in rows}
+    out = {"saved": [], "skipped_exact": 0, "review_pending": 0, "replaced": 0, "skipped_by_user": 0, "invalid": 0, "errors": []}
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        if it.get("skip_reasons"):
+            out["invalid"] += 1
+            continue
+        try:
+            date = str(pd.Timestamp(it["date"]).date())
+            tick = sorted({str(t).upper() for t in it.get("tickers") or []})
+            head = (it.get("headline") or "").strip()
+            dup = dup_check(tick, date, head, by_hash, by_td)
+            action = it.get("dup_action")
+            if dup["status"] == "exact":
+                out["skipped_exact"] += 1
+                continue
+            if dup["status"] == "review" and action not in ("replace", "keep_both"):
+                out["review_pending" if action is None else "skipped_by_user"] += 1
+                continue
+            if dup["status"] == "new" and not it.get("include"):
+                out["skipped_by_user"] += 1
+                continue
+            row = make_row(dict(it, effective_date=None))  # ผู้ใช้อาจแก้วันที่ใน preview → คำนวณวันที่มีผลใหม่
+        except (ValueError, KeyError, TypeError) as e:
+            out["errors"].append({"row": it.get("row"), "error": str(e).strip("'\"")})
+            continue
+        if dup["status"] == "review" and action == "replace":
+            for m in dup["matches"]:
+                old = by_id.get(m["id"])
+                if old and not old.get("deleted"):
+                    old.update(deleted=True, replaced_by=row["id"], updated_at=_now())
+                    out["replaced"] += 1
+            live_before = [r for r in rows if r["id"] not in {x["id"] for x in out["saved"]}]
+            by_hash = hash_index(rows)[0]
+            by_td = hash_index(live_before)[1]
+        rows.append(row)
+        by_id[row["id"]] = row
+        for h in row["content_hashes"]:  # แถวซ้ำเป๊ะภายในไฟล์เดียวกัน → ตัวหลังข้ามอัตโนมัติ
+            by_hash.setdefault(h, row["id"])
+        # by_td ไม่เติมแถวจากไฟล์เดียวกัน: ข่าวต่างหัวข้อของหุ้นเดียวกันวันเดียวกันในไฟล์เดียว = คนละข่าว (ตรงกับที่ preview แสดง)
+        out["saved"].append(row)
+    if out["saved"] or out["replaced"]:
+        _write(rows)
+    return out
+
+
+def make_row(item: dict) -> dict:
+    """ตรวจ + สร้าง record ข่าว (ยังไม่บันทึก)"""
     headline = (item.get("headline") or "").strip()
     if not headline:
         raise ValueError("ต้องมี headline")
@@ -295,9 +437,7 @@ def add(item: dict) -> dict:
         row["label_scale"] = item.get("label_scale")
     if item.get("extra"):  # column ที่ระบบไม่รู้จัก (source_url, label_reason, …) → metadata ต่อแถว
         row["extra"] = {str(k)[:100]: str(v)[:BODY_MAX] for k, v in dict(item["extra"]).items()}
-    rows = _load()
-    rows.append(row)
-    _write(rows)
+    row["content_hashes"] = hashes_for(tickers, date, row["headline"])
     return row
 
 
@@ -405,7 +545,7 @@ def _parse_tickers(raw: str, man) -> tuple:
     return sorted(set(out)), bad
 
 
-def csv_preview(text: str, mapping: dict | None = None, limit=2000) -> dict:
+def csv_preview(text: str, mapping: dict | None = None, limit=20000) -> dict:
     """อ่าน CSV → mapping ที่เดา (หรือที่ผู้ใช้เลือกเอง) + ทุกแถวพร้อมเหตุผลถ้าข้าม — ไม่บันทึกอะไร
     raise ValueError (ข้อความไทย) เฉพาะกรณีอ่านไฟล์ไม่ได้เลย; ปัญหารายแถว/ไม่มี column → แสดงใน preview"""
     text = (text or "").lstrip("﻿")
@@ -442,6 +582,9 @@ def csv_preview(text: str, mapping: dict | None = None, limit=2000) -> dict:
     extra_cols = [c for c in cols if c not in used]
     scale = label_scale(mapping["sentiment"], [r.get(mapping["sentiment"]) for r in data]) if mapping["sentiment"] else None
     man = prices.manifest()["tickers"]
+    ensure_hashes()
+    by_hash, by_td = hash_index()
+    seen = {}
     get = lambda r, f: (r.get(mapping[f]) or "") if mapping[f] else ""  # noqa: E731
     rows = []
     for i, r in enumerate(data[:limit]):
@@ -462,7 +605,9 @@ def csv_preview(text: str, mapping: dict | None = None, limit=2000) -> dict:
         else:
             skip.append("ไม่มีวันที่")
         extra = {c: r.get(c) for c in extra_cols if (r.get(c) or "").strip()}
-        det = detect(" ".join([headline, body] + [v for c, v in extra.items() if any(h in c.lower() for h in NAME_HINT)]))
+        has_col_ticker = bool(mapping["ticker"] and get(r, "ticker").strip())
+        det = ({"mentions": [], "macro": macro_info(headline + " " + body)} if has_col_ticker  # มี ticker แล้ว → ไม่ต้องไล่ alias ทั้งตาราง
+               else detect(" ".join([headline, body] + [v for c, v in extra.items() if any(h in c.lower() for h in NAME_HINT)])))
         warn = []
         if mapping["ticker"] and get(r, "ticker").strip():
             tick, bad = _parse_tickers(get(r, "ticker"), man)
@@ -478,12 +623,24 @@ def csv_preview(text: str, mapping: dict | None = None, limit=2000) -> dict:
             skip.append(lerr)
         if len(body) > BODY_MAX:
             warn.append(f"เนื้อข่าวยาว {len(body):,} ตัวอักษร เกิน {BODY_MAX:,} — จะถูกตัด")
-        rows.append({"row": i + 1, "headline": headline, "body": body,
+        dup = {"status": "invalid"}
+        if not skip and dinfo:
+            dup = dup_check(tick, dinfo["date"], headline, by_hash, by_td)
+            if dup["status"] == "new":
+                key = tuple(dup["hashes"])
+                if key in seen:  # แถวซ้ำกันเองภายในไฟล์เดียวกัน
+                    dup = {"status": "exact", "hashes": dup["hashes"], "ids": [], "in_file": seen[key]}
+                else:
+                    seen[key] = i + 1
+        rows.append({"row": i + 1, "headline": headline, "body": body, "dup": dup,
+                     "dup_action": "skip" if dup["status"] == "exact" else None,
                      "date": dinfo["date"] if dinfo else date_raw, "effective_date": dinfo["next_trading_day"] if dinfo else None,
                      "date_ok": bool(dinfo), "tickers": tick, "ticker_source": src,
                      "label": label if label is not None else 0, "label_raw": raw,
                      "label_scale": f"±{scale:g}" if scale and isinstance(raw, (int, float)) else None,
-                     "macro": det["macro"], "extra": extra, "warnings": warn, "skip_reasons": skip, "include": not skip})
-    return {"mapping": mapping, "guessed": guessed, "columns": cols, "extra_columns": extra_cols, "fields": [[f, FIELD_TH[f]] for f in FIELD_KEYWORDS],
+                     "macro": det["macro"], "extra": extra, "warnings": warn, "skip_reasons": skip,
+                     "include": not skip and dup["status"] == "new"})  # exact = ข้ามอัตโนมัติ, review = รอผู้ใช้เลือก
+    n = {k: sum(1 for r in rows if r["dup"]["status"] == k) for k in ("new", "exact", "review")}
+    return {"mapping": mapping, "guessed": guessed, "dup_summary": {**n, "invalid": sum(1 for r in rows if r["skip_reasons"])}, "columns": cols, "extra_columns": extra_cols, "fields": [[f, FIELD_TH[f]] for f in FIELD_KEYWORDS],
             "label_scale": scale, "problems": problems, "rows": rows, "total_rows": len(data),
             "truncated": len(data) > limit, "n_include": sum(r["include"] for r in rows)}

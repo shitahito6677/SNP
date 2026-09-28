@@ -5,7 +5,7 @@ const NEWS = { charts: {} };  // chart object นอก Alpine reactive state
 
 function news() {
   return {
-    headline: "", body: "", date: "", label: 0, labelMethod: "unknown", csvMethod: "unknown", methods: null, tickers: [], ignored: [], sectors: [], macroOn: false,
+    headline: "", body: "", date: "", label: 0, labelMethod: "unknown", csvMethod: "unknown", methods: null, csvResult: null, tickers: [], ignored: [], sectors: [], macroOn: false,
     det: null, dateInfo: null, mq: null, mStart: 0, mi: 0, list: [], csv: null, csvErr: "", csvText: "", csvName: "", dragOver: false, _t: null,
 
     init() {
@@ -19,6 +19,15 @@ function news() {
     },
     async refresh() { [this.list, this.methods] = await Promise.all([api("/api/news"), api("/api/news/methods")]); },
     methodList() { return this.methods?.methods || [["hindsight", "hindsight"], ["real_time", "real-time"], ["unknown", "ยังไม่ระบุ"]]; },
+    /* ---------- ข่าวซ้ำ: ซ้ำเป๊ะ = ข้ามเงียบ ๆ · ticker+วันที่ตรงแต่หัวข่าวต่าง = ให้ผู้ใช้เลือก ---------- */
+    csvVisibleRows() { return (this.csv?.rows || []).filter((r) => r.dup?.status !== "exact"); },
+    dupCounts() {
+      const rows = this.csv?.rows || [];
+      return { newRows: rows.filter((r) => r.dup?.status === "new" && r.include).length, exact: rows.filter((r) => r.dup?.status === "exact").length,
+        review: rows.filter((r) => r.dup?.status === "review").length, reviewOpen: rows.filter((r) => r.dup?.status === "review" && !r.dup_action).length,
+        invalid: rows.filter((r) => r.skip_reasons.length).length };
+    },
+    setDupAction(r, a) { r.dup_action = a || null; r.include = a === "replace" || a === "keep_both"; },
     setCsvMethod(m) { this.csvMethod = m; if (this.csv) this.csv.rows.forEach((r) => { r.label_method = m; }); },
     async setBatchMethod(b, m) {
       const what = m === "hindsight" ? "hindsight — label ตั้งตอนรู้ผลราคาแล้ว (ใช้ได้แค่ Oracle test)" : "real-time — label จากเนื้อข่าว ณ วันข่าว ไม่รู้ผลล่วงหน้า";
@@ -130,7 +139,7 @@ function news() {
     },
     async previewCsv(mapping) {
       try {
-        this.csv = await api("/api/news/csv/preview", { method: "POST", body: { text: this.csvText, mapping } }); this.csvErr = "";
+        this.csv = await api("/api/news/csv/preview", { method: "POST", body: { text: this.csvText, mapping } }); this.csvErr = ""; this.csvResult = null;
         this.csv.rows.forEach((r) => { r.label_method = this.csvMethod; });
       }
       catch (e) { this.csvErr = e.message; }
@@ -141,7 +150,10 @@ function news() {
       const rows = this.csv.rows.map((r) => ({ ...r, import_batch: batch, sectors: !r.tickers.length && r.macro.suggest ? this.etfs() : [] }));
       try {
         const res = await api("/api/news/csv/commit", { method: "POST", body: { rows } });
-        Alpine.store("app").toast(`บันทึก ${res.saved} ข่าว` + (res.errors.length ? ` · ผิดพลาด ${res.errors.length}` : ""), res.errors.length ? "err" : "ok", 6000);
+        this.csvResult = res;
+        Alpine.store("app").toast(`นำเข้าใหม่ ${res.saved} แถว · ข้ามอัตโนมัติเพราะซ้ำเป๊ะ ${res.skipped_exact} แถว`
+          + (res.review_pending ? ` · ยังไม่ได้ตรวจ ${res.review_pending} แถว (ไม่ได้บันทึก)` : "") + (res.errors.length ? ` · ผิดพลาด ${res.errors.length}` : ""),
+          res.errors.length ? "err" : "ok", 7000);
         if (res.errors.length) this.csvErr = res.errors.map((x) => `แถว ${x.row}: ${x.error}`).join(" · ");
         else this.csv = null;
       } catch (e) { this.csvErr = "บันทึกไม่สำเร็จ: " + e.message; }

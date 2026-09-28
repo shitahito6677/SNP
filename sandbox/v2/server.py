@@ -72,6 +72,13 @@ def rebuild_manual_labels():
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static", template_folder="templates")
     app.json.ensure_ascii = False
+    try:  # migrate ครั้งเดียว: ข่าวเก่าที่ยังไม่มี content hash (สำรองไฟล์เดิมไว้ก่อน)
+        from sandbox.v2 import news
+        n = news.ensure_hashes()
+        if n:
+            log.info("เติม content hash ให้ข่าว manual เดิม %d รายการ", n)
+    except Exception:  # noqa: BLE001
+        log.exception("ensure_hashes failed")
     rebuild_manual_labels()
 
     @app.errorhandler(Exception)
@@ -339,23 +346,17 @@ def create_app() -> Flask:
 
     @app.post("/api/news/csv/commit")
     def api_news_csv_commit():
+        """ข่าวซ้ำเป๊ะ (hash ตรง) ข้ามอัตโนมัติ · ticker+วันที่ตรงแต่หัวข่าวต่าง = ทำตามที่ผู้ใช้เลือก · ที่เหลือบันทึก"""
         from sandbox.v2 import news
-        saved, errors = [], []
         b = request.get_json(force=True, silent=True) or {}
-        for r in b.get("rows", []) if isinstance(b, dict) else []:
-            if not isinstance(r, dict) or not r.get("include"):
-                continue
-            r = dict(r, effective_date=None)  # ผู้ใช้อาจแก้วันที่ใน preview → คำนวณวันที่มีผลใหม่เสมอ
-            try:
-                saved.append(news.add(r))
-            except (ValueError, KeyError) as e:
-                errors.append({"row": r.get("row"), "error": str(e).strip("'\"")})
-            except Exception as e:  # noqa: BLE001 — แถวเดียวพังไม่ให้ทั้งไฟล์พัง
-                resp, _ = fail(e, "บันทึกแถวนี้ไม่สำเร็จ")
-                errors.append({"row": r.get("row"), "error": resp.get_json()["error"]})
-        if saved:
+        try:
+            res = news.commit_rows(b.get("rows", []) if isinstance(b, dict) else [])
+        except Exception as e:  # noqa: BLE001
+            return fail(e, "บันทึกข่าวจาก CSV ไม่สำเร็จ")
+        if res["saved"] or res["replaced"]:
             rebuild_manual_labels()
-        return jsonify({"saved": len(saved), "errors": errors, "ids": [x["id"] for x in saved]})
+        saved = res.pop("saved")
+        return jsonify(dict(res, saved=len(saved), ids=[x["id"] for x in saved]))
 
     # ------------------------------------------------------------ results / experiments
     def _result_dir(kind, rid):
