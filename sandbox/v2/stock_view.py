@@ -63,6 +63,7 @@ def build(ticker: str, kind=None, rid=None, start=None, end=None, versions=None)
         why = man.get("reason") or "ดึงราคาจาก Yahoo ไม่ได้"
         raise StockError(f"ไม่มีข้อมูลราคาของ {ticker} ({man.get('name') or ticker}) — status: {man.get('status') or 'ไม่ทราบ'} · {why}", 404, "no_price")
     notices = []
+    a_ranking = None
     if man.get("status") == "partial":
         notices.append(f"ราคาไม่ครบช่วง: {man.get('reason') or ('มีราคา ' + str(man.get('start')) + ' → ' + str(man.get('end')))}")
     versions = dict(versions or {})
@@ -73,6 +74,7 @@ def build(ticker: str, kind=None, rid=None, start=None, end=None, versions=None)
         d = _result_dir(kind, rid)
         conf = json.loads((d / "config.json").read_text())
         allow = bool(conf["held_out"].get("touched"))
+        a_ranking = conf["stages"]["A"].get("ranking", "global")
         start, end = start or pd.Timestamp(conf["start"]), end or pd.Timestamp(conf["end"])
         for m in "ABC":
             if conf["stages"][m]["mode"] != "off":
@@ -129,7 +131,7 @@ def build(ticker: str, kind=None, rid=None, start=None, end=None, versions=None)
     return {"ticker": ticker, "name": man.get("name") or ticker, "sector": sector, "etf": etf,
             "status": man.get("status"), "start": str(start.date()), "end": str(end.date()), "held_out_visible": allow,
             "bars": bars, "trades": trades, "layers": layers, "labels": labels, "notices": notices,
-            "manual_unknown": manual_unknown,
+            "manual_unknown": manual_unknown, "a_ranking": a_ranking,
             "price_note": "แท่งเทียน = ราคาดิบ (ปรับ split แล้ว ไม่ปรับปันผล); simulator ใช้ Adj Close (รวมปันผล)"}
 
 

@@ -185,8 +185,16 @@
 - ผ่านเว็บจริงกับข่าวจริง (สำรอง/คืนไฟล์): หน้า MU เตือน "มีข่าว 7 รายการ…" → คลิกลิงก์ → ตัวกรอง MU + ยังไม่ระบุ 7 แถว → เลือกทั้งหมดที่กรองอยู่ → real-time → เหลือ 0, กลับหน้า MU ไม่มีคำเตือน, error 0 — screenshot `screenshots/L1_bulk_label_method.jpg`
 - DoD: ✅
 
+## L2 — โหมดทดสอบ "จัดอันดับ A ใหม่เฉพาะใน scope" ✅
+- engine: `scoped_select()` (score เดิม, เทียบเฉพาะ applicable ใน scope, k = round(n × สัดส่วนเดิมของกฎ) ≥ 1, cache ต่อรอบ), `stages.A.ranking = "scoped"` (ไม่ใช่ค่าเริ่มต้น), record `ctx.a` มี `global_class`/`scoped_rank`, chip ใน trade reasons, `provenance.a_ranking_mode` — DECISIONS #22
+- UI: กล่อง A มี dropdown "การจัดอันดับ" (ทั้งตลาด / จัดอันดับใหม่เฉพาะใน scope (สำหรับทดสอบ)); ข้อความเตือนตามสเปคเป็นแถบ sticky บนหน้า Pipeline, หน้าผล (รวมผลที่บันทึก), หน้าหุ้นจากผลนั้น + ในกล่อง A; badge "A โหมดทดสอบ" อันแรก
+- test `tests/test_scoped_ranking.py` 6 ข้อ: META + A1 ทั้งตลาดผ่าน 0 / โหมดทดสอบผ่าน 1 และซื้อจริง; XLK + bmf20 = 3 ตัว (52 × 5.81% / 53 × 5.63%) ตรงกับ top-k ที่คำนวณแยก; scope ทั้งตลาด = ผลเดียวกับโหมดปกติ; applicable False ถูกตัดเสมอ; ค่าเริ่มต้น global + ตรวจค่าผิด + คำเตือน A3; ข้อความเตือนตรงสเปคทุกจุด
+- ผ่านเว็บจริง: "ผ่าน 0" → เลือกโหมดทดสอบ → "ผ่าน 1" + แถบเตือน, เลื่อนหน้าแถบยังอยู่, รัน → หน้าผลมีแถบ (เลื่อนแล้วยังอยู่) + badge, บันทึกแล้วเปิดใหม่ยังมีแถบ, คลิกไปหน้าหุ้นมีแถบ, error 0 — screenshot `screenshots/L2_*.jpg`
+- ผลรันจริงบันทึกใน experiments/log.md "L2" (ระบุชัดว่าไม่ใช่ผลของ Model A) · tests รวม **135/135 ผ่าน** · `ui_smoke` console errors 0
+- DoD: ✅
+
 # สรุปรวม
-**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
+**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
 **ตรวจแล้วด้วยการรันจริง**
 - signal Model A ทั้ง 5 กฎ reproduce NAV ของ backtest เดิมเป๊ะ (≤ 6e-15); engine ของ sandbox ตาม NAV ของ A1 (corr รายวัน 0.99999)

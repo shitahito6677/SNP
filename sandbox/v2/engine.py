@@ -31,7 +31,11 @@ from sandbox.v2.signals import AsOf, load_manual_news
 
 STAGES = ["load", "A", "B", "C", "condition", "simulate", "metrics", "save"]
 MODES = ("off", "on")  # กล่องโมเดล = แหล่งสัญญาณ: เปิด/ปิด + เลือก version เท่านั้น (เกณฑ์กรองทั้งหมดอยู่ใน condition)
-LEGACY_MODES = ("filter", "score-only")  # config ก่อน G1 — ดู legacy_notes()
+LEGACY_MODES = ("filter", "score-only")
+A_RANKING = ("global", "scoped")  # global = จัดอันดับทั้งตลาด (ค่าเริ่มต้น, ตรงกับ backtest) · scoped = โหมดทดสอบ
+SCOPED_A_WARNING = ("โหมดทดสอบ: จัดอันดับใหม่เฉพาะในขอบเขตที่เลือก — ไม่ใช่พฤติกรรมจริงของกฎที่ผ่านการทดสอบ "
+                    "(backtest เดิมของ Model A ทดสอบด้วยการจัดอันดับทั้งตลาดเท่านั้น) ผลจากโหมดนี้ใช้ดูกลไกระบบเท่านั้น "
+                    "ห้ามอ้างเป็นผลการทดสอบของ Model A")  # config ก่อน G1 — ดู legacy_notes()
 SCOPE_MODES = ("all", "sectors", "tickers")
 ALLOWED_ETFS = [cfg.BENCHMARK] + list(cfg.SECTOR_ETFS.values())
 
@@ -217,6 +221,14 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
             if not vid.startswith(m + ":"):
                 raise ConfigError(f"กล่อง {m}: version {vid} ไม่ใช่ของ Model {m}")
         stages[m] = {"mode": mode, "version": vid if mode != "off" else None}
+        ranking = s.get("ranking") or "global"
+        if m == "A" and ranking not in A_RANKING:
+            raise ConfigError(f"กล่อง A: การจัดอันดับต้องเป็น {A_RANKING} (ได้ {ranking!r})")
+        if m == "A" and mode == "on" and ranking == "scoped":  # ใส่ key เฉพาะโหมดทดสอบ — config โหมดปกติเหมือนเดิมทุกตัวอักษร
+            stages[m]["ranking"] = "scoped"
+    if stages["A"].get("ranking") == "scoped":
+        warnings.insert(0, "SCOPED-A: " + SCOPED_A_WARNING + (" · กฎที่มีเงื่อนไขพิเศษ (เช่น BUFFER ของ A3) จะถูกแทนด้วยการเลือก top-k ตาม score"
+                                                              if "BUFFER" in (stages["A"]["version"] or "") else ""))
     if legacy:
         warnings.append("LEGACY: รันด้วยความหมายของระบบใหม่ ผลจะต่างจากผลเดิม — " + " · ".join(legacy))
     if stages["A"]["mode"] != "on":
@@ -276,7 +288,7 @@ def coverage_warnings(conf: dict) -> list:
         man = registry.get(s["version"])
         for w in man.get("warnings") or []:
             out.append(f"{man['short_label']}: {w}")
-        if m == "A" and (conf.get("scope") or {}).get("mode", "all") != "all":
+        if m == "A" and (conf.get("scope") or {}).get("mode", "all") != "all" and s.get("ranking") != "scoped":
             out += _scope_vs_A(conf, a, start, end)
     return out
 
@@ -390,9 +402,25 @@ def not_applicable(model: str, date) -> dict:
     return {"class": None, "score": None, "applicable": False, "reasons": ["ไม่มีข้อมูล"], "date": None, "model": model}
 
 
+def scoped_select(snap: dict, scope) -> tuple:
+    """โหมดทดสอบ: จัดอันดับ A ใหม่เทียบกันเฉพาะหุ้นใน scope ด้วย score เดิมจาก export (ไม่คำนวณ score ใหม่)
+    - ตัด applicable False ออกก่อนเสมอ
+    - สัดส่วนที่เลือก = สัดส่วนเดิมของกฎในรอบนั้น (จำนวน selected ÷ จำนวนที่กฎจัดอันดับจริง = applicable) × จำนวนหุ้น applicable ใน scope
+      ปัดครึ่งขึ้น และอย่างน้อย 1 ตัวถ้ามีหุ้น applicable ใน scope
+    คืน (รายชื่อที่เลือกเรียงตามอันดับ, info)"""
+    appl = [k for k, r in snap.items() if r.get("applicable") and r.get("score") is not None]
+    n_sel = sum(1 for k in appl if snap[k].get("class") == "selected")
+    frac = n_sel / len(appl) if appl else 0.0
+    cands = sorted((k for k in appl if scope is None or k in scope), key=lambda k: (-float(snap[k]["score"]), k))
+    k = max(1, int(np.floor(len(cands) * frac + 0.5))) if cands and n_sel else 0
+    return cands[:k], {"fraction": frac, "k": k, "n_candidates": len(cands), "n_selected_global": n_sel, "n_ranked_global": len(appl)}
+
+
 def _chip(model, label, rec, extra=""):
     if rec is None or rec.get("applicable") is False:
         return f"{model}: {label} ไม่มีสัญญาณ"
+    if model == "A" and rec.get("ranking") == "scoped":
+        extra = f"{extra}[โหมดทดสอบ อันดับ {rec['scoped_rank']}/{rec['scoped_n']} ใน scope · ทั้งตลาด {rec.get('global_class')}] "
     sc = rec.get("score")
     s = f" (score {sc:.1f})" if isinstance(sc, float) and model == "A" else (f" ({sc:+.2f})" if isinstance(sc, float) else "")
     src = " [MANUAL]" if rec.get("source") == "manual" else ""
@@ -697,6 +725,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
         "contains_oracle_signal": bool(any(registry.get(st[m]["version"])["result_badge"] == "oracle" for m in asof)
                                        or manual_methods.get("hindsight")),
         "manual_label_methods": dict(sorted(manual_methods.items())),
+        **({"a_ranking_mode": st["A"].get("ranking", "global")} if "A" in asof else {}),
         **({"manual_unknown_news": _manual_unknown(conf)} if _manual_unknown(conf) else {}),
         "condition_sha256": hashlib.sha256(conf["condition"]["source"].encode()).hexdigest(),
         "execution": cfg.EXECUTION,
@@ -725,12 +754,27 @@ def stage_day(t, pxrow, stocks, held, asof, st, sector_of, scope=None):
     if "A" in asof:
         snap = asof["A"].snapshot(t)
         fun["a_rebalance"] = asof["A"].rebalance_date(t)
-        passed = [k for k, r in snap.items() if _crit_A(r) and (scope is None or k in scope)]
+        scoped = st["A"].get("ranking") == "scoped"
+        if scoped:  # โหมดทดสอบ: เทียบกันเฉพาะใน scope (cache ต่อรอบ rebalance — ผลเท่ากันทุกวันในรอบเดียวกัน)
+            key = (fun["a_rebalance"], None if scope is None else frozenset(scope))
+            cache = asof["A"].__dict__.setdefault("_scoped_cache", {})
+            if key not in cache:
+                cache[key] = scoped_select(snap, scope)
+            passed, info = cache[key]
+            rank = {k: i + 1 for i, k in enumerate(passed)}
+            fun["a_scoped_k"] = info["k"]
+        else:
+            passed = [k for k, r in snap.items() if _crit_A(r) and (scope is None or k in scope)]
         hp = set(has_px)
         fun["dropped_no_price"] = sum(1 for k in passed if k not in hp)
         fun["a_signal_empty"] = not snap
         passA = sorted(k for k in passed if k in hp)
         a_recs = {k: snap.get(k) for k in sorted(set(passA) | set(held)) if snap.get(k) is not None}
+        if scoped:  # record ที่ condition เห็น: class/weight ตามโหมดทดสอบ + เก็บ class จริงทั้งตลาดไว้
+            a_recs = {k: dict(r, global_class=r.get("class"), ranking="scoped", scoped_n=info["k"], scoped_rank=rank.get(k),
+                              **{"class": "selected" if k in rank else ("not_selected" if r.get("applicable") else r.get("class")),
+                                 "weight": 1.0 / info["k"] if k in rank else 0.0})
+                      for k, r in a_recs.items()}
     else:
         passA = has_px
     fun["after_A"] = len(passA)

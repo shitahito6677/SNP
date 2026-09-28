@@ -10,7 +10,7 @@ const WIRE_COLORS = ["#10B981", "#A855F7", "#F59E0B"];
 function pipeline() {
   return {
     stages: {
-      A: { mode: "on", version: null },
+      A: { mode: "on", version: null, ranking: "global" },
       B: { mode: "off", version: null },
       C: { mode: "off", version: null },
     },
@@ -88,7 +88,7 @@ function pipeline() {
         held_out: { enabled: this.run.heldOut, confirm: this.run.confirm }, include_manual: this.run.includeManual,
         scope: { mode: this.scope.mode, sectors: [...this.scope.sectors], tickers: [...this.scope.tickers] },
         stages: {
-          A: { mode: this.stages.A.mode, version: this.stages.A.version },
+          A: { mode: this.stages.A.mode, version: this.stages.A.version, ...(this.stages.A.ranking === "scoped" ? { ranking: "scoped" } : {}) },
           B: { mode: this.stages.B.mode, version: this.stages.B.version },
           C: { mode: this.stages.C.mode, version: this.stages.C.version },
         },
@@ -155,6 +155,7 @@ function pipeline() {
     },
     warnTag(w) {
       if (w.startsWith("SURVIVORSHIP")) return "SURVIVORSHIP";
+      if (w.startsWith("SCOPED-A")) return "โหมดทดสอบ";
       if (/(^|: )ORACLE:/.test(w)) return "ORACLE";
       if (w.startsWith("LEGACY")) return "LEGACY";
       if (/(^|: )MANUAL:/.test(w)) return "MANUAL";
@@ -164,7 +165,8 @@ function pipeline() {
       if (/test set|look-ahead/.test(w)) return "CAVEAT";
       return "NOTE";
     },
-    warnClass(w) { return { STUB: "gray", NEGATIVE: "orange", CAVEAT: "orange", COVERAGE: "", SURVIVORSHIP: "", NOTE: "gray", ORACLE: "oracle", LEGACY: "orange", MANUAL: "gray" }[this.warnTag(w)]; },
+    warnClass(w) { return { STUB: "gray", NEGATIVE: "orange", CAVEAT: "orange", COVERAGE: "", SURVIVORSHIP: "", NOTE: "gray", ORACLE: "oracle", LEGACY: "orange", MANUAL: "gray", "โหมดทดสอบ": "scoped" }[this.warnTag(w)]; },
+    scopedA() { return this.stages.A.mode === "on" && this.stages.A.ranking === "scoped"; },
 
     /* ---------- condition / editor ---------- */
     async loadCondition() {
