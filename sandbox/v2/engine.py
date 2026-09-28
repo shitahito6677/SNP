@@ -206,7 +206,7 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
     if legacy:
         warnings.append("LEGACY: รันด้วยความหมายของระบบใหม่ ผลจะต่างจากผลเดิม — " + " · ".join(legacy))
     if stages["A"]["mode"] != "on":
-        warnings.append("SURVIVORSHIP: กล่อง A ไม่ได้กรอง → universe = หุ้น S&P 500 ปัจจุบัน ∪ หุ้นที่เคยอยู่ใน export ของ A "
+        warnings.append("SURVIVORSHIP: กล่อง A ปิด → universe = หุ้น S&P 500 ปัจจุบัน ∪ หุ้นที่เคยอยู่ใน export ของ A "
                         "(หุ้นที่ล้ม/ถูกถอดก่อนปัจจุบันส่วนใหญ่ไม่อยู่ในนี้) — ผลจะดีเกินจริง")
     cond = dict(c.get("condition") or {})
     if cond.get("source") is None:
@@ -240,6 +240,14 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
 def coverage_warnings(conf: dict) -> list:
     start, end = pd.Timestamp(conf["start"]), pd.Timestamp(conf["end"])
     out = []
+    if conf.get("include_manual"):
+        from collections import Counter
+        c = Counter(r.get("label_method") or "unknown" for m in "bc" for r in load_manual_news(m))
+        if c.get("hindsight"):
+            out.append(f"ORACLE: ข่าว manual ที่รวมเข้ามา (toggle) มี label แบบ hindsight (รู้ผลราคาแล้ว) {c['hindsight']} รายการ "
+                       "→ ผลนี้จะติดธง Oracle test — ไม่ใช่ผลตอบแทนที่ทำได้จริง")
+        if c.get("unknown"):
+            out.append(f"MANUAL: ข่าว manual ที่รวมเข้ามา {c['unknown']} รายการยังไม่ระบุวิธี label (unknown) — ไม่ควรใช้แปลผลจนกว่าจะระบุ")
     for m in "ABC":
         s = conf["stages"][m]
         if s["mode"] == "off":
@@ -404,6 +412,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
     # ---- stages
     st = conf["stages"]
     asof = {}
+    manual_methods = {}
     for i, m in enumerate("ABC"):
         progress(m, 6 + 3 * i, None, f"เตรียมสัญญาณ {m}")
         if st[m]["mode"] == "off":
@@ -412,6 +421,8 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
         manual = None
         if conf["include_manual"] and m in "BC":
             manual = load_manual_news(m.lower())
+            for r in manual:
+                manual_methods[r.get("label_method") or "unknown"] = manual_methods.get(r.get("label_method") or "unknown", 0) + 1
             log(f"{m}: รวมข่าว manual {len(manual)} รายการ")
         asof[m] = AsOf(st[m]["version"], manual)
         log(f"{m}: {st[m]['version']} ({st[m]['mode']})")
@@ -642,6 +653,10 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
         "n_tickers_priced": len(used),
         "held_out_touched": bool(conf["held_out"]["touched"]),
         "versions": {m: registry.get(st[m]["version"]) for m in asof},
+        # มีการรู้ผลล่วงหน้าปนอยู่ไหม: B/C version แบบ ORACLE หรือข่าว manual (toggle) ที่ label แบบ hindsight
+        "contains_oracle_signal": bool(any(registry.get(st[m]["version"])["result_badge"] == "oracle" for m in asof)
+                                       or manual_methods.get("hindsight")),
+        "manual_label_methods": dict(sorted(manual_methods.items())),
         "condition_sha256": hashlib.sha256(conf["condition"]["source"].encode()).hexdigest(),
         "execution": cfg.EXECUTION,
         "runtime_sec": round(time.time() - t_start, 2),

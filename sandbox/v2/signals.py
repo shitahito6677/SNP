@@ -17,7 +17,7 @@ import pandas as pd
 from sandbox.v2 import config as cfg
 from sandbox.v2 import registry
 
-FIELDS = ("class", "score", "applicable", "reasons", "weight", "rank", "sector", "source", "label", "label_text")
+FIELDS = ("class", "score", "applicable", "reasons", "weight", "rank", "sector", "source", "label", "label_text", "label_method")
 
 
 def _clean(v):
@@ -126,7 +126,7 @@ class AsOf:
 def load_manual_news(kind: str) -> list:
     """ข่าว manual (source="manual") ที่ผู้ใช้เพิ่มเอง → record แบบ signal (kind 'b' = รายหุ้น, 'c' = ราย sector)
     ไม่ใช่ output ของโมเดลและไม่ถูกใช้เป็น training data"""
-    from sandbox.v2.news import LABELS, label_class, label_of, label_tag
+    from sandbox.v2.news import LABELS, label_class, label_method_of, label_of, label_tag
 
     if not cfg.MANUAL_NEWS.exists():
         return []
@@ -146,7 +146,8 @@ def load_manual_news(kind: str) -> list:
         for k in targets:
             # score = label -2..+2 ตามสัญญา B; class 3 กลุ่ม derive จาก label สำหรับ condition ที่อ่านแบบ Model B
             out.append({"date": n["effective_date"], ("ticker" if kind == "b" else "sector"): k,
-                        "class": label_class(lab), "score": float(lab), "label": lab, "label_text": LABELS[lab], "applicable": True,
+                        "class": label_class(lab), "score": float(lab), "label": lab, "label_text": LABELS[lab],
+                        "label_method": label_method_of(n), "applicable": True,
                         "reasons": [f"MANUAL {n['effective_date']} [{label_tag(lab)}]: {n['headline'][:140]}"],
                         "model_version": "manual", "is_stub": False, "source": "manual"})
     return out

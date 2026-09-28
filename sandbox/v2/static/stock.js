@@ -131,7 +131,7 @@ function stock() {
       for (const p of d.layers.A) if (t >= p.from && t < p.to) items.push({ title: `A ${d.labels.A?.short_label || ""}: ${p.class} (score ${fmtNum(p.score, 1)}) · รอบ ${p.rebalance}`, cls: p.class === "selected" ? "pos" : "", reasons: p.reasons.map((r) => "A: " + r) });
       for (const b of d.layers.B) if (b.time === t) items.push({ title: `B ${d.labels.B?.short_label || ""}: ${b.class}`, cls: "", reasons: b.reasons.map((r) => "B: " + r) });
       for (const c of d.layers.C) if (c.time === t) items.push({ title: `C ${d.labels.C?.short_label || ""} ${d.etf}: ${c.class} (${fmtNum(c.score)})`, cls: "", reasons: c.reasons.map((r) => "C: " + r) });
-      for (const n of d.layers.manual) if (n.time === t) items.push({ title: `ข่าว manual · label ${labelTag(n.label)}`, cls: labelCls(n.label), reasons: [`MANUAL [${labelTag(n.label)}] ${n.headline}`] });
+      for (const n of d.layers.manual) if (n.time === t) items.push({ title: `ข่าว manual · label ${labelTag(n.label)}${n.label_method === "hindsight" ? " · hindsight (Oracle)" : n.label_method === "real_time" ? " · real-time" : " · วิธี label ไม่ระบุ"}`, cls: labelCls(n.label), reasons: [`MANUAL [${labelTag(n.label)}] ${n.headline}`] });
       this.hoverItems = items;
     },
     focus(date) {

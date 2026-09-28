@@ -100,3 +100,10 @@
 - ข่าวหลายรายการของหุ้นเดียวกันในวันเดียว (key ซ้ำไม่ได้) → label เฉลี่ยปัดครึ่งออกจาก 0 + reasons เก็บทุกข่าวและบอกวิธีรวม — ถ้าต้องการกติกาอื่น (เช่น ตัวแรงสุด) แก้ `_rows()`
 - ไม่มีข่าวเลย → version ยังอยู่ (เลือกได้) แต่ว่าง + คำเตือน; ทุกวัน applicable False
 - test ใช้โฟลเดอร์ export ชั่วคราว (`tests/conftest.py`) ไม่ทับไฟล์ที่ build จากข่าวจริง
+
+## 17. (G2b) แยก Oracle (hindsight) ออกจาก real-time
+- ข่าว manual มี `label_method` ∈ {hindsight, real_time, unknown}; **ไม่ระบุ = unknown และไม่เข้า version ใดเลย** (ไม่เดาให้) — ข่าว 463 รายการที่ผู้ใช้นำเข้าเมื่อ 2026-09-28 06:19 ยังเป็น unknown ทั้งหมด (label_reason บางรายการอ้างผลราคาจริง แต่ระบบไม่ตัดสินแทน) → ผู้ใช้ระบุได้ทีละชุดในหน้าเพิ่มข่าว
+- version `manual-labels` (G2) ถูกแทนด้วย `manual-labels-oracle` + `manual-labels-realtime` (โฟลเดอร์เก่าถูกลบตอน build) — ผลที่บันทึกด้วย `B:manual-labels` (ถ้ามี) เปิดดูได้ แต่ Re-run จะ error "ไม่พบ version" (version นั้นปนสองประเภท ไม่ควรรันซ้ำ)
+- `contains_oracle_signal` = ใช้ B/C version badge oracle **หรือ** toggle "รวมข่าว manual" ดึงข่าว hindsight เข้ามา (อีกทางที่ข่าวรู้ผลล่วงหน้าจะเข้าสู่ pipeline ได้) + `manual_label_methods` นับจำนวนตามวิธี; ผลเก่าที่ไม่มี field นี้ = false เว้นแต่ version เป็น oracle
+- ORACLE ติดเป็น badge แรกของผล (gallery/compare/หน้าผล) + แถบเตือนบนสุดของหน้าผล; preflight เตือน ORACLE / unknown ก่อนรัน
+- สี: ORACLE = ม่วงบานเย็น (#D946EF) ต่างจากทุก badge; MANUAL = ฟ้า

@@ -267,6 +267,24 @@ def create_app() -> Flask:
         from sandbox.v2 import news
         return jsonify(news.list_news())
 
+    @app.get("/api/news/methods")
+    def api_news_methods():
+        """จำนวนข่าวตามวิธี label + ชุดข่าวที่ยังไม่ระบุ (ให้ผู้ใช้ระบุ hindsight / real-time เอง)"""
+        from sandbox.v2 import news
+        return jsonify(dict(news.method_summary(), methods=[[k, v] for k, v in news.LABEL_METHODS.items()]))
+
+    @app.post("/api/news/label_method")
+    def api_news_set_method():
+        from sandbox.v2 import news
+        b = request.get_json(force=True, silent=True) or {}
+        try:
+            n = news.set_label_method(b.get("ids") or [], b.get("method"))
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        if n:
+            rebuild_manual_labels()
+        return jsonify({"updated": n})
+
     @app.post("/api/news")
     def api_news_add():
         from sandbox.v2 import news

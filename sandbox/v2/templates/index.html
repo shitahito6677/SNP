@@ -506,6 +506,10 @@
         <div><label class="lbl">label ความแรงของข่าว (-2..+2)</label>
           <div class="seg"><template x-for="[v, t] in newsLabels()" :key="v"><button :data-label="v" :class="{on: label===v}" :title="t" @click="label=v" x-text="(v>0?'+':'') + v + ' ' + t"></button></template></div></div>
       </div>
+      <div><label class="lbl">วิธีตั้ง label (แยก Oracle test ออกจากสิ่งที่ทำได้จริง)</label>
+        <select id="news-method" x-model="labelMethod" style="padding:4px 6px">
+            <template x-for="[k, t] in methodList()" :key="k"><option :value="k" :selected="labelMethod===k" x-text="t"></option></template></select>
+        <div class="warn orange" x-show="labelMethod==='unknown'" style="margin-top:6px"><b>ยังไม่ระบุ</b><span>ข่าวที่ไม่ระบุวิธี label จะไม่ถูกใช้ใน B version manual-labels ใด ๆ และไม่ควรใช้แปลผล — เลือก hindsight (รู้ผลราคาแล้ว) หรือ real-time (ณ วันข่าว)</span></div></div>
       <template x-if="dateInfo && !dateInfo.is_trading_day">
         <div class="warn"><b>ตลาดปิด</b><span x-text="`${dateInfo.date} เป็น${dateInfo.reason} — ข่าวจะมีผลวันทำการถัดไป ${dateInfo.next_trading_day}`"></span>
           <button class="sm" style="margin-left:auto" @click="date=dateInfo.next_trading_day; detectNow()">เลื่อนเป็น <span x-text="dateInfo.next_trading_day"></span></button></div>
@@ -542,12 +546,16 @@
             <div class="dim" style="font-size:12px;margin-top:4px" x-show="csv.extra_columns.length" x-text="'เก็บเป็น metadata ต่อแถว: ' + csv.extra_columns.join(', ')"></div>
             <div class="dim" style="font-size:12px" x-show="csv.label_scale" x-text="csv.label_scale == 2 ? 'label -2..+2 ใช้ตรง ๆ ทั้ง 5 ระดับ (ไม่ยุบรวม)' : `label สเกล ±${csv.label_scale} → เทียบเป็น -2..+2 (เก็บค่าดิบไว้ด้วย)`"></div>
           </div>
+          <div class="row" style="gap:8px;align-items:center"><b style="font-size:13px">วิธีตั้ง label ของไฟล์นี้</b>
+            <select id="csv-method" :value="csvMethod" @change="setCsvMethod($event.target.value)" style="padding:4px 6px">
+              <template x-for="[k, t] in methodList()" :key="k"><option :value="k" :selected="csvMethod===k" x-text="t"></option></template></select></div>
+          <div class="warn orange" x-show="csvMethod==='unknown'"><b>ถามก่อนนำเข้า</b><span>label ในไฟล์นี้ตั้งตอนรู้ผลราคาแล้ว (hindsight — เช่น label_reason อ้าง % การเคลื่อนไหวจริง) หรือจากเนื้อข่าว ณ วันนั้น (real-time)? ถ้าไม่ระบุจะบันทึกเป็น unknown และไม่ถูกใช้ใน B version manual-labels จนกว่าจะระบุ (แก้ทีละแถวได้ในตาราง)</span></div>
           <template x-for="p in csv.problems"><div class="warn orange"><b>MAPPING</b><span x-text="p"></span></div></template>
           <template x-if="csv.rows.some(r=>r.skip_reasons.length)">
             <div class="warn"><b>ข้าม</b><div><template x-for="r in csv.rows.filter(r=>r.skip_reasons.length)"><div x-text="`แถว ${r.row}: ${r.skip_reasons.join(' · ')}`"></div></template></div></div>
           </template>
           <div class="scroll" style="max-height:380px"><table class="t">
-            <thead><tr><th></th><th>วันที่</th><th>headline</th><th>หุ้น</th><th>label (-2..+2)</th></tr></thead>
+            <thead><tr><th></th><th>วันที่</th><th>headline</th><th>หุ้น</th><th>label (-2..+2)</th><th>วิธี label</th></tr></thead>
             <tbody><template x-for="r in csv.rows" :key="r.row"><tr :class="r.skip_reasons.length ? 'dim' : ''" :title="r.skip_reasons.join(' · ')">
               <td><input type="checkbox" x-model="r.include"></td>
               <td><input type="date" x-model="r.date" style="width:140px"><div class="dim" style="font-size:11px" x-show="r.effective_date && r.effective_date!==r.date" x-text="'มีผล ' + r.effective_date"></div></td>
@@ -556,6 +564,7 @@
               <td><select class="label-sel" :class="labelCls(r.label)" x-model.number="r.label">
                   <template x-for="[v, t] in newsLabels()" :key="v"><option :value="v" :selected="r.label===v" x-text="(v>0?'+':'') + v + ' ' + t"></option></template></select>
                 <div class="dim mono" style="font-size:11px" x-show="r.label_raw !== null && r.label_raw !== undefined && r.label_raw !== r.label" x-text="'ค่าในไฟล์: ' + r.label_raw"></div></td>
+              <td><select class="row-method" x-model="r.label_method" style="padding:3px 4px;font-size:12px"><option value="hindsight">hindsight</option><option value="real_time">real-time</option><option value="unknown">unknown</option></select></td>
             </tr></template></tbody></table></div>
           <div class="row" style="justify-content:flex-end"><span class="muted" x-text="csv.rows.filter(r=>r.include).length + ' แถวที่จะบันทึก'"></span><button class="gold" @click="commitCsv()">บันทึกที่เลือก</button></div>
         </div>
@@ -563,11 +572,25 @@
     </div>
     <div class="panel">
       <h2>ข่าว manual ล่าสุด <span class="dim mono" x-text="'(' + list.length + ')'"></span></h2>
-      <div class="scroll"><table class="t"><thead><tr><th>มีผล</th><th>headline</th><th>หุ้น / sector</th><th></th><th></th></tr></thead>
+      <div class="dim mono" style="font-size:12px;margin-bottom:8px" x-show="methods" x-text="methods ? `hindsight ${methods.counts.hindsight} · real-time ${methods.counts.real_time} · ยังไม่ระบุ ${methods.counts.unknown}` : ''"></div>
+      <template x-if="methods && methods.unknown_batches.length">
+        <div class="warn orange" id="unknown-batches" style="margin-bottom:10px"><b>ยังไม่ระบุวิธี label</b>
+          <div class="stack" style="width:100%">
+            <span>ข่าวชุดนี้ยังไม่ถูกใช้ใน B version manual-labels ใด ๆ — ระบุเองว่า label ตั้งตอนรู้ผลราคาแล้ว (hindsight → Oracle test) หรือ ณ วันข่าว (real-time) ระบบไม่เดาให้</span>
+            <template x-for="b in methods.unknown_batches" :key="b.batch"><div class="panel" style="padding:8px 10px">
+              <div class="row" style="justify-content:space-between"><b x-text="`${b.batch} · ${b.n} ข่าว`"></b>
+                <div class="row" style="gap:4px"><button class="sm" data-set="hindsight" @click="setBatchMethod(b, 'hindsight')">hindsight (Oracle)</button><button class="sm" data-set="real_time" @click="setBatchMethod(b, 'real_time')">real-time</button></div></div>
+              <div class="dim" style="font-size:12px" x-text="'หุ้น: ' + b.tickers.join(', ') + ' · ตัวอย่าง: ' + b.sample"></div>
+              <div class="dim" style="font-size:12px" x-show="b.sample_reason" x-text="'เหตุผลของ label (ตัวอย่าง): ' + b.sample_reason"></div>
+            </div></template>
+          </div></div>
+      </template>
+      <div class="scroll"><table class="t"><thead><tr><th>มีผล</th><th>headline</th><th>หุ้น / sector</th><th></th><th>วิธี</th><th></th></tr></thead>
         <tbody><template x-for="n in list" :key="n.id"><tr>
           <td class="mono" x-text="n.effective_date"></td><td x-text="n.headline"></td>
           <td><div class="row" style="gap:3px"><template x-for="t in n.tickers"><a class="chip B" :href="'#/stock/' + t" x-text="t"></a></template><template x-for="e in n.sectors"><span class="chip C" x-text="e"></span></template></div></td>
           <td class="mono" :class="labelCls(newsLabelOf(n))" x-text="labelTag(newsLabelOf(n))"></td>
+          <td><span class="badge" :class="{hindsight:'oracle', real_time:'manual', unknown:'stub'}[n.label_method]" :title="(methodList().find(x=>x[0]===n.label_method)||['',''])[1]" x-text="{hindsight:'hindsight', real_time:'real-time', unknown:'?'}[n.label_method]"></span></td>
           <td><button class="sm ghost" @click="del(n)">ลบ</button></td></tr></template></tbody></table></div>
     </div>
   </div>

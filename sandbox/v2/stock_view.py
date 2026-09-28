@@ -155,7 +155,7 @@ def _layer(m, vid, meta, ticker, etf, start, end) -> list:
 
 
 def _manual(ticker, etf, start, end) -> list:
-    from sandbox.v2.news import LABELS, label_of
+    from sandbox.v2.news import LABELS, label_method_of, label_of
 
     out = []
     if not cfg.MANUAL_NEWS.exists():
@@ -174,7 +174,7 @@ def _manual(ticker, etf, start, end) -> list:
         if (ticker in (n.get("tickers") or []) or (etf and etf in (n.get("sectors") or []))) and start <= dt <= end:
             lab = label_of(n)
             out.append({"time": n["effective_date"], "headline": n.get("headline", ""), "label": lab,
-                        "label_text": LABELS[lab], "id": n.get("id")})
+                        "label_text": LABELS[lab], "label_method": label_method_of(n), "id": n.get("id")})
     return out
 
 

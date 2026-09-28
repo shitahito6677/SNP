@@ -54,11 +54,15 @@ def badges(conf, prov) -> list:
     out = []
     if prov.get("held_out_touched"):
         out.append({"kind": "held_out", "text": "HELD-OUT"})
+    if prov.get("contains_oracle_signal") or any(v.get("result_badge") == "oracle" for v in (prov.get("versions") or {}).values()):
+        out.insert(0, {"kind": "oracle", "text": "ORACLE"})
     for m, v in (prov.get("versions") or {}).items():
         if v.get("result_badge") == "stub":
             out.append({"kind": "stub", "text": f"{m} STUB"})
         elif v.get("result_badge") == "negative":
             out.append({"kind": "negative", "text": f"{m} NEGATIVE"})
+        elif v.get("result_badge") == "manual":
+            out.append({"kind": "manual_labels", "text": f"{m} MANUAL"})
     if conf["stages"]["A"]["mode"] not in ("on", "filter"):  # "filter" = config ก่อน G1
         out.append({"kind": "survivorship", "text": "SURVIVORSHIP"})
     if conf.get("include_manual"):

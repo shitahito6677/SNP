@@ -70,6 +70,19 @@ LABELS = {-2: "negative แรงมาก", -1: "negative", 0: "neutral (ไม
 SENTIMENT_TO_LABEL = {"positive": 1, "neutral": 0, "negative": -1}  # ข่าวเก่า/ข้อความ positive-neutral-negative
 
 
+# วิธีที่ใช้ตั้ง label — แยก Oracle test ออกจากสิ่งที่ทำได้จริง (ห้ามเดาแทนผู้ใช้: ไม่ระบุ = unknown)
+LABEL_METHODS = {
+    "hindsight": "hindsight — label ตอนรู้ผลราคาจริงแล้ว (Oracle test)",
+    "real_time": "real-time — label จากเนื้อข่าว ณ วันที่ข่าวออก ไม่รู้ผลล่วงหน้า",
+    "unknown": "ยังไม่ระบุ — ไม่ควรใช้แปลผลจนกว่าจะระบุ",
+}
+
+
+def label_method_of(n: dict) -> str:
+    m = n.get("label_method")
+    return m if m in LABEL_METHODS else "unknown"
+
+
 def label_class(label: int) -> str:
     """3 คลาสแบบ output ของ Model B (ดี/ไม่กระทบ/แย่) — ใช้เฉพาะจุดที่ต้องเข้ากับเกณฑ์กรองของ B/C เท่านั้น ไม่เขียนทับ label"""
     return "positive" if label >= 1 else "negative" if label <= -1 else "neutral"
@@ -188,7 +201,42 @@ def _write(rows):
 
 
 def list_news(limit=300) -> list:
-    return [dict(r, label=label_of(r)) for r in reversed(_load()) if not r.get("deleted")][:limit]
+    return [dict(r, label=label_of(r), label_method=label_method_of(r)) for r in reversed(_load()) if not r.get("deleted")][:limit]
+
+
+def method_summary() -> dict:
+    """จำนวนข่าวตามวิธี label + ข่าวที่ยังไม่ระบุ จัดกลุ่มตามชุดที่นำเข้า (import_batch หรือ นาทีที่บันทึก) ให้ผู้ใช้ระบุทีละชุด"""
+    live = [r for r in _load() if not r.get("deleted")]
+    counts = {m: 0 for m in LABEL_METHODS}
+    batches = {}
+    for r in live:
+        m = label_method_of(r)
+        counts[m] += 1
+        if m == "unknown":
+            key = r.get("import_batch") or f"บันทึกเมื่อ {str(r.get('created_at', ''))[:16].replace('T', ' ')}"
+            b = batches.setdefault(key, {"batch": key, "ids": [], "tickers": set(), "sample": r.get("headline", "")[:120],
+                                         "sample_reason": (r.get("extra") or {}).get(next((k for k in (r.get("extra") or {}) if "reason" in k.lower()
+                                                                                       or "เหตุผล" in k), ""), "")[:200]})
+            b["ids"].append(r["id"])
+            b["tickers"].update(r.get("tickers") or [])
+    out = [dict(b, n=len(b["ids"]), tickers=sorted(b["tickers"])[:12]) for b in batches.values()]
+    return {"counts": counts, "unknown_batches": sorted(out, key=lambda b: b["batch"])}
+
+
+def set_label_method(ids: list, method: str) -> int:
+    """ผู้ใช้ระบุวิธี label ของข่าวที่บันทึกไว้แล้ว (ทีละรายการหรือทั้งชุด) — ไม่แตะ label/เนื้อข่าว"""
+    if method not in LABEL_METHODS:
+        raise ValueError(f"label_method ต้องเป็น {sorted(LABEL_METHODS)}")
+    want, n = set(ids or []), 0
+    rows = _load()
+    for r in rows:
+        if r["id"] in want and not r.get("deleted") and label_method_of(r) != method:
+            r["label_method"] = method
+            r["updated_at"] = _now()
+            n += 1
+    if n:
+        _write(rows)
+    return n
 
 
 def add(item: dict) -> dict:
@@ -226,7 +274,12 @@ def add(item: dict) -> dict:
     row = {"id": str(uuid.uuid4()), "created_at": _now(), "source": "manual", "headline": headline[:500],
            "body": (item.get("body") or "")[:BODY_MAX], "date": date, "effective_date": str(pd.Timestamp(eff).date()),
            "kind": "company" if tickers else "macro", "tickers": tickers, "sectors": sectors,
-           "label": label, "detected_by": item.get("detected_by") or {}, "deleted": False}
+           "label": label, "label_method": item.get("label_method") or "unknown",
+           "detected_by": item.get("detected_by") or {}, "deleted": False}
+    if row["label_method"] not in LABEL_METHODS:
+        raise ValueError(f"label_method ต้องเป็น {sorted(LABEL_METHODS)} (ได้ {row['label_method']!r})")
+    if item.get("import_batch"):
+        row["import_batch"] = str(item["import_batch"])[:200]
     if item.get("label_raw") is not None and item.get("label_raw") != label:  # ค่าในไฟล์ไม่ใช่ -2..+2 ตรง ๆ (ข้อความ/สเกลอื่น) → เก็บต้นฉบับ
         row["label_raw"] = item["label_raw"]
         row["label_scale"] = item.get("label_scale")

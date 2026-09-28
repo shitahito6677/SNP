@@ -155,9 +155,9 @@ function pipeline() {
     },
     warnTag(w) {
       if (w.startsWith("SURVIVORSHIP")) return "SURVIVORSHIP";
-      if (w.startsWith("ORACLE")) return "ORACLE";
+      if (/(^|: )ORACLE:/.test(w)) return "ORACLE";
       if (w.startsWith("LEGACY")) return "LEGACY";
-      if (w.startsWith("MANUAL")) return "MANUAL";
+      if (/(^|: )MANUAL:/.test(w)) return "MANUAL";
       if (/STUB/.test(w)) return "STUB";
       if (/NEGATIVE|0\/216/.test(w)) return "NEGATIVE";
       if (/ไม่มีข้อมูล|เหตุการณ์แรก|เหตุการณ์สุดท้าย|รอบแรก/.test(w)) return "COVERAGE";

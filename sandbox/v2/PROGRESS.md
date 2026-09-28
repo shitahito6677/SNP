@@ -130,8 +130,18 @@
 - ผ่านเว็บจริง: กล่อง B เลือก "B-manual · Manual labels … [MANUAL]" ได้, badge MANUAL (?) + tooltip, คำเตือน MANUAL — screenshot `screenshots/G2_manual_labels.jpg`
 - DoD: ✅
 
+## G2b — แยก Oracle label ออกจาก real-time ✅
+- `news.py`: `label_method` (hindsight / real_time / unknown — ไม่ระบุ = unknown), `import_batch`, `method_summary()` (ชุดข่าวที่ยังไม่ระบุ + ตัวอย่างเหตุผลของ label), `set_label_method()`; API `/api/news/methods`, `POST /api/news/label_method` (rebuild B version ทันที)
+- `manual_labels.py`: 2 version — `manual-labels-oracle` (hindsight, badge ORACLE + tooltip) / `manual-labels-realtime` (real_time, badge MANUAL); ไม่ผสมข้ามประเภท, ไม่มีข่าวประเภทนั้น = applicable False; signal มี `label_method`
+- engine: `provenance.contains_oracle_signal` (version oracle หรือ toggle ข่าว manual ที่มี hindsight) + `manual_label_methods`; preflight เตือน ORACLE / unknown
+- UI: ฟอร์มข่าวเลือกวิธี label (default ยังไม่ระบุ + คำเตือน), นำเข้า CSV ถามวิธีของทั้งไฟล์ + แก้รายแถว, รายการข่าวแสดงวิธี + กล่องระบุทีละชุด; หน้าผล: badge ORACLE เป็นอันแรก + แถบเตือนบนสุด; hover หน้าหุ้นบอกวิธี label — DECISIONS #17
+- tests รวม **96/96 ผ่าน** · `ui_smoke` console errors 0
+- test `tests/test_manual_labels.py` (7 ข้อรวม G2): META hindsight → ORACLE version 9 แถว / real_time 3 ข่าว → REALTIME 3 แถว / unknown ไม่เข้าทั้งคู่; run ORACLE → `contains_oracle_signal` + badge ORACLE + คำเตือน; run REALTIME → ไม่มี ORACLE; toggle ข่าว manual ที่มี hindsight → ติดธง; label_method ผิด → 400; ระบุทีละชุดแล้ว rebuild
+- ผ่านเว็บจริง (Playwright, สำรอง/คืนข่าวของผู้ใช้ + rebuild): กล่อง "ยังไม่ระบุ" แสดงชุด 463 ข่าว; นำเข้า CSV default unknown + ถามก่อน → เลือก hindsight → ทุกแถว hindsight; เพิ่มข่าว real-time 3 รายการผ่านฟอร์ม; รัน B = oracle → แถบ ORACLE บนสุด + badge; รัน B = realtime → ไม่มีแถบ ORACLE, badge B MANUAL; 5xx/page error = 0 — screenshot `screenshots/G2b_*.jpg`
+- DoD: ✅
+
 # สรุปรวม
-**ทำครบ W0–W8 + F1–F3** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
+**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
 **ตรวจแล้วด้วยการรันจริง**
 - signal Model A ทั้ง 5 กฎ reproduce NAV ของ backtest เดิมเป๊ะ (≤ 6e-15); engine ของ sandbox ตาม NAV ของ A1 (corr รายวัน 0.99999)
