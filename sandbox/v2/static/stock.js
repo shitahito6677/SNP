@@ -31,6 +31,7 @@ function stock() {
       window.addEventListener("route", go);
       window.addEventListener("focus-search", () => this.$refs.search && this.$refs.search.focus());
       window.addEventListener("resize", () => this.resize());
+      window.addEventListener("news-changed", () => { this._key = null; this.gallery = null; });  // ข่าวเปลี่ยน → โหลดใหม่ครั้งถัดไป
       if (Alpine.store("app").meta) go(); else window.addEventListener("app-ready", go, { once: true });
     },
     go(t) { this.q = ""; const rt = Alpine.store("app").route; const keep = rt.query.kind ? `?kind=${rt.query.kind}&id=${rt.query.id}` : ""; location.hash = `#/stock/${t}${keep}`; },

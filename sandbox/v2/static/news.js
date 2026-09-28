@@ -5,6 +5,7 @@ const NEWS = { charts: {} };  // chart object นอก Alpine reactive state
 
 function news() {
   return {
+    nf: { ticker: "", sector: "", date_from: "", date_to: "", method: "" }, sel: [], selAll: false, total: 0, bulkMethod: "real_time", _nf: null,
     headline: "", body: "", date: "", label: 0, labelMethod: "unknown", csvMethod: "unknown", methods: null, csvResult: null, tickers: [], ignored: [], sectors: [], macroOn: false,
     det: null, dateInfo: null, mq: null, mStart: 0, mi: 0, list: [], csv: null, csvErr: "", csvText: "", csvName: "", dragOver: false, _t: null,
 
@@ -15,9 +16,33 @@ function news() {
     },
     async load() {
       if (!this.date) this.date = Alpine.store("app").meta.config.default_end;
+      const q = Alpine.store("app").route.query || {};  // ลิงก์จากหน้าหุ้น เช่น #/news?method=unknown&ticker=MU
+      for (const k of ["ticker", "sector", "date_from", "date_to", "method"]) if (q[k] !== undefined) this.nf[k] = q[k];
       await this.refresh();
     },
-    async refresh() { [this.list, this.methods] = await Promise.all([api("/api/news"), api("/api/news/methods")]); },
+    async refresh() {
+      const qs = new URLSearchParams({ with_total: 1, limit: 500 });
+      for (const [k, v] of Object.entries(this.nf)) if (v) qs.set(k, v);
+      const [res, m] = await Promise.all([api(`/api/news?${qs}`), api("/api/news/methods")]);
+      this.list = res.rows; this.total = res.total; this.methods = m;
+      window.dispatchEvent(new CustomEvent("news-changed"));  // หน้าหุ้นล้าง cache (คำเตือนข่าว unknown / layer ข่าวต้องเป็นค่าล่าสุด)
+      this.sel = this.sel.filter((id) => this.list.some((n) => n.id === id)); this.selAll = false;
+    },
+    /* ---------- แก้ label_method หลายรายการพร้อมกัน ---------- */
+    nfChanged() { clearTimeout(this._nf); this._nf = setTimeout(() => this.refresh(), 250); },
+    toggleSel(id) { this.selAll = false; this.sel = this.sel.includes(id) ? this.sel.filter((x) => x !== id) : [...this.sel, id]; },
+    selectPage(on) { this.selAll = false; this.sel = on ? this.list.map((n) => n.id) : []; },
+    selCount() { return this.selAll ? this.total : this.sel.length; },
+    async applyMethod() {
+      if (!this.bulkMethod || !this.selCount()) return;
+      const what = (this.methodList().find((x) => x[0] === this.bulkMethod) || ["", this.bulkMethod])[1];
+      if (!confirm(`ตั้งวิธี label ของ ${this.selCount()} ข่าวเป็น\n${what}\n\nยืนยัน?`)) return;
+      const body = this.selAll ? { filter: { ...this.nf }, method: this.bulkMethod } : { ids: this.sel, method: this.bulkMethod };
+      const r = await api("/api/news/label_method", { method: "POST", body });
+      Alpine.store("app").toast(`ตั้งวิธี label แล้ว ${r.updated} ข่าว · สร้างสัญญาณ B manual-labels ใหม่แล้ว`);
+      this.sel = []; this.selAll = false;
+      await this.refresh();
+    },
     methodList() { return this.methods?.methods || [["hindsight", "hindsight"], ["real_time", "real-time"], ["unknown", "ยังไม่ระบุ"]]; },
     /* ---------- ข่าวซ้ำ: ซ้ำเป๊ะ = ข้ามเงียบ ๆ · ticker+วันที่ตรงแต่หัวข่าวต่าง = ให้ผู้ใช้เลือก ---------- */
     csvVisibleRows() { return (this.csv?.rows || []).filter((r) => r.dup?.status !== "exact"); },
@@ -39,7 +64,7 @@ function news() {
     get mHits() { return this.mq === null ? [] : searchTickers(this.mq || "", 8); },
     secColor(s) { return SECTOR_COLORS[s] || "#94A3B8"; },
     info(t) { return (Alpine.store("app").meta.tickers.find((x) => x.t === t)) || { sector: "Unknown", name: t }; },
-    etfs() { return Object.values(Alpine.store("app").meta.sector_etfs); },
+    etfs() { const m = Alpine.store("app").meta; return m ? Object.values(m.sector_etfs) : []; },
 
     /* ---------- @mention ---------- */
     onType(e) {

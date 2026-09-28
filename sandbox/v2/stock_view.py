@@ -118,14 +118,18 @@ def build(ticker: str, kind=None, rid=None, start=None, end=None, versions=None)
         except Exception as e:  # noqa: BLE001 — layer เดียวพังไม่ให้ทั้งหน้าพัง
             log.exception("stock %s: layer %s (%s) failed", ticker, m, vid)
             notices.append(f"โหลด layer {m} ({meta['short_label']}) ไม่สำเร็จ: {type(e).__name__} — ดู server log")
+    manual_unknown = 0  # ข่าว label_method = unknown ของหุ้น/sector นี้ (โชว์บนกราฟ แต่ไม่อยู่ใน B manual-labels)
     try:
         layers["manual"] = _manual(ticker, etf, start, end)
+        from sandbox.v2.news import unknown_count
+        manual_unknown = unknown_count([ticker], [etf] if etf else [])
     except Exception as e:  # noqa: BLE001
         log.exception("stock %s: manual news layer failed", ticker)
         notices.append(f"โหลดข่าว manual ไม่สำเร็จ: {type(e).__name__} — ดู server log")
     return {"ticker": ticker, "name": man.get("name") or ticker, "sector": sector, "etf": etf,
             "status": man.get("status"), "start": str(start.date()), "end": str(end.date()), "held_out_visible": allow,
             "bars": bars, "trades": trades, "layers": layers, "labels": labels, "notices": notices,
+            "manual_unknown": manual_unknown,
             "price_note": "แท่งเทียน = ราคาดิบ (ปรับ split แล้ว ไม่ปรับปันผล); simulator ใช้ Adj Close (รวมปันผล)"}
 
 

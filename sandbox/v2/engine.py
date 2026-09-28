@@ -255,6 +255,10 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
 def coverage_warnings(conf: dict) -> list:
     start, end = pd.Timestamp(conf["start"]), pd.Timestamp(conf["end"])
     out = []
+    n_unknown = _manual_unknown(conf)
+    if n_unknown:
+        out.append(f"MANUAL: มีข่าว {n_unknown} รายการที่ยังไม่ได้ระบุว่ารู้ผลล่วงหน้าหรือไม่ (label_method = unknown) จึงยังไม่ถูกใช้ในทั้ง "
+                   "B-manual และ B-oracle — ctx.b ของหุ้นเหล่านั้นจะเป็น applicable False · ระบุได้ที่หน้าเพิ่มข่าว (ตัวกรอง \"ยังไม่ระบุ\")")
     if conf.get("include_manual"):
         from collections import Counter
         c = Counter(r.get("label_method") or "unknown" for m in "bc" for r in load_manual_news(m))
@@ -275,6 +279,16 @@ def coverage_warnings(conf: dict) -> list:
         if m == "A" and (conf.get("scope") or {}).get("mode", "all") != "all":
             out += _scope_vs_A(conf, a, start, end)
     return out
+
+
+def _manual_unknown(conf) -> int:
+    """ใช้ B version จากข่าว manual อยู่ → นับข่าว unknown (ในขอบเขต ถ้าจำกัดหุ้น/sector) ที่ตกหล่น"""
+    b = conf["stages"]["B"]
+    if b["mode"] == "off" or not str(b.get("version") or "").startswith("B:manual-labels"):
+        return 0
+    from sandbox.v2.news import unknown_count
+    members = scope_members(conf.get("scope"))
+    return unknown_count(members) if members is not None else unknown_count()
 
 
 def _scope_vs_A(conf, a, start, end) -> list:
@@ -683,6 +697,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
         "contains_oracle_signal": bool(any(registry.get(st[m]["version"])["result_badge"] == "oracle" for m in asof)
                                        or manual_methods.get("hindsight")),
         "manual_label_methods": dict(sorted(manual_methods.items())),
+        **({"manual_unknown_news": _manual_unknown(conf)} if _manual_unknown(conf) else {}),
         "condition_sha256": hashlib.sha256(conf["condition"]["source"].encode()).hexdigest(),
         "execution": cfg.EXECUTION,
         "runtime_sec": round(time.time() - t_start, 2),

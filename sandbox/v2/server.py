@@ -291,8 +291,14 @@ def create_app() -> Flask:
 
     @app.get("/api/news")
     def api_news_list():
+        """ไม่มีตัวกรอง = ข่าวล่าสุด 300 รายการ (list เดิม) · มีตัวกรอง (ticker/sector/date_from/date_to/method) = {rows, total}"""
         from sandbox.v2 import news
-        return jsonify(news.list_news())
+        f = {k: request.args.get(k) for k in ("ticker", "sector", "date_from", "date_to", "method") if request.args.get(k)}
+        if not f and not request.args.get("with_total"):
+            return jsonify(news.list_news())
+        rows = news.filter_news(f)
+        limit = min(int(request.args.get("limit", 500)), 5000)
+        return jsonify({"total": len(rows), "rows": [dict(r, label=news.label_of(r), label_method=news.label_method_of(r)) for r in rows[:limit]]})
 
     @app.get("/api/news/methods")
     def api_news_methods():
@@ -304,13 +310,16 @@ def create_app() -> Flask:
     def api_news_set_method():
         from sandbox.v2 import news
         b = request.get_json(force=True, silent=True) or {}
+        ids = b.get("ids") or []
+        if b.get("filter") is not None:  # "เลือกทั้งหมดที่กรองอยู่" — ใช้ตัวกรองฝั่ง server (ไม่จำกัดแค่ที่แสดงบนหน้า)
+            ids = [r["id"] for r in news.filter_news(b["filter"])]
         try:
-            n = news.set_label_method(b.get("ids") or [], b.get("method"))
+            n = news.set_label_method(ids, b.get("method"))
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
         if n:
-            rebuild_manual_labels()
-        return jsonify({"updated": n})
+            rebuild_manual_labels()  # signal ของ B manual-labels-* สร้างใหม่ทันที (registry.scan ล้าง cache)
+        return jsonify({"updated": n, "matched": len(ids)})
 
     @app.post("/api/news")
     def api_news_add():

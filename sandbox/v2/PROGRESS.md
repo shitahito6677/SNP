@@ -176,6 +176,15 @@
 - tests รวม **126/126 ผ่าน** · `ui_smoke` console errors 0
 - DoD: ✅
 
+## L1 — แก้ label_method แบบ bulk + เตือนข่าว unknown ✅
+- `news.py`: `filter_news()` (ticker / sector / ช่วงวันที่ / วิธี label), `unknown_count()`; API `/api/news` รับตัวกรอง (คืน `{rows, total}`), `POST /api/news/label_method` รับ `ids` หรือ `filter` ("เลือกทั้งหมดที่กรองอยู่") → build B manual-labels ใหม่ทันที — DECISIONS #21
+- หน้าเพิ่มข่าว: แถบตัวกรอง + ปุ่ม "แสดงเฉพาะที่ยังไม่ระบุ", checkbox ต่อแถว/ทั้งหน้า, "เลือกทั้งหมดที่กรองอยู่ (N)", ตั้งวิธี label ให้ทุกแถวที่เลือก; เปิดด้วย `#/news?method=unknown&ticker=MU` ได้
+- คำเตือน: หน้าหุ้น "มีข่าว N รายการที่ยังไม่ได้ระบุว่ารู้ผลล่วงหน้าหรือไม่ จึงยังไม่ถูกใช้ในทั้ง B-manual และ B-oracle" + ลิงก์ไปแก้; preflight (B = manual-labels-*) และหน้าผล (`provenance.manual_unknown_news`)
+- แก้ระหว่างทาง: หน้าหุ้นใช้ข้อมูล cache เดิมหลังข่าวเปลี่ยน (คำเตือนค้าง) → event `news-changed`; `etfs()` เรียกก่อน meta โหลด (page error)
+- test `tests/test_label_method_bulk.py` 3 ข้อ: ข่าว MU แบบไม่ระบุ → `ctx.b["MU"]` วันข่าวร้าย = applicable False (ยืนยัน bug) + ไม่ขาย + คำเตือน → bulk ด้วยตัวกรอง → signal B ใหม่ทันที → รันใหม่ `ctx.b["MU"]` = −2 และเกิด trade ขายจริงวันนั้น (reasons "label -2 negative แรงมาก"); ตัวกรองทุกแบบ; หน้าเว็บมีเครื่องมือครบ
+- ผ่านเว็บจริงกับข่าวจริง (สำรอง/คืนไฟล์): หน้า MU เตือน "มีข่าว 7 รายการ…" → คลิกลิงก์ → ตัวกรอง MU + ยังไม่ระบุ 7 แถว → เลือกทั้งหมดที่กรองอยู่ → real-time → เหลือ 0, กลับหน้า MU ไม่มีคำเตือน, error 0 — screenshot `screenshots/L1_bulk_label_method.jpg`
+- DoD: ✅
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

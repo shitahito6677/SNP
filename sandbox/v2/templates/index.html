@@ -318,6 +318,8 @@
     </div>
 
     <template x-if="r?.empty_reason"><div class="warn orange" id="empty-reason" style="margin-bottom:14px"><b>พอร์ตว่าง</b><span x-text="r.empty_reason"></span></div></template>
+    <template x-if="r?.provenance?.manual_unknown_news"><div class="warn orange" id="unknown-news-result" style="margin-bottom:14px"><b>ข่าวยังไม่ระบุ</b>
+      <span x-text="`ตอนรันมีข่าว manual ${r.provenance.manual_unknown_news} รายการที่ยังไม่ระบุ label_method จึงไม่ถูกใช้ใน B-manual/B-oracle ของผลนี้`"></span> <a href="#/news?method=unknown">ไปตั้งค่า →</a></div></template>
     <template x-if="r?.config?.warmup?.days"><div class="warn gray" id="warmup-note" style="margin-bottom:14px"><b>WARM-UP</b>
       <span x-text="`ราคา ${r.config.warmup.start} → ${r.config.warmup.end} (${r.config.warmup.days} วันทำการ) ส่งให้ condition คำนวณ indicator เท่านั้น — ไม่ซื้อขาย ไม่อยู่ในกราฟ/metrics · ผลนับตั้งแต่ ${r.config.start}`"></span></div></template>
     <template x-if="r?.config?.scope && r.config.scope.mode !== 'all'"><div class="warn gray" id="scope-note" style="margin-bottom:14px"><b>ขอบเขต</b><span x-text="scopeText()"></span></div></template>
@@ -485,6 +487,9 @@
         <template x-for="l in layerList" :key="l[0]"><label class="chip" :class="l[2]" style="cursor:pointer"><input type="checkbox" x-model="layers[l[0]]" @change="render()"> <span x-text="l[1]"></span></label></template>
         <span class="dim" x-show="ctxLabel" x-text="ctxLabel" style="margin-left:auto;font-size:12px"></span>
       </div>
+      <template x-if="d?.manual_unknown"><div class="warn orange" id="unknown-news-warn" style="margin-bottom:6px"><b>ข่าวยังไม่ระบุ</b>
+        <span>มีข่าว <b x-text="d.manual_unknown"></b> รายการที่ยังไม่ได้ระบุว่ารู้ผลล่วงหน้าหรือไม่ จึงยังไม่ถูกใช้ในทั้ง B-manual และ B-oracle (ข่าวยังโชว์บนกราฟ แต่ ctx.b ไม่เห็น) ·
+          <a :href="`#/news?method=unknown&ticker=${d.ticker}`">ไปตั้งค่า label_method →</a></span></div></template>
       <template x-for="n in d?.notices || []"><div class="warn gray" style="margin-bottom:6px"><b>หมายเหตุ</b><span x-text="n"></span></div></template>
       <div class="stock-chart" x-ref="chart"></div>
       <div class="rsi-chart" x-ref="rsi" x-show="layers.rsi"></div>
@@ -626,7 +631,7 @@
       </template>
     </div>
     <div class="panel">
-      <h2>ข่าว manual ล่าสุด <span class="dim mono" x-text="'(' + list.length + ')'"></span></h2>
+      <h2>ข่าว manual <span class="dim mono" x-text="`(${list.length}${total > list.length ? ' จาก ' + total : ''})`"></span></h2>
       <div class="dim mono" style="font-size:12px;margin-bottom:8px" x-show="methods" x-text="methods ? `hindsight ${methods.counts.hindsight} · real-time ${methods.counts.real_time} · ยังไม่ระบุ ${methods.counts.unknown}` : ''"></div>
       <template x-if="methods && methods.unknown_batches.length">
         <div class="warn orange" id="unknown-batches" style="margin-bottom:10px"><b>ยังไม่ระบุวิธี label</b>
@@ -640,8 +645,23 @@
             </div></template>
           </div></div>
       </template>
-      <div class="scroll"><table class="t"><thead><tr><th>มีผล</th><th>headline</th><th>หุ้น / sector</th><th></th><th>วิธี</th><th></th></tr></thead>
-        <tbody><template x-for="n in list" :key="n.id"><tr>
+      <div class="news-filter row" id="news-filter">
+        <input placeholder="ticker" x-model="nf.ticker" @input="nfChanged()" style="width:90px">
+        <select x-model="nf.sector" @change="refresh()"><option value="">ทุก sector</option><template x-for="e in etfs()" :key="e"><option :value="e" x-text="e"></option></template></select>
+        <input type="date" x-model="nf.date_from" @change="refresh()" title="ตั้งแต่วันที่"><input type="date" x-model="nf.date_to" @change="refresh()" title="ถึงวันที่">
+        <select id="nf-method" x-model="nf.method" @change="refresh()"><option value="">ทุกวิธี label</option><option value="unknown">ยังไม่ระบุ (unknown)</option><option value="real_time">real-time</option><option value="hindsight">hindsight</option></select>
+        <button class="sm" id="nf-unknown" :class="{on: nf.method==='unknown'}" @click="nf.method = nf.method==='unknown' ? '' : 'unknown'; refresh()">แสดงเฉพาะที่ยังไม่ระบุ</button>
+      </div>
+      <div class="row bulk-bar" id="bulk-bar">
+        <button class="sm" id="sel-filtered" @click="sel = list.map(n => n.id); selAll = true" x-text="`เลือกทั้งหมดที่กรองอยู่ (${total})`"></button>
+        <span class="muted" x-text="`เลือกแล้ว ${selCount()} ข่าว`"></span>
+        <span style="margin-left:auto">ตั้งวิธี label เป็น</span>
+        <select id="bulk-method" x-model="bulkMethod"><option value="real_time">real-time (ณ วันข่าว ไม่รู้ผล)</option><option value="hindsight">hindsight (รู้ผลแล้ว → Oracle)</option><option value="unknown">ยังไม่ระบุ</option></select>
+        <button class="gold sm" id="bulk-apply" :disabled="!selCount()" @click="applyMethod()">ใช้กับที่เลือก</button>
+      </div>
+      <div class="scroll"><table class="t"><thead><tr><th><input type="checkbox" title="เลือกทั้งหน้านี้" :checked="list.length && sel.length === list.length" @change="selectPage($event.target.checked)"></th><th>มีผล</th><th>headline</th><th>หุ้น / sector</th><th></th><th>วิธี</th><th></th></tr></thead>
+        <tbody><template x-for="n in list" :key="n.id"><tr :data-news="n.id">
+          <td><input type="checkbox" class="news-sel" :checked="selAll || sel.includes(n.id)" @change="toggleSel(n.id)"></td>
           <td class="mono" x-text="n.effective_date"></td><td x-text="n.headline"></td>
           <td><div class="row" style="gap:3px"><template x-for="t in n.tickers"><a class="chip B" :href="'#/stock/' + t" x-text="t"></a></template><template x-for="e in n.sectors"><span class="chip C" x-text="e"></span></template></div></td>
           <td class="mono" :class="labelCls(newsLabelOf(n))" x-text="labelTag(newsLabelOf(n))"></td>

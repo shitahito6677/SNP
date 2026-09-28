@@ -308,6 +308,42 @@ def method_summary() -> dict:
     return {"counts": counts, "unknown_batches": sorted(out, key=lambda b: b["batch"])}
 
 
+def unknown_count(tickers=None, sectors=None) -> int:
+    """ข่าวที่ยังไม่ถูกลบและยังไม่ระบุ label_method (จึงไม่ถูกใช้ใน B manual-labels ใด ๆ) — จำกัดเฉพาะ ticker/sector ที่ให้มาได้"""
+    tk, sc = set(tickers or []), set(sectors or [])
+    n = 0
+    for r in _load():
+        if r.get("deleted") or label_method_of(r) != "unknown":
+            continue
+        if (tk or sc) and not (tk & set(r.get("tickers") or []) or sc & set(r.get("sectors") or [])):
+            continue
+        n += 1
+    return n
+
+
+def filter_news(f: dict | None = None, rows=None) -> list:
+    """ข่าวที่ยังไม่ถูกลบตามตัวกรอง (ใหม่สุดก่อน) — ticker, sector (ETF: ข่าวมหภาคของ sector นั้น หรือข่าวหุ้นใน sector นั้น),
+    date_from/date_to (วันที่ข่าว), method (hindsight / real_time / unknown)"""
+    f = f or {}
+    tk = (f.get("ticker") or "").strip().upper().replace(".", "-")
+    sec = (f.get("sector") or "").strip().upper()
+    d0, d1, m = f.get("date_from") or "", f.get("date_to") or "", f.get("method") or ""
+    man = prices.manifest()["tickers"] if sec else {}
+    out = []
+    for r in reversed(_load() if rows is None else rows):
+        if r.get("deleted"):
+            continue
+        if tk and tk not in (r.get("tickers") or []):
+            continue
+        if sec and sec not in (r.get("sectors") or []) and not any(
+                cfg.SECTOR_ETFS.get((man.get(t) or {}).get("sector") or "") == sec for t in r.get("tickers") or []):
+            continue
+        if (d0 and r["date"] < d0) or (d1 and r["date"] > d1) or (m and label_method_of(r) != m):
+            continue
+        out.append(r)
+    return out
+
+
 def set_label_method(ids: list, method: str) -> int:
     """ผู้ใช้ระบุวิธี label ของข่าวที่บันทึกไว้แล้ว (ทีละรายการหรือทั้งชุด) — ไม่แตะ label/เนื้อข่าว"""
     if method not in LABEL_METHODS:

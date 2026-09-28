@@ -138,3 +138,10 @@
 - migrate: ข่าวเดิมที่ยังไม่มี hash ได้ `content_hashes` ตอน server start (สำรองไฟล์เดิมเป็น `manual_news.jsonl.bak-before-content-hash` ครั้งแรก, gitignored) — ข่าว 463 รายการของผู้ใช้: ไม่มี hash ซ้ำ ไม่มี ticker+วันที่ซ้ำ
 - ฟอร์มพิมพ์ข่าวเอง: ซ้ำเป๊ะ → ปฏิเสธพร้อมข้อความ (400)
 - ประสิทธิภาพ: index แบบ dict (O(n)), commit เป็น batch อ่าน/เขียนไฟล์ครั้งเดียว (เดิมเขียนทั้งไฟล์ทุกแถว), ปฏิทินวันทำการ cache, แถวที่มี column ticker ไม่ต้องไล่ alias ~1,000 ตัว — 600 แถว preview+commit 0.36 วินาที; เพดานแถวต่อไฟล์ 2,000 → 20,000
+
+## 21. (L1) ข่าว label_method = unknown — แก้แบบ bulk + เตือน (ไม่เปลี่ยนกติกาว่า unknown ไม่เข้า version ใด)
+- กติกาเดิม (#17) คงไว้: unknown ไม่เข้าทั้ง B-manual และ B-oracle — ระบบยังไม่เดาแทนผู้ใช้ แต่ทำให้ **เห็นและแก้ได้ง่าย**
+- ข่าวจริงของผู้ใช้: MU มีข่าว unknown 7 รายการ (ตรงกับอาการที่รายงาน) — ทั้ง 463 ข่าวยังเป็น unknown (ตรวจผ่านหน้าเว็บแบบสำรอง/คืนไฟล์ ไม่ได้แก้ข้อมูลจริงให้)
+- ตัวกรองทำฝั่ง server (`/api/news?ticker=&sector=&date_from=&date_to=&method=`) — "เลือกทั้งหมดที่กรองอยู่" ส่งตัวกรองไปให้ server เลือกเอง (รายการบนหน้าแสดงสูงสุด 500 แถว แต่ข่าวมีมากกว่านั้นได้); `sector` = ข่าวของหุ้นใน sector นั้น + ข่าวมหภาคที่ติด sector นั้น
+- ตั้งค่าแล้ว → build signal ของ `manual-labels-*` ใหม่ทันที (`content_sha256` เปลี่ยน → registry.scan ล้าง cache; `created_at` = updated_at ล่าสุด → cache AsOf ของ preflight ก็ไม่ค้าง); หน้าหุ้นล้าง cache ของตัวเองเมื่อข่าวเปลี่ยน
+- คำเตือน: หน้าหุ้น (นับข่าว unknown ของหุ้นนั้น + ข่าวมหภาคของ sector ETF) พร้อมลิงก์ `#/news?method=unknown&ticker=…`; preflight เมื่อ B = manual-labels-* (นับในขอบเขต); หน้าผล (บันทึก `manual_unknown_news` ใน provenance ณ เวลารัน)
