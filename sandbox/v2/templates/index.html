@@ -575,13 +575,14 @@
       </div>
       <div><label class="lbl">วิธีตั้ง label (แยก Oracle test ออกจากสิ่งที่ทำได้จริง)</label>
         <select id="news-method" x-model="labelMethod" style="padding:4px 6px">
-            <template x-for="[k, t] in methodList()" :key="k"><option :value="k" :selected="labelMethod===k" x-text="t"></option></template></select>
-        <div class="warn orange" x-show="labelMethod==='unknown'" style="margin-top:6px"><b>ยังไม่ระบุ</b><span>ข่าวที่ไม่ระบุวิธี label จะไม่ถูกใช้ใน B version manual-labels ใด ๆ และไม่ควรใช้แปลผล — เลือก hindsight (รู้ผลราคาแล้ว) หรือ real-time (ณ วันข่าว)</span></div></div>
+            <option value="">— ต้องเลือก —</option><option value="real_time">real-time — label จากเนื้อข่าว ณ วันข่าว ไม่รู้ผลล่วงหน้า</option>
+            <option value="hindsight">hindsight — label ตอนรู้ผลราคาแล้ว (Oracle test)</option></select>
+        <div class="warn orange" x-show="!labelMethod" style="margin-top:6px"><b>ต้องเลือก</b><span>เลือกวิธีตั้ง label ก่อนบันทึก — ข่าวที่ไม่ระบุจะไม่ถูกใช้ใน B version manual-labels ใด ๆ</span></div></div>
       <template x-if="dateInfo && !dateInfo.is_trading_day">
         <div class="warn"><b>ตลาดปิด</b><span x-text="`${dateInfo.date} เป็น${dateInfo.reason} — ข่าวจะมีผลวันทำการถัดไป ${dateInfo.next_trading_day}`"></span>
           <button class="sm" style="margin-left:auto" @click="date=dateInfo.next_trading_day; detectNow()">เลื่อนเป็น <span x-text="dateInfo.next_trading_day"></span></button></div>
       </template>
-      <div class="row" style="justify-content:flex-end"><button id="news-save" class="gold" @click="save()" :disabled="!headline.trim() || (!tickers.length && !(macroOn && sectors.length))">บันทึกข่าว</button></div>
+      <div class="row" style="justify-content:flex-end"><button id="news-save" class="gold" @click="save()" :disabled="!headline.trim() || (!tickers.length && !(macroOn && sectors.length)) || !labelMethod">บันทึกข่าว</button></div>
     </div>
     <div class="panel">
       <h3>Preview ราคารอบวันที่ข่าว (±30 วัน)</h3>
@@ -616,8 +617,15 @@
           </div>
           <div class="row" style="gap:8px;align-items:center"><b style="font-size:13px">วิธีตั้ง label ของไฟล์นี้</b>
             <select id="csv-method" :value="csvMethod" @change="setCsvMethod($event.target.value)" style="padding:4px 6px">
-              <template x-for="[k, t] in methodList()" :key="k"><option :value="k" :selected="csvMethod===k" x-text="t"></option></template></select></div>
-          <div class="warn orange" x-show="csvMethod==='unknown'"><b>ถามก่อนนำเข้า</b><span>label ในไฟล์นี้ตั้งตอนรู้ผลราคาแล้ว (hindsight — เช่น label_reason อ้าง % การเคลื่อนไหวจริง) หรือจากเนื้อข่าว ณ วันนั้น (real-time)? ถ้าไม่ระบุจะบันทึกเป็น unknown และไม่ถูกใช้ใน B version manual-labels จนกว่าจะระบุ (แก้ทีละแถวได้ในตาราง)</span></div>
+              <option value="" :selected="!csvMethod">— ต้องเลือกก่อนนำเข้า —</option>
+              <option value="real_time" :selected="csvMethod==='real_time'">ทั้งไฟล์นี้เป็น real_time (ณ วันข่าว ไม่รู้ผล)</option>
+              <option value="hindsight" :selected="csvMethod==='hindsight'">ทั้งไฟล์นี้เป็น hindsight (รู้ผลราคาแล้ว → Oracle)</option>
+              <option value="per_row" :selected="csvMethod==='per_row'">ระบุเป็นรายแถวเอง</option></select></div>
+          <div class="warn red" id="csv-method-required" x-show="!csvMethod || rowsNeedingMethod().length"><b>ต้องเลือก</b>
+            <span x-text="!csvMethod ? `ไฟล์นี้${csv?.has_method_column ? '' : 'ไม่มีคอลัมน์ label_method — '}ต้องเลือกวิธีตั้ง label ก่อนนำเข้า (ข่าวที่ไม่ระบุจะไม่ถูกใช้ใน B ใด ๆ)` : `ยังมี ${rowsNeedingMethod().length} แถวที่ยังไม่ได้เลือกวิธี label ในตาราง`"></span></div>
+          <template x-if="csv?.method_hint?.suggest"><div class="warn oracle" id="csv-method-hint"><b>แนะนำ</b><div>
+            <span x-text="`ไฟล์นี้ดูเหมือนจะเป็น label แบบ hindsight (มีการอ้างอิงผลราคาหลังประกาศใน ${csv.method_hint.n_hit} จาก ${csv.method_hint.n_rows} แถว) แนะนำเลือก hindsight — ระบบไม่ตั้งให้ ต้องเลือกเอง`"></span>
+            <template x-for="e in csv.method_hint.examples"><div class="dim mono" style="font-size:11.5px" x-text="`แถว ${e.row}: …${e.text}…`"></div></template></div></div></template>
           <template x-for="p in (csv?.problems || [])"><div class="warn orange"><b>MAPPING</b><span x-text="p"></span></div></template>
           <div class="warn gray" id="dup-summary"><b>สรุป</b><span x-text="`นำเข้าใหม่ ${dupCounts().newRows} แถว · ข้ามอัตโนมัติเพราะซ้ำเป๊ะ ${dupCounts().exact} แถว · ต้องตรวจสอบ ${dupCounts().review} แถว (ticker+วันที่ตรงกันแต่ headline ต่างกัน)` + (dupCounts().invalid ? ` · อ่านไม่ได้ ${dupCounts().invalid} แถว` : '')"></span></div>
           <div class="warn orange" x-show="dupCounts().reviewOpen"><b>ตรวจสอบ</b><span x-text="`${dupCounts().reviewOpen} แถวยังไม่ได้เลือกว่าจะ ข้าม / แทนที่ / เก็บทั้งคู่ — แถวที่ไม่เลือกจะไม่ถูกบันทึก`"></span></div>
@@ -641,9 +649,9 @@
               <td><select class="label-sel" :class="labelCls(r.label)" x-model.number="r.label">
                   <template x-for="[v, t] in newsLabels()" :key="v"><option :value="v" :selected="r.label===v" x-text="(v>0?'+':'') + v + ' ' + t"></option></template></select>
                 <div class="dim mono" style="font-size:11px" x-show="r.label_raw !== null && r.label_raw !== undefined && r.label_raw !== r.label" x-text="'ค่าในไฟล์: ' + r.label_raw"></div></td>
-              <td><select class="row-method" x-model="r.label_method" style="padding:3px 4px;font-size:12px"><option value="hindsight">hindsight</option><option value="real_time">real-time</option><option value="unknown">unknown</option></select></td>
+              <td><select class="row-method" x-model="r.label_method" :disabled="csvMethod !== 'per_row'" style="padding:3px 4px;font-size:12px"><option value="">— เลือก —</option><option value="hindsight">hindsight</option><option value="real_time">real-time</option></select></td>
             </tr></template></tbody></table></div>
-          <div class="row" style="justify-content:flex-end"><span class="muted" x-text="(csv?.rows || []).filter(r=>r.include).length + ' แถวที่จะบันทึก'"></span><button class="gold" @click="commitCsv()">บันทึกที่เลือก</button></div>
+          <div class="row" style="justify-content:flex-end"><span class="muted" x-text="(csv?.rows || []).filter(r=>r.include).length + ' แถวที่จะบันทึก'"></span><button class="gold" id="csv-commit" :disabled="!canCommitCsv()" @click="commitCsv()">ยืนยัน import</button></div>
         </div>
       </template>
     </div>

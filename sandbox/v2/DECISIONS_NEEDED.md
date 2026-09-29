@@ -184,3 +184,8 @@
 - กันหน้าเก่า: `/` ส่ง `Cache-Control: no-store`; หน้าเว็บส่ง `X-App-Version` (static + template + เวลา start ของ server) ทุก request → server ตอบ 409 `stale_page` สำหรับ preflight/รัน ถ้าไม่ตรง → แถบแดง "ต้องรีโหลด" + ปิดปุ่ม RUN (request ที่ไม่ส่ง header เช่น script/test ยังใช้ได้)
 - แสดงสิ่งที่ server จะรันจริง: บรรทัด "จะรัน: A … · การจัดอันดับ … · ขอบเขต … · B … · C … · เงื่อนไข …" จาก preflight (ไม่ใช่จาก state ของหน้า) + บันทึกใน server log และ log ของ job
 - N เริ่มต้นตาม version ที่เลือก (A1 63 / bmf20 20) จนกว่าผู้ใช้จะพิมพ์ N เอง
+
+## 27. (N3) import CSV ต้องระบุวิธีตั้ง label เสมอ
+- ไฟล์ไม่มีคอลัมน์ `label_method` → ต้องเลือก "ทั้งไฟล์ real_time / ทั้งไฟล์ hindsight / ระบุรายแถว" ก่อน ปุ่ม "ยืนยัน import" กดไม่ได้จนกว่าทุกแถวที่จะนำเข้ามีวิธีที่ถูกต้อง; ไฟล์มีคอลัมน์ `label_method` (ค่า real_time / realtime / real-time / hindsight) → อ่านรายแถว (ค่าอื่น = ต้องเลือก)
+- server ปฏิเสธแถวที่ไม่มีวิธีที่ถูกต้อง (รวม "unknown") ตอน commit — ไม่มีทางเกิด unknown จาก import อีก; ฟอร์มพิมพ์เองก็ต้องเลือกก่อนบันทึก (API ยังรับข่าวแบบไม่ระบุได้สำหรับ script เดิม → ได้ unknown + คำเตือนเหมือนเดิม)
+- คำแนะนำ hindsight: สแกนคอลัมน์เหตุผลของ label หาการอ้างอิงผลราคาหลังข่าว (market reaction, confirmed by, +x% reaction, biggest one-day, shares rose/fell …) — เจอแม้บางแถว → แนะนำ hindsight พร้อมจำนวนจริงและตัวอย่าง (ระบบไม่ตั้งให้): `model_b_IT_news.csv` พบ 15 จาก 463 แถว (ส่วนใหญ่ให้เหตุผลจาก EPS surprise) — เหตุผลที่แนะนำแม้จะเป็นส่วนน้อย: กระบวนการตั้ง label เข้าถึงผลราคาแล้ว จึงปลอดภัยกว่าที่จะถือว่าทั้งไฟล์เป็น hindsight

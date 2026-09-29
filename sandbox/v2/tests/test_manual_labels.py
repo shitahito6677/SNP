@@ -21,7 +21,7 @@ def client(tmp_path, monkeypatch):
 
 def _import(client, path, **extra):
     prev = client.post("/api/news/csv/preview", json={"text": path.read_text(encoding="utf-8")}).get_json()
-    rows = [dict(r, **extra) for r in prev["rows"]]
+    rows = [dict(r, **dict({"label_method": "real_time"}, **extra)) for r in prev["rows"]]  # import ต้องระบุวิธี label เสมอ (N3)
     res = client.post("/api/news/csv/commit", json={"rows": rows}).get_json()
     assert res["errors"] == [], res
     return res
@@ -153,7 +153,11 @@ def test_include_manual_toggle_with_hindsight_news_is_flagged(client, tmp_path):
 def test_label_method_required_values_and_batch_update(client):
     r = client.post("/api/news", json={"headline": "x", "date": "2022-06-01", "tickers": ["AAPL"], "label": 1, "label_method": "guess"})
     assert r.status_code == 400
-    _import(client, FIXTURE)  # ไม่ระบุวิธี → unknown ทั้งไฟล์ (ไม่เดาให้)
+    # ข่าวเก่าที่ยังไม่ระบุวิธี (import ใหม่ไม่ยอมให้เกิด unknown แล้ว — N3) → สร้างผ่าน API แบบ legacy เพื่อทดสอบเครื่องมือระบุย้อนหลัง
+    prev = client.post("/api/news/csv/preview", json={"text": FIXTURE.read_text(encoding="utf-8")}).get_json()
+    for r in prev["rows"]:
+        client.post("/api/news", json={"headline": r["headline"], "date": r["date"], "tickers": r["tickers"], "label": r["label"],
+                                       "extra": r["extra"], "import_batch": "legacy-file.csv"})
     s = client.get("/api/news/methods").get_json()
     assert s["counts"]["unknown"] == 9 and len(s["unknown_batches"]) == 1 and s["unknown_batches"][0]["n"] == 9
     assert registry.get(ORACLE)["coverage"]["n_rows"] == 0 and registry.get(REALTIME)["coverage"]["n_rows"] == 0

@@ -37,7 +37,7 @@ def _import(client, text, mapping=None):
     r = client.post("/api/news/csv/preview", json={"text": text, "mapping": mapping})
     assert r.status_code == 200, r.get_data(as_text=True)
     prev = r.get_json()
-    c = client.post("/api/news/csv/commit", json={"rows": prev["rows"]})
+    c = client.post("/api/news/csv/commit", json={"rows": [dict(r, label_method=r["label_method"] or "real_time") for r in prev["rows"]]})
     assert c.status_code == 200, c.get_data(as_text=True)
     return prev, c.get_json()
 
@@ -140,7 +140,7 @@ def test_other_numeric_scale_is_mapped_to_five_levels(client):
     prev = client.post("/api/news/csv/preview", json={"text": text, "mapping": {"headline": "Headline", "date": "Date", "ticker": "Ticker",
                                                                              "sentiment": "score (-1..+1)"}}).get_json()
     assert [r["label"] for r in prev["rows"]] == [-2, -1, 0, 1, 2]
-    client.post("/api/news/csv/commit", json={"rows": prev["rows"]})
+    client.post("/api/news/csv/commit", json={"rows": [dict(r, label_method="real_time") for r in prev["rows"]]})
     saved = news._load()
     assert [n["label"] for n in saved] == [-2, -1, 0, 1, 2] and saved[1]["label_raw"] == -0.4
 
@@ -221,9 +221,9 @@ def test_internal_error_is_logged_and_readable(client, monkeypatch, tmp_path):
 
 
 def test_commit_row_errors_do_not_fail_file(client):
-    rows = [{"row": 1, "include": True, "headline": "ok", "date": "2023-02-03", "tickers": ["AAPL"], "label": 0},
-            {"row": 2, "include": True, "headline": "bad", "date": "2023-02-03", "tickers": ["NOPE1"], "sentiment": "neutral"},
-            {"row": 3, "include": True, "headline": "bad date", "date": "xx", "tickers": ["AAPL"], "sentiment": "neutral"}]
+    rows = [{"row": 1, "include": True, "headline": "ok", "date": "2023-02-03", "tickers": ["AAPL"], "label": 0, "label_method": "real_time"},
+            {"row": 2, "include": True, "headline": "bad", "date": "2023-02-03", "tickers": ["NOPE1"], "sentiment": "neutral", "label_method": "real_time"},
+            {"row": 3, "include": True, "headline": "bad date", "date": "xx", "tickers": ["AAPL"], "sentiment": "neutral", "label_method": "real_time"}]
     r = client.post("/api/news/csv/commit", json={"rows": rows})
     assert r.status_code == 200
     j = r.get_json()

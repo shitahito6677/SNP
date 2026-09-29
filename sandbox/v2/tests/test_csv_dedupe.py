@@ -37,6 +37,7 @@ def _import(client, text, actions=None):
     prev = client.post("/api/news/csv/preview", json={"text": text}).get_json()
     rows = prev["rows"]
     for r in rows:  # ทำเหมือน UI: ส่งทุกแถวกลับ (รวมแถวซ้ำ) — server ต้องข้ามเองได้
+        r["label_method"] = r["label_method"] or "real_time"  # ผู้ใช้เลือกวิธี label ก่อน import (N3)
         if actions and r["row"] in actions:
             r["dup_action"] = actions[r["row"]]
             r["include"] = actions[r["row"]] in ("replace", "keep_both")
@@ -160,3 +161,39 @@ def test_600_row_file_is_fast(client):
     assert res["saved"] == 1 and res["skipped_exact"] == 600
     print(f"600 แถวแรก {t1:.2f}s · import ซ้ำ 601 แถว {t2:.2f}s")
     assert t1 < 20 and t2 < 20
+
+
+# ------------------------------------------------------------------ N3: บังคับวิธีตั้ง label ตอน import
+
+def test_import_without_label_method_is_refused(client):
+    text = FIXTURE.read_text(encoding="utf-8")
+    prev = client.post("/api/news/csv/preview", json={"text": text}).get_json()
+    assert prev["has_method_column"] is False and prev["rows_missing_method"] == N_FIXTURE
+    assert all(r["label_method"] is None for r in prev["rows"])  # ไม่ตั้งให้เงียบ ๆ
+    res = client.post("/api/news/csv/commit", json={"rows": prev["rows"]}).get_json()
+    assert res["saved"] == 0 and len(res["errors"]) == N_FIXTURE and "ต้องระบุวิธีตั้ง label" in res["errors"][0]["error"]
+    rows = [dict(r, label_method="unknown") for r in prev["rows"]]
+    assert client.post("/api/news/csv/commit", json={"rows": rows}).get_json()["saved"] == 0  # unknown ก็ไม่รับ
+    rows = [dict(r, label_method="hindsight") for r in prev["rows"]]
+    assert client.post("/api/news/csv/commit", json={"rows": rows}).get_json()["saved"] == N_FIXTURE
+    assert {r["label_method"] for r in _live()} == {"hindsight"}
+
+
+def test_label_method_column_and_hindsight_hint(client):
+    fields, rows = _rows()
+    prev = client.post("/api/news/csv/preview", json={"text": FIXTURE.read_text(encoding="utf-8")}).get_json()
+    h = prev["method_hint"]
+    assert h["suggest"] == "hindsight" and h["n_hit"] >= 1 and h["examples"]  # label_reason อ้าง "+12% reaction" ฯลฯ
+    assert prev["rows"][0]["label_method"] is None  # แนะนำเท่านั้น ไม่ตั้งค่าให้
+    fields2 = fields + ["label_method"]
+    rows2 = [dict(r, label_method="real_time" if i % 2 else "Real-Time") for i, r in enumerate(rows)]
+    prev = client.post("/api/news/csv/preview", json={"text": _csv(fields2, rows2)}).get_json()
+    assert prev["has_method_column"] and prev["mapping"]["label_method"] == "label_method" and prev["mapping"]["sentiment"] != "label_method"
+    assert {r["label_method"] for r in prev["rows"]} == {"real_time"} and prev["rows_missing_method"] == 0
+
+
+def test_page_forces_choice():
+    html = (cfg.V2 / "templates" / "index.html").read_text(encoding="utf-8")
+    assert ':disabled="!canCommitCsv()"' in html and 'id="csv-method-required"' in html and 'id="csv-method-hint"' in html
+    assert '<option value="unknown">unknown</option>' not in html  # import ไม่มีตัวเลือก unknown
+    assert "|| !labelMethod" in html  # ฟอร์มพิมพ์เองก็ต้องเลือก

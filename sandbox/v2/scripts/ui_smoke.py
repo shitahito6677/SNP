@@ -126,6 +126,8 @@ def main():
             pg.wait_for_timeout(1500)
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "10b_news_confirmed.jpg"), full_page=True)
             ids0 = {n["id"] for n in requests.get(base + "/api/news").json()}  # /api/news คืนล่าสุด ≤ 300 แถว → เทียบ id ไม่ใช่จำนวน
+            assert pg.is_disabled("#news-save"), "ต้องเลือกวิธี label ก่อนบันทึก"
+            pg.select_option("#news-method", "real_time")
             pg.click("#news-save")
             pg.wait_for_timeout(1000)
             saved = requests.get(base + "/api/news").json()

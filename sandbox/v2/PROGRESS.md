@@ -220,6 +220,12 @@
 - กันสาเหตุจริง: `no-store` บนหน้าเว็บ, `X-App-Version` + 409 `stale_page` + แถบ "ต้องรีโหลด" + ปิด RUN, บรรทัด "จะรัน: …" จาก preflight, log โหมด A ใน server/job, N ตาม version
 - ผ่านเว็บจริง: N 63 → 20 เมื่อเปลี่ยนเป็น bmf20 (พิมพ์เองแล้วไม่ถูกทับ), "จะรัน: A A:bmf20-weighted · การจัดอันดับ Top-15 คงที่ใน scope (ทดสอบ) · ขอบเขต sector XLK …", restart server ขณะหน้าเปิด → แถบแดง + RUN กดไม่ได้ → รีโหลด → หาย — screenshot `screenshots/N2_effective_line.jpg`
 
+## N3 — บังคับเลือกวิธีตั้ง label ตอน import ✅
+- preview: `has_method_column`, `label_method` รายแถว (ถ้ามีคอลัมน์), `method_hint` (แนะนำ hindsight จากคอลัมน์เหตุผล) — commit ฝั่ง server ปฏิเสธแถวที่ไม่ใช่ real_time/hindsight — DECISIONS #27
+- UI: ตัวเลือก "ทั้งไฟล์ real_time / ทั้งไฟล์ hindsight / ระบุรายแถว" (ค่าเริ่มต้น = ยังไม่เลือก), แถบแดง "ต้องเลือก", ปุ่ม "ยืนยัน import" ปิดจนครบ, รายแถวไม่มี unknown; ฟอร์มพิมพ์เองก็ต้องเลือก
+- test (+3 ใน `tests/test_csv_dedupe.py`) + อัปเดต test เดิมให้เลือกวิธี label; ผ่านเว็บจริงกับ `model_b_IT_news.csv`: ค่าเริ่มต้นว่าง + ยืนยันกดไม่ได้, แนะนำ hindsight "15 จาก 463 แถว" พร้อมตัวอย่าง, เลือก hindsight → ทุกแถว hindsight + กดได้, รายแถว → กดไม่ได้จนเลือกครบ (ไม่ได้ import) — screenshot `screenshots/N3_method_required.jpg`
+- tests รวม **145 ผ่าน**
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน)** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

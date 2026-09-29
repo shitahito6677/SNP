@@ -402,6 +402,8 @@ def commit_rows(items: list) -> dict:
             if dup["status"] == "new" and not it.get("include"):
                 out["skipped_by_user"] += 1
                 continue
+            if it.get("label_method") not in IMPORT_METHODS:  # ห้ามนำเข้าแบบ unknown เงียบ ๆ (ข่าวจะไม่เข้า B ใด ๆ)
+                raise ValueError("ต้องระบุวิธีตั้ง label (real_time / hindsight) ก่อนนำเข้า — ข่าวที่ไม่ระบุจะไม่ถูกใช้ใน B ใด ๆ")
             row = make_row(dict(it, effective_date=None))  # ผู้ใช้อาจแก้วันที่ใน preview → คำนวณวันที่มีผลใหม่
         except (ValueError, KeyError, TypeError) as e:
             out["errors"].append({"row": it.get("row"), "error": str(e).strip("'\"")})
@@ -499,10 +501,42 @@ FIELD_KEYWORDS = {
     "body": [("full_news", 10), ("ข่าวแบบเต็ม", 10), ("body", 9), ("content", 8), ("เนื้อหา", 8), ("summary", 7),
              ("description", 6)],
     "sentiment": [("sentiment", 10), ("label", 8), ("polarity", 8)],
+    "label_method": [("label_method", 10), ("วิธี label", 9), ("วิธีตั้ง label", 9), ("method", 5)],
 }
-FIELD_EXCLUDE = {"sentiment": ("reason", "เหตุผล", "explain")}  # "เหตุผลของ label (label_reason)" ไม่ใช่ label
+FIELD_EXCLUDE = {"sentiment": ("reason", "เหตุผล", "explain", "method", "วิธี")}  # "เหตุผลของ label (label_reason)" ไม่ใช่ label
 FIELD_TH = {"ticker": "ticker", "date": "วันที่", "headline": "หัวข่าว (headline)", "body": "เนื้อข่าว (body)",
-            "sentiment": "label/sentiment"}
+            "sentiment": "label/sentiment", "label_method": "วิธีตั้ง label"}
+IMPORT_METHODS = ("real_time", "hindsight")  # import ต้องเป็น 2 ค่านี้เท่านั้น (ห้าม unknown)
+# คำที่บ่งว่า label ตั้งตอนรู้ผลราคาแล้ว (hindsight) — ใช้ "แนะนำ" เท่านั้น ผู้ใช้ต้องเลือกเอง
+HINDSIGHT_HINTS = [
+    r"market(?:'s)?\s+(?:own\s+)?reaction", r"\breaction\b[^.]{0,40}[+\-−]?\d+(?:\.\d+)?\s*%", r"confirmed by",
+    r"\b(?:shares?|stock)\s+(?:rose|fell|jumped|plunged|dropped|rallied|surged|sank|tumbled|soared|slid|gained|lost)\b",
+    r"(?:biggest|largest)\s+one[- ]day", r"\bclosed\s+(?:up|down)\b", r"after[- ]hours?\s+(?:move|trading)",
+    r"ราคา(?:หุ้น)?(?:ขึ้น|ลง|พุ่ง|ร่วง)\s*[+\-−]?\d", r"ตลาดตอบรับ",
+]
+
+
+def parse_method(v):
+    k = str(v or "").strip().lower().replace("-", "_").replace(" ", "_")
+    return {"real_time": "real_time", "realtime": "real_time", "hindsight": "hindsight"}.get(k)
+
+
+def method_hint(rows: list, extra_cols: list) -> dict | None:
+    """สแกนคอลัมน์เหตุผลของ label หาการอ้างอิงผลราคาหลังข่าว → แนะนำ hindsight (ไม่ตั้งค่าให้)"""
+    cols = [c for c in extra_cols if "reason" in c.lower() or "เหตุผล" in c]
+    if not cols:
+        return None
+    pats = [re.compile(p, re.I) for p in HINDSIGHT_HINTS]
+    hits, examples = 0, []
+    for r in rows:
+        txt = " ".join(str((r.get("extra") or {}).get(c) or "") for c in cols)
+        m = next((m for p in pats for m in [p.search(txt)] if m), None)
+        if m:
+            hits += 1
+            if len(examples) < 3:
+                examples.append({"row": r["row"], "text": txt[max(0, m.start() - 60): m.end() + 40].strip()})
+    # แม้เจอแค่บางแถว = กระบวนการตั้ง label เห็นผลราคาแล้ว → แนะนำ hindsight แบบระมัดระวัง (บอกจำนวนจริง ผู้ใช้ตัดสินเอง)
+    return {"suggest": "hindsight" if hits else None, "n_hit": hits, "n_rows": len(rows), "columns": cols, "examples": examples}
 NAME_HINT = ("stock", "company", "หุ้น", "บริษัท")  # column ชื่อบริษัท → ใช้ช่วยตรวจจับ ticker เมื่อไม่มี column ticker
 TEXT_LABELS = {"positive": "positive", "pos": "positive", "bullish": "positive", "บวก": "positive",
                "negative": "negative", "neg": "negative", "bearish": "negative", "ลบ": "negative",
@@ -655,6 +689,7 @@ def csv_preview(text: str, mapping: dict | None = None, limit=20000) -> dict:
         if not tick and not det["macro"]["suggest"] and not any("ticker" in x for x in skip):
             skip.append("ไม่มี ticker และไม่พบคำที่บ่งว่าเป็นข่าวมหภาค")
         label, raw, lerr = parse_label(get(r, "sentiment"), scale) if mapping["sentiment"] else (0, None, None)
+        row_method = parse_method(get(r, "label_method")) if mapping["label_method"] else None
         if lerr:
             skip.append(lerr)
         if len(body) > BODY_MAX:
@@ -675,8 +710,12 @@ def csv_preview(text: str, mapping: dict | None = None, limit=20000) -> dict:
                      "label": label if label is not None else 0, "label_raw": raw,
                      "label_scale": f"±{scale:g}" if scale and isinstance(raw, (int, float)) else None,
                      "macro": det["macro"], "extra": extra, "warnings": warn, "skip_reasons": skip,
+                     "label_method": row_method,  # None = ยังไม่ระบุ → ต้องเลือกก่อนนำเข้า
                      "include": not skip and dup["status"] == "new"})  # exact = ข้ามอัตโนมัติ, review = รอผู้ใช้เลือก
     n = {k: sum(1 for r in rows if r["dup"]["status"] == k) for k in ("new", "exact", "review")}
-    return {"mapping": mapping, "guessed": guessed, "dup_summary": {**n, "invalid": sum(1 for r in rows if r["skip_reasons"])}, "columns": cols, "extra_columns": extra_cols, "fields": [[f, FIELD_TH[f]] for f in FIELD_KEYWORDS],
+    has_method = bool(mapping["label_method"])
+    return {"has_method_column": has_method, "method_hint": method_hint(rows, extra_cols),
+            "rows_missing_method": sum(1 for r in rows if not r["label_method"]),
+            "mapping": mapping, "guessed": guessed, "dup_summary": {**n, "invalid": sum(1 for r in rows if r["skip_reasons"])}, "columns": cols, "extra_columns": extra_cols, "fields": [[f, FIELD_TH[f]] for f in FIELD_KEYWORDS],
             "label_scale": scale, "problems": problems, "rows": rows, "total_rows": len(data),
             "truncated": len(data) > limit, "n_include": sum(r["include"] for r in rows)}

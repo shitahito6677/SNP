@@ -6,7 +6,7 @@ const NEWS = { charts: {} };  // chart object นอก Alpine reactive state
 function news() {
   return {
     nf: { ticker: "", sector: "", date_from: "", date_to: "", method: "" }, sel: [], selAll: false, total: 0, bulkMethod: "real_time", _nf: null,
-    headline: "", body: "", date: "", label: 0, labelMethod: "unknown", csvMethod: "unknown", methods: null, csvResult: null, tickers: [], ignored: [], sectors: [], macroOn: false,
+    headline: "", body: "", date: "", label: 0, labelMethod: "", csvMethod: "", methods: null, csvResult: null, tickers: [], ignored: [], sectors: [], macroOn: false,
     det: null, dateInfo: null, mq: null, mStart: 0, mi: 0, list: [], csv: null, csvErr: "", csvText: "", csvName: "", dragOver: false, _t: null,
 
     init() {
@@ -53,7 +53,16 @@ function news() {
         invalid: rows.filter((r) => r.skip_reasons.length).length };
     },
     setDupAction(r, a) { r.dup_action = a || null; r.include = a === "replace" || a === "keep_both"; },
-    setCsvMethod(m) { this.csvMethod = m; if (this.csv) this.csv.rows.forEach((r) => { r.label_method = m; }); },
+    /* วิธีตั้ง label: บังคับเลือกก่อนนำเข้า (ไม่มี unknown) — ทั้งไฟล์ real_time / hindsight หรือระบุรายแถว */
+    setCsvMethod(m) {
+      this.csvMethod = m;
+      if (!this.csv) return;
+      if (m === "real_time" || m === "hindsight") this.csv.rows.forEach((r) => { r.label_method = m; });
+      else if (m === "per_row") this.csv.rows.forEach((r) => { r.label_method = r._fileMethod || ""; });
+      else this.csv.rows.forEach((r) => { r.label_method = r._fileMethod || ""; });
+    },
+    rowsNeedingMethod() { return (this.csv?.rows || []).filter((r) => r.include && !["real_time", "hindsight"].includes(r.label_method)); },
+    canCommitCsv() { return !!this.csvMethod && this.rowsNeedingMethod().length === 0 && (this.csv?.rows || []).some((r) => r.include); },
     async setBatchMethod(b, m) {
       const what = m === "hindsight" ? "hindsight — label ตั้งตอนรู้ผลราคาแล้ว (ใช้ได้แค่ Oracle test)" : "real-time — label จากเนื้อข่าว ณ วันข่าว ไม่รู้ผลล่วงหน้า";
       if (!confirm(`ระบุวิธี label ของ ${b.n} ข่าวในชุด "${b.batch}" เป็น\n${what}\n\nยืนยัน?`)) return;
@@ -132,7 +141,7 @@ function news() {
       try {
         await api("/api/news", { method: "POST", body: {
           headline: this.headline, body: this.body, date: this.date, effective_date: this.dateInfo?.next_trading_day,
-          tickers: this.tickers, sectors: this.macroOn ? this.sectors : [], label: this.label, label_method: this.labelMethod,
+          tickers: this.tickers, sectors: this.macroOn ? this.sectors : [], label: this.label, label_method: this.labelMethod || "unknown",
           detected_by: Object.fromEntries((this.det?.mentions || []).filter((m) => this.tickers.includes(m.ticker)).map((m) => [m.ticker, m.how])) } });
         Alpine.store("app").toast("บันทึกข่าวแล้ว (source = manual)");
         Object.assign(this, { headline: "", body: "", tickers: [], ignored: [], sectors: [], macroOn: false, det: null, label: 0 });
@@ -165,7 +174,9 @@ function news() {
     async previewCsv(mapping) {
       try {
         this.csv = await api("/api/news/csv/preview", { method: "POST", body: { text: this.csvText, mapping } }); this.csvErr = ""; this.csvResult = null;
-        this.csv.rows.forEach((r) => { r.label_method = this.csvMethod; });
+        this.csv.rows.forEach((r) => { r._fileMethod = r.label_method || ""; });  // ค่าจากคอลัมน์ label_method ในไฟล์ (ถ้ามี)
+        this.csvMethod = this.csv.has_method_column ? "per_row" : "";  // ไม่มีคอลัมน์ = ต้องเลือกเอง ไม่ตั้งให้
+        this.setCsvMethod(this.csvMethod);
       }
       catch (e) { this.csvErr = e.message; }
     },
