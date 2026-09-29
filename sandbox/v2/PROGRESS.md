@@ -193,8 +193,19 @@
 - ผลรันจริงบันทึกใน experiments/log.md "L2" (ระบุชัดว่าไม่ใช่ผลของ Model A) · tests รวม **135/135 ผ่าน** · `ui_smoke` console errors 0
 - DoD: ✅
 
+## M1 — ไม่รัน (ซ้ำกับ trial 127 ที่มีอยู่แล้ว) ⚠️
+- สเปค = round 013 กฎ `r013_BMF20_WEIGHTED` (trial 127) ทุกข้อ; tie-break ต่างกันแต่ตรวจแล้วรายชื่อเหมือนกันทุกปี (ต่าง 0 ตัวใน 12 ปี) → ไม่รันซ้ำ ไม่แตะ `feature/model-a-rebuild` — DECISIONS #23
+- ผลเดิม: Sharpe 0.415 vs EW 0.640 / SPY 0.681, CAGR 9.6%, MaxDD −55.2%, ระดับ C, DSR 0.003; export `A:bmf20-weighted` พร้อมใช้ใน sandbox
+
+## M2 — โหมดทดสอบ "Top-N คงที่ภายใน scope" ✅
+- engine: `ranking: "scoped_fixed_n"` + `n` (ค่าเริ่มต้น = จำนวนที่กฎเลือกจริงจาก manifest), `scoped_select(..., fixed_n)`, `provenance.a_ranking_n` ต่อรอบ, คำเตือนตามสเปค — DECISIONS #24
+- UI: ตัวเลือกที่ 3 ในกล่อง A + ช่อง N, แถบเตือน sticky ทุกหน้า (ข้อความตามโหมด), badge "A โหมดทดสอบ (Top-N คงที่ N=20)", หน้าผลแสดง N ที่ตั้ง/ได้จริง
+- test `tests/test_fixed_n_ranking.py` 4 ข้อ: XLK + bmf20-weighted N=20 → 20 ตัวเป๊ะทั้ง 2 รอบ = top-20 score ที่คำนวณแยก, provenance/badge/reasons; N=100 กับ 10 ตัว applicable → 10 ไม่ error (applicable False ไม่นับ); N เริ่มต้น + ค่าผิด; ข้อความเตือนตรงสเปค
+- ผ่านเว็บจริง (ตั้งค่าแบบ Experiment 1: bmf20-weighted · Top-N 20 · XLK · B manual-labels-realtime · C ปิด): "ผ่าน 20 ตัว", แถบเตือนทุกหน้า (เลื่อนแล้วยังอยู่, เปิดผลที่บันทึกย้อนหลังยังอยู่, หน้าหุ้นมี), badge ใน gallery, error 0 — screenshot `screenshots/M2_*.jpg`
+- DoD: ✅
+
 # สรุปรวม
-**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
+**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน)** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
 **ตรวจแล้วด้วยการรันจริง**
 - signal Model A ทั้ง 5 กฎ reproduce NAV ของ backtest เดิมเป๊ะ (≤ 6e-15); engine ของ sandbox ตาม NAV ของ A1 (corr รายวัน 0.99999)

@@ -54,8 +54,11 @@ def badges(conf, prov) -> list:
     out = []
     if prov.get("held_out_touched"):
         out.append({"kind": "held_out", "text": "HELD-OUT"})
-    if conf["stages"]["A"].get("ranking") == "scoped" or prov.get("a_ranking_mode") == "scoped":
+    rk = conf["stages"]["A"].get("ranking") or prov.get("a_ranking_mode")
+    if rk == "scoped":
         out.insert(0, {"kind": "scoped_a", "text": "A โหมดทดสอบ (จัดอันดับใน scope)"})
+    elif rk == "scoped_fixed_n":
+        out.insert(0, {"kind": "scoped_fixed_n", "text": f"A โหมดทดสอบ (Top-N คงที่ N={conf['stages']['A'].get('n')})"})
     if prov.get("contains_oracle_signal") or any(v.get("result_badge") == "oracle" for v in (prov.get("versions") or {}).values()):
         out.insert(0, {"kind": "oracle", "text": "ORACLE"})
     for m, v in (prov.get("versions") or {}).items():
@@ -81,7 +84,8 @@ def chips(conf, prov) -> list:
         else:
             lab = (prov.get("versions") or {}).get(m, {}).get("short_label", s["version"])
             out.append(f"{lab}{' (กรองในกล่อง·เดิม)' if s['mode'] == 'filter' and m != 'A' else ''}"
-                       f"{' (จัดอันดับใน scope·ทดสอบ)' if m == 'A' and s.get('ranking') == 'scoped' else ''}")
+                       f"{' (จัดอันดับใน scope·ทดสอบ)' if m == 'A' and s.get('ranking') == 'scoped' else ''}"
+                       f"{' (Top-' + str(s.get('n')) + ' ใน scope·ทดสอบ)' if m == 'A' and s.get('ranking') == 'scoped_fixed_n' else ''}")
     out.append(f"cond: {conf['condition'].get('id') or conf['condition'].get('name')}")
     sc = conf.get("scope") or {}
     if sc.get("mode") == "sectors":

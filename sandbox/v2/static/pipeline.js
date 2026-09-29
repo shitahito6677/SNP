@@ -10,7 +10,7 @@ const WIRE_COLORS = ["#10B981", "#A855F7", "#F59E0B"];
 function pipeline() {
   return {
     stages: {
-      A: { mode: "on", version: null, ranking: "global" },
+      A: { mode: "on", version: null, ranking: "global", n: null },
       B: { mode: "off", version: null },
       C: { mode: "off", version: null },
     },
@@ -88,7 +88,9 @@ function pipeline() {
         held_out: { enabled: this.run.heldOut, confirm: this.run.confirm }, include_manual: this.run.includeManual,
         scope: { mode: this.scope.mode, sectors: [...this.scope.sectors], tickers: [...this.scope.tickers] },
         stages: {
-          A: { mode: this.stages.A.mode, version: this.stages.A.version, ...(this.stages.A.ranking === "scoped" ? { ranking: "scoped" } : {}) },
+          A: { mode: this.stages.A.mode, version: this.stages.A.version,
+               ...(this.stages.A.ranking !== "global" ? { ranking: this.stages.A.ranking } : {}),
+               ...(this.stages.A.ranking === "scoped_fixed_n" ? { n: this.fixedN() } : {}) },
           B: { mode: this.stages.B.mode, version: this.stages.B.version },
           C: { mode: this.stages.C.mode, version: this.stages.C.version },
         },
@@ -166,7 +168,10 @@ function pipeline() {
       return "NOTE";
     },
     warnClass(w) { return { STUB: "gray", NEGATIVE: "orange", CAVEAT: "orange", COVERAGE: "", SURVIVORSHIP: "", NOTE: "gray", ORACLE: "oracle", LEGACY: "orange", MANUAL: "gray", "โหมดทดสอบ": "scoped" }[this.warnTag(w)]; },
-    scopedA() { return this.stages.A.mode === "on" && this.stages.A.ranking === "scoped"; },
+    scopedA() { return this.stages.A.mode === "on" && this.stages.A.ranking !== "global"; },
+    defaultN() { return Math.max(1, Math.round(this.vmeta("A")?.coverage?.avg_selected || 20)); },  // จำนวนที่กฎเลือกจริงต่อรอบ
+    fixedN() { return isNum(this.stages.A.n) && this.stages.A.n >= 1 ? Math.round(this.stages.A.n) : this.defaultN(); },
+    setRanking(v) { this.stages.A.ranking = v; if (v === "scoped_fixed_n" && !isNum(this.stages.A.n)) this.stages.A.n = this.defaultN(); this.changed(); },
 
     /* ---------- condition / editor ---------- */
     async loadCondition() {

@@ -32,10 +32,17 @@ from sandbox.v2.signals import AsOf, load_manual_news
 STAGES = ["load", "A", "B", "C", "condition", "simulate", "metrics", "save"]
 MODES = ("off", "on")  # กล่องโมเดล = แหล่งสัญญาณ: เปิด/ปิด + เลือก version เท่านั้น (เกณฑ์กรองทั้งหมดอยู่ใน condition)
 LEGACY_MODES = ("filter", "score-only")
-A_RANKING = ("global", "scoped")  # global = จัดอันดับทั้งตลาด (ค่าเริ่มต้น, ตรงกับ backtest) · scoped = โหมดทดสอบ
+A_RANKING = ("global", "scoped", "scoped_fixed_n")  # global = ทั้งตลาด (ค่าเริ่มต้น) · scoped / scoped_fixed_n = โหมดทดสอบ
 SCOPED_A_WARNING = ("โหมดทดสอบ: จัดอันดับใหม่เฉพาะในขอบเขตที่เลือก — ไม่ใช่พฤติกรรมจริงของกฎที่ผ่านการทดสอบ "
                     "(backtest เดิมของ Model A ทดสอบด้วยการจัดอันดับทั้งตลาดเท่านั้น) ผลจากโหมดนี้ใช้ดูกลไกระบบเท่านั้น "
-                    "ห้ามอ้างเป็นผลการทดสอบของ Model A")  # config ก่อน G1 — ดู legacy_notes()
+                    "ห้ามอ้างเป็นผลการทดสอบของ Model A")
+FIXED_N_WARNING = ("โหมดทดสอบ: บังคับจำนวนหุ้นตายตัวภายในขอบเขตที่เลือก — ไม่ใช่พฤติกรรมจริงของกฎที่ผ่านการทดสอบ "
+                   "ผลจากโหมดนี้ใช้ดูกลไกระบบเท่านั้น ห้ามอ้างเป็นผลการทดสอบของ Model A")
+
+
+def default_fixed_n(vid: str) -> int:
+    """N เริ่มต้นของโหมด Top-N = จำนวนที่กฎเลือกจริงต่อรอบในตลาดทั้งหมด (coverage.avg_selected ใน manifest)"""
+    return max(1, int(round(float((registry.get(vid).get("coverage") or {}).get("avg_selected") or 20))))  # config ก่อน G1 — ดู legacy_notes()
 SCOPE_MODES = ("all", "sectors", "tickers")
 ALLOWED_ETFS = [cfg.BENCHMARK] + list(cfg.SECTOR_ETFS.values())
 
@@ -224,8 +231,18 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
         ranking = s.get("ranking") or "global"
         if m == "A" and ranking not in A_RANKING:
             raise ConfigError(f"กล่อง A: การจัดอันดับต้องเป็น {A_RANKING} (ได้ {ranking!r})")
-        if m == "A" and mode == "on" and ranking == "scoped":  # ใส่ key เฉพาะโหมดทดสอบ — config โหมดปกติเหมือนเดิมทุกตัวอักษร
-            stages[m]["ranking"] = "scoped"
+        if m == "A" and mode == "on" and ranking != "global":  # ใส่ key เฉพาะโหมดทดสอบ — config โหมดปกติเหมือนเดิมทุกตัวอักษร
+            stages[m]["ranking"] = ranking
+            if ranking == "scoped_fixed_n":
+                try:
+                    n = int(default_fixed_n(vid) if s.get("n") in (None, "") else s["n"])  # 0 = ค่าผิด ไม่ใช่ "ไม่ได้ตั้ง"
+                except (TypeError, ValueError):
+                    raise ConfigError(f"กล่อง A: N ต้องเป็นจำนวนเต็ม (ได้ {s.get('n')!r})") from None
+                if not 1 <= n <= 5000:
+                    raise ConfigError("กล่อง A: N ต้องอยู่ระหว่าง 1 ถึง 5000")
+                stages[m]["n"] = n
+    if stages["A"].get("ranking") == "scoped_fixed_n":
+        warnings.insert(0, f"SCOPED-A: {FIXED_N_WARNING} · N = {stages['A']['n']} (ถ้าหุ้น applicable ใน scope มีน้อยกว่า N จะได้เท่าที่มี)")
     if stages["A"].get("ranking") == "scoped":
         warnings.insert(0, "SCOPED-A: " + SCOPED_A_WARNING + (" · กฎที่มีเงื่อนไขพิเศษ (เช่น BUFFER ของ A3) จะถูกแทนด้วยการเลือก top-k ตาม score"
                                                               if "BUFFER" in (stages["A"]["version"] or "") else ""))
@@ -288,9 +305,18 @@ def coverage_warnings(conf: dict) -> list:
         man = registry.get(s["version"])
         for w in man.get("warnings") or []:
             out.append(f"{man['short_label']}: {w}")
-        if m == "A" and (conf.get("scope") or {}).get("mode", "all") != "all" and s.get("ranking") != "scoped":
+        if m == "A" and (conf.get("scope") or {}).get("mode", "all") != "all" and s.get("ranking", "global") == "global":
             out += _scope_vs_A(conf, a, start, end)
     return out
+
+
+def _fixed_n_used(requested: int, funnel_rows: list) -> dict:
+    """N ที่ได้จริงต่อรอบ rebalance (อาจน้อยกว่าที่ตั้งถ้าหุ้น applicable ใน scope ไม่พอ)"""
+    per = {}
+    for f in funnel_rows:
+        if f.get("a_rebalance") is not None and "a_scoped_k" in f:
+            per[str(pd.Timestamp(f["a_rebalance"]).date())] = int(f["a_scoped_k"])
+    return {"requested": int(requested), "per_rebalance": per, "min": min(per.values(), default=None), "max": max(per.values(), default=None)}
 
 
 def _manual_unknown(conf) -> int:
@@ -402,7 +428,7 @@ def not_applicable(model: str, date) -> dict:
     return {"class": None, "score": None, "applicable": False, "reasons": ["ไม่มีข้อมูล"], "date": None, "model": model}
 
 
-def scoped_select(snap: dict, scope) -> tuple:
+def scoped_select(snap: dict, scope, fixed_n: int | None = None) -> tuple:
     """โหมดทดสอบ: จัดอันดับ A ใหม่เทียบกันเฉพาะหุ้นใน scope ด้วย score เดิมจาก export (ไม่คำนวณ score ใหม่)
     - ตัด applicable False ออกก่อนเสมอ
     - สัดส่วนที่เลือก = สัดส่วนเดิมของกฎในรอบนั้น (จำนวน selected ÷ จำนวนที่กฎจัดอันดับจริง = applicable) × จำนวนหุ้น applicable ใน scope
@@ -412,15 +438,19 @@ def scoped_select(snap: dict, scope) -> tuple:
     n_sel = sum(1 for k in appl if snap[k].get("class") == "selected")
     frac = n_sel / len(appl) if appl else 0.0
     cands = sorted((k for k in appl if scope is None or k in scope), key=lambda k: (-float(snap[k]["score"]), k))
-    k = max(1, int(np.floor(len(cands) * frac + 0.5))) if cands and n_sel else 0
+    if fixed_n is not None:  # โหมด Top-N คงที่: เอา N ตัวบนสุดตรง ๆ (หุ้นไม่พอ = เท่าที่มี ไม่ error ไม่ปัดเพิ่ม)
+        k = min(int(fixed_n), len(cands))
+    else:
+        k = max(1, int(np.floor(len(cands) * frac + 0.5))) if cands and n_sel else 0
     return cands[:k], {"fraction": frac, "k": k, "n_candidates": len(cands), "n_selected_global": n_sel, "n_ranked_global": len(appl)}
 
 
 def _chip(model, label, rec, extra=""):
     if rec is None or rec.get("applicable") is False:
         return f"{model}: {label} ไม่มีสัญญาณ"
-    if model == "A" and rec.get("ranking") == "scoped":
-        extra = f"{extra}[โหมดทดสอบ อันดับ {rec['scoped_rank']}/{rec['scoped_n']} ใน scope · ทั้งตลาด {rec.get('global_class')}] "
+    if model == "A" and rec.get("ranking") in ("scoped", "scoped_fixed_n"):
+        tag = "โหมดทดสอบ Top-N คงที่" if rec["ranking"] == "scoped_fixed_n" else "โหมดทดสอบ"
+        extra = f"{extra}[{tag} อันดับ {rec['scoped_rank']}/{rec['scoped_n']} ใน scope · ทั้งตลาด {rec.get('global_class')}] "
     sc = rec.get("score")
     s = f" (score {sc:.1f})" if isinstance(sc, float) and model == "A" else (f" ({sc:+.2f})" if isinstance(sc, float) else "")
     src = " [MANUAL]" if rec.get("source") == "manual" else ""
@@ -726,6 +756,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
                                        or manual_methods.get("hindsight")),
         "manual_label_methods": dict(sorted(manual_methods.items())),
         **({"a_ranking_mode": st["A"].get("ranking", "global")} if "A" in asof else {}),
+        **({"a_ranking_n": _fixed_n_used(st["A"]["n"], funnel_rows)} if st["A"].get("ranking") == "scoped_fixed_n" else {}),
         **({"manual_unknown_news": _manual_unknown(conf)} if _manual_unknown(conf) else {}),
         "condition_sha256": hashlib.sha256(conf["condition"]["source"].encode()).hexdigest(),
         "execution": cfg.EXECUTION,
@@ -754,12 +785,13 @@ def stage_day(t, pxrow, stocks, held, asof, st, sector_of, scope=None):
     if "A" in asof:
         snap = asof["A"].snapshot(t)
         fun["a_rebalance"] = asof["A"].rebalance_date(t)
-        scoped = st["A"].get("ranking") == "scoped"
+        scoped = st["A"].get("ranking", "global") != "global"
+        fixed_n = st["A"].get("n") if st["A"].get("ranking") == "scoped_fixed_n" else None
         if scoped:  # โหมดทดสอบ: เทียบกันเฉพาะใน scope (cache ต่อรอบ rebalance — ผลเท่ากันทุกวันในรอบเดียวกัน)
-            key = (fun["a_rebalance"], None if scope is None else frozenset(scope))
+            key = (fun["a_rebalance"], None if scope is None else frozenset(scope), fixed_n)
             cache = asof["A"].__dict__.setdefault("_scoped_cache", {})
             if key not in cache:
-                cache[key] = scoped_select(snap, scope)
+                cache[key] = scoped_select(snap, scope, fixed_n)
             passed, info = cache[key]
             rank = {k: i + 1 for i, k in enumerate(passed)}
             fun["a_scoped_k"] = info["k"]
@@ -771,7 +803,7 @@ def stage_day(t, pxrow, stocks, held, asof, st, sector_of, scope=None):
         passA = sorted(k for k in passed if k in hp)
         a_recs = {k: snap.get(k) for k in sorted(set(passA) | set(held)) if snap.get(k) is not None}
         if scoped:  # record ที่ condition เห็น: class/weight ตามโหมดทดสอบ + เก็บ class จริงทั้งตลาดไว้
-            a_recs = {k: dict(r, global_class=r.get("class"), ranking="scoped", scoped_n=info["k"], scoped_rank=rank.get(k),
+            a_recs = {k: dict(r, global_class=r.get("class"), ranking=st["A"]["ranking"], scoped_n=info["k"], scoped_rank=rank.get(k),
                               **{"class": "selected" if k in rank else ("not_selected" if r.get("applicable") else r.get("class")),
                                  "weight": 1.0 / info["k"] if k in rank else 0.0})
                       for k, r in a_recs.items()}

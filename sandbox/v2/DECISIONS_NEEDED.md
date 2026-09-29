@@ -154,3 +154,17 @@
 - record ที่ condition เห็น (`ctx.a`): `class`/`weight` ตามโหมดทดสอบ (weight = 1/k) + `global_class` (class จริงทั้งตลาด), `scoped_rank`, `scoped_n`, `ranking: "scoped"`; trade reasons ติด "[โหมดทดสอบ อันดับ r/k ใน scope · ทั้งตลาด …]"
 - ไม่ใช่ค่าเริ่มต้น; config มี key `ranking` เฉพาะโหมดทดสอบ (config โหมดปกติเหมือนเดิมทุกตัวอักษร → ผลเก่ารันซ้ำเหมือนเดิม); `provenance.a_ranking_mode` = global / scoped ทุก run ที่เปิด A
 - คำเตือน (ข้อความตามสเปค): แถบ sticky บนหน้า Pipeline (เมื่อเลือกโหมด), ในกล่อง A, หน้าผล (รวมผลที่บันทึกแล้วเปิดย้อนหลัง), หน้าหุ้นที่เปิดจากผลนั้น, badge อันแรกใน gallery/compare, คำเตือน preflight
+
+## 23. (M1) ไม่รัน trial ใหม่ — "BM60/Fscore40 top-20" คือ trial 127 ที่มีอยู่แล้ว
+- สเปค M1 บอกว่าเป็น "ไอเดียใหม่ที่ยังไม่เคยลองใน 125 trial" แต่บน `feature/model-a-rebuild` มี **round 013 (BMF20) กฎ S2_WEIGHTED = `r013_BMF20_WEIGHTED` เป็น trial ที่ 127** แล้ว (trials.csv มี 127 แถว ไม่ใช่ 125): เปอร์เซ็นไทล์ BM + เปอร์เซ็นไทล์ F-score ในปีนั้น, 0.6/0.4, top 20 EW, รายปี มิ.ย., ไม่รวมการเงิน, ข้อมูลประกอบ 2011–2016 + ตัดสิน 2017–2023, 10 และ 25 bps, S1–S7 + DSR, ไม่แตะ held-out — ตรงสเปค M1 ทุกข้อ
+- ต่างกันแค่การตัดสินคะแนนเสมอ (สเปค: ticker A-Z · round 013: BM สูงกว่า) → **ตรวจแล้วรายชื่อ 20 ตัวเหมือนกันทุกปีทั้ง 12 ปี (ต่างกัน 0 ตัว)** จึงให้ผลเดียวกันทุกตัวเลข
+- ผลที่บันทึกไว้แล้ว: Sharpe ช่วงตัดสิน 0.415 (EW 0.640, SPY 0.681), CAGR 9.6%, MaxDD −55.2%, ระดับ C (ตก S1/S2/S3/S6), DSR 0.003 — export `A:bmf20-weighted` (experimental-not-frozen) มีอยู่แล้วและ sandbox อ่านได้
+- **เลือก:** ไม่รันซ้ำเป็น trial 128 — การนับสมมติฐานเดิมซ้ำทำให้จำนวน trial เกินจริงและลด DSR ของทุก trial (ขัดกติกา pre-registration ของ Model A); ไม่แตะ branch `feature/model-a-rebuild` / `trials.csv` / `CONCLUSION.md` · ใช้ `A:bmf20-weighted` ใน M2 และ Experiment 1
+- ถ้าต้องการกฎที่ต่างจริง (เช่น น้ำหนักอื่น, universe อื่น, top-N อื่น) ให้ระบุ — จะเป็น trial ใหม่ได้
+- `condition_fixed.py` ที่ขั้นตอน Experiment 1 อ้างถึง **ไม่มีในเครื่อง** (ไม่พบใน repo / Downloads / Desktop) — ไม่ได้สร้างให้ (ไม่รู้ว่าต้องการตรรกะไหน)
+
+## 24. (M2) โหมดทดสอบ "Top-N คงที่ภายใน scope"
+- โหมดที่ 3 ของกล่อง A (`ranking: "scoped_fixed_n"`, `n`): เรียงด้วย score เดิมเฉพาะหุ้น applicable ใน scope → เอา N ตัวบนสุด; applicable ไม่พอ → ได้เท่าที่มี (ไม่ error ไม่ปัดเพิ่ม); ใช้กลไกเดียวกับ L2 (cache ต่อรอบ, record `ctx.a`, chip ใน reasons)
+- N เริ่มต้น = `coverage.avg_selected` ใน manifest ของ version (bmf20 = 20, A1 = 63); รับ 1–5000; 0/ค่าที่ไม่ใช่ตัวเลข = error
+- `provenance.a_ranking_mode = "scoped_fixed_n"` + `a_ranking_n = {requested, per_rebalance: {รอบ: N ที่ได้จริง}, min, max}` (ค่าต่อรอบ เพราะ "N ที่ใช้จริง" ต่างกันได้แต่ละรอบ)
+- คำเตือนข้อความตามสเปคที่ทุกจุดเดียวกับ L2 (แถบ sticky Pipeline / หน้าผลรวมผลที่บันทึก / หน้าหุ้น, กล่อง A, badge อันแรก, preflight)

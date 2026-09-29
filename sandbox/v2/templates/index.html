@@ -57,7 +57,7 @@
     </div>
   </div>
 
-  <div class="warn scoped sticky-banner" id="scoped-banner-pipeline" x-show="scopedA()"><b>โหมดทดสอบ</b><span x-text="SCOPED_A_WARNING"></span></div>
+  <div class="warn scoped sticky-banner" id="scoped-banner-pipeline" x-show="scopedA()"><b>โหมดทดสอบ</b><span x-text="rankingWarning(stages.A.ranking) + (stages.A.ranking==='scoped_fixed_n' ? ' · N = ' + fixedN() : '')"></span></div>
   <!-- ขั้น 0: ขอบเขตการลงทุน (ก่อนกล่อง A) -->
   <div class="panel scope-panel" id="scope-panel">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:16px">
@@ -140,10 +140,14 @@
         </div>
         <template x-if="m==='A'"><div class="field" x-show="stages.A.mode==='on'">
           <label class="lbl">การจัดอันดับ</label>
-          <select id="a-ranking" x-model="stages.A.ranking" @change="changed()" style="width:100%">
-            <option value="global">ทั้งตลาด (ค่าเริ่มต้น · ตรงกับที่ทดสอบไว้จริง)</option>
-            <option value="scoped">จัดอันดับใหม่เฉพาะใน scope (สำหรับทดสอบ)</option></select>
-          <div class="warn scoped" x-show="scopedA()" style="margin-top:8px;font-size:12px"><b>โหมดทดสอบ</b><span x-text="SCOPED_A_WARNING"></span></div>
+          <select id="a-ranking" :value="stages.A.ranking" @change="setRanking($event.target.value)" style="width:100%">
+            <option value="global" :selected="stages.A.ranking==='global'">ทั้งตลาด (ค่าเริ่มต้น · ตรงกับที่ทดสอบไว้จริง)</option>
+            <option value="scoped" :selected="stages.A.ranking==='scoped'">จัดอันดับใหม่เฉพาะใน scope (คงสัดส่วนเดิม · ทดสอบ)</option>
+            <option value="scoped_fixed_n" :selected="stages.A.ranking==='scoped_fixed_n'">Top-N คงที่ภายใน scope (สำหรับทดสอบ)</option></select>
+          <label class="row" style="gap:6px;margin-top:6px;font-size:12.5px" x-show="stages.A.ranking==='scoped_fixed_n'">N =
+            <input id="a-fixed-n" type="number" min="1" max="5000" step="1" style="width:80px" x-model.number="stages.A.n" @change="changed()">
+            <span class="dim" x-text="`(กฎนี้เลือกจริง ~${defaultN()} ตัวต่อรอบในตลาดทั้งหมด · หุ้นไม่พอ = ได้เท่าที่มี)`"></span></label>
+          <div class="warn scoped" x-show="scopedA()" style="margin-top:8px;font-size:12px"><b>โหมดทดสอบ</b><span x-text="rankingWarning(stages.A.ranking)"></span></div>
         </div></template>
         <p class="dim box-role" style="font-size:12px;margin:10px 0 0" x-show="stages[m].mode!=='off'" x-text="{
           A: 'ใช้ผลเลือกหุ้นของ version นี้ตรง ๆ (class = selected และ applicable) · อยากคัดเข้มขึ้นด้วย score → condition a_score_threshold',
@@ -284,7 +288,7 @@
   <template x-if="loading"><div class="stack"><div class="skeleton" style="height:40px"></div><div class="skeleton" style="height:110px"></div><div class="skeleton" style="height:340px"></div></div></template>
   <template x-if="err"><div class="warn red"><b>ERROR</b><span x-text="err"></span></div></template>
   <div x-show="r && !loading">
-    <template x-if="isScopedA()"><div class="warn scoped sticky-banner" id="scoped-banner-results"><b>โหมดทดสอบ</b><span x-text="SCOPED_A_WARNING"></span></div></template>
+    <template x-if="isScopedA()"><div class="warn scoped sticky-banner" id="scoped-banner-results"><b>โหมดทดสอบ</b><span x-text="scopedText()"></span></div></template>
     <template x-if="isOracle()"><div class="warn oracle oracle-banner" id="oracle-banner"><b>ORACLE</b>
       <span>ผลนี้มาจาก Oracle test (label รู้ผลราคาล่วงหน้า) — เป็นเพดานบนสมมติ ไม่ใช่ผลตอบแทนที่ทำได้จริง ห้ามอ้างเป็นผลจริง</span></div></template>
     <div class="page-head">
@@ -496,7 +500,7 @@
         <template x-for="l in layerList" :key="l[0]"><label class="chip" :class="l[2]" style="cursor:pointer"><input type="checkbox" x-model="layers[l[0]]" @change="render()"> <span x-text="l[1]"></span></label></template>
         <span class="dim" x-show="ctxLabel" x-text="ctxLabel" style="margin-left:auto;font-size:12px"></span>
       </div>
-      <template x-if="d?.a_ranking === 'scoped'"><div class="warn scoped sticky-banner" id="scoped-banner-stock"><b>โหมดทดสอบ</b><span x-text="'ช่วงที่ A เลือกบนกราฟนี้มาจากการจัดอันดับทั้งตลาด (export) แต่ trade ของการทดลองนี้ใช้โหมดทดสอบ — ' + SCOPED_A_WARNING"></span></div></template>
+      <template x-if="d?.a_ranking && d.a_ranking !== 'global'"><div class="warn scoped sticky-banner" id="scoped-banner-stock"><b>โหมดทดสอบ</b><span x-text="'ช่วงที่ A เลือกบนกราฟนี้มาจากการจัดอันดับทั้งตลาด (export) แต่ trade ของการทดลองนี้ใช้โหมดทดสอบ — ' + rankingWarning(d.a_ranking)"></span></div></template>
       <template x-if="d?.manual_unknown"><div class="warn orange" id="unknown-news-warn" style="margin-bottom:6px"><b>ข่าวยังไม่ระบุ</b>
         <span>มีข่าว <b x-text="d.manual_unknown"></b> รายการที่ยังไม่ได้ระบุว่ารู้ผลล่วงหน้าหรือไม่ จึงยังไม่ถูกใช้ในทั้ง B-manual และ B-oracle (ข่าวยังโชว์บนกราฟ แต่ ctx.b ไม่เห็น) ·
           <a :href="`#/news?method=unknown&ticker=${d.ticker}`">ไปตั้งค่า label_method →</a></span></div></template>

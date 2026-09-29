@@ -33,12 +33,14 @@ const BADGE_INFO = {
   legacy: ["LEGACY", "ผลนี้บันทึกด้วยกล่องแบบเดิม (มีเกณฑ์กรองในกล่อง) — เปิดดูได้ตามเดิม แต่ Re-run จะใช้ความหมายใหม่"],
 };
 const SCOPED_A_WARNING = "โหมดทดสอบ: จัดอันดับใหม่เฉพาะในขอบเขตที่เลือก — ไม่ใช่พฤติกรรมจริงของกฎที่ผ่านการทดสอบ (backtest เดิมของ Model A ทดสอบด้วยการจัดอันดับทั้งตลาดเท่านั้น) ผลจากโหมดนี้ใช้ดูกลไกระบบเท่านั้น ห้ามอ้างเป็นผลการทดสอบของ Model A";
+const FIXED_N_WARNING = "โหมดทดสอบ: บังคับจำนวนหุ้นตายตัวภายในขอบเขตที่เลือก — ไม่ใช่พฤติกรรมจริงของกฎที่ผ่านการทดสอบ ผลจากโหมดนี้ใช้ดูกลไกระบบเท่านั้น ห้ามอ้างเป็นผลการทดสอบของ Model A";
+function rankingWarning(mode) { return mode === "scoped_fixed_n" ? FIXED_N_WARNING : SCOPED_A_WARNING; }
 /* badge ของผลการทดลอง (experiments_store.badges) — kind "manual" = เปิด toggle รวมข่าว manual */
 const RESULT_BADGE_TIPS = {
   held_out: BADGE_INFO.held_out[1], stub: BADGE_INFO.stub[1], negative: BADGE_INFO.negative[1], survivorship: BADGE_INFO.survivorship[1],
   manual: "รวมข่าวที่ผู้ใช้พิมพ์/นำเข้าเอง (source=manual) ผ่าน toggle — ไม่ใช่ output ของโมเดล",
   manual_labels: BADGE_INFO.manual[1], oracle: BADGE_INFO.oracle[1], legacy: BADGE_INFO.legacy[1],
-  scoped_a: SCOPED_A_WARNING,
+  scoped_a: SCOPED_A_WARNING, scoped_fixed_n: FIXED_N_WARNING,
 };
 function resultBadgeTip(k) { return RESULT_BADGE_TIPS[k] || ""; }
 function badgeLabel(b) { return (BADGE_INFO[b] || [String(b || "").toUpperCase()])[0]; }

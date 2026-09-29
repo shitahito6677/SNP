@@ -31,7 +31,12 @@ function results() {
       return this.r.name || this.r.config?.name || this.id;
     },
     badgeText(b) { return resultBadgeTip(b.kind); },
-    isScopedA() { return this.r?.config?.stages?.A?.ranking === "scoped" || this.r?.provenance?.a_ranking_mode === "scoped"; },
+    aRanking() { return this.r?.config?.stages?.A?.ranking || this.r?.provenance?.a_ranking_mode || "global"; },
+    isScopedA() { return this.aRanking() !== "global"; },
+    scopedText() {
+      const n = this.r?.provenance?.a_ranking_n;
+      return rankingWarning(this.aRanking()) + (n ? ` · N ที่ตั้ง ${n.requested} · ได้จริงต่อรอบ ${n.min === n.max ? n.min : n.min + "–" + n.max}` : "");
+    },
     isOracle() { return !!(this.r?.provenance?.contains_oracle_signal || (this.r?.badges || []).some((b) => b.kind === "oracle")); },
     async rerunAsk() {
       const notes = this.r?.legacy_notes || [];
