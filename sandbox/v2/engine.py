@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import multiprocessing as mp
 import os
 import platform
@@ -45,6 +46,9 @@ def default_fixed_n(vid: str) -> int:
     return max(1, int(round(float((registry.get(vid).get("coverage") or {}).get("avg_selected") or 20))))  # config ก่อน G1 — ดู legacy_notes()
 SCOPE_MODES = ("all", "sectors", "tickers")
 ALLOWED_ETFS = [cfg.BENCHMARK] + list(cfg.SECTOR_ETFS.values())
+
+
+dlog = logging.getLogger("sandbox.v2.engine")  # DEBUG = รายละเอียดการคัดหุ้นของโหมดทดสอบ
 
 
 class ConfigError(ValueError):
@@ -435,6 +439,13 @@ def scoped_select(snap: dict, scope, fixed_n: int | None = None) -> tuple:
       ปัดครึ่งขึ้น และอย่างน้อย 1 ตัวถ้ามีหุ้น applicable ใน scope
     คืน (รายชื่อที่เลือกเรียงตามอันดับ, info)"""
     appl = [k for k, r in snap.items() if r.get("applicable") and r.get("score") is not None]
+    if dlog.isEnabledFor(logging.DEBUG):  # N0: หลักฐานทุกขั้นของการคัด (เปิดด้วย logging level DEBUG ของ "sandbox.v2.engine")
+        in_scope = list(snap) if scope is None else [k for k in snap if k in scope]
+        dlog.debug("scoped_select: scope %s ตัว → มี record ของ A %d → applicable+score %d → เรียงตาม score → "
+                   "mode=%s N=%s · ใช้ class/selected ของทั้งตลาดกรองก่อนไหม: ไม่ (ใช้แค่คำนวณสัดส่วนของโหมดคงสัดส่วน)",
+                   "ทั้งหมด" if scope is None else len(scope), len(in_scope),
+                   sum(1 for k in in_scope if snap[k].get("applicable") and snap[k].get("score") is not None),
+                   "fixed_n" if fixed_n is not None else "proportional", fixed_n)
     n_sel = sum(1 for k in appl if snap[k].get("class") == "selected")
     frac = n_sel / len(appl) if appl else 0.0
     cands = sorted((k for k in appl if scope is None or k in scope), key=lambda k: (-float(snap[k]["score"]), k))
@@ -442,6 +453,8 @@ def scoped_select(snap: dict, scope, fixed_n: int | None = None) -> tuple:
         k = min(int(fixed_n), len(cands))
     else:
         k = max(1, int(np.floor(len(cands) * frac + 0.5))) if cands and n_sel else 0
+    if dlog.isEnabledFor(logging.DEBUG):
+        dlog.debug("scoped_select: candidates %d → k %d → picks %s", len(cands), k, cands[:k])
     return cands[:k], {"fraction": frac, "k": k, "n_candidates": len(cands), "n_selected_global": n_sel, "n_ranked_global": len(appl)}
 
 

@@ -204,6 +204,10 @@
 - ผ่านเว็บจริง (ตั้งค่าแบบ Experiment 1: bmf20-weighted · Top-N 20 · XLK · B manual-labels-realtime · C ปิด): "ผ่าน 20 ตัว", แถบเตือนทุกหน้า (เลื่อนแล้วยังอยู่, เปิดผลที่บันทึกย้อนหลังยังอยู่, หน้าหุ้นมี), badge ใน gallery, error 0 — screenshot `screenshots/M2_*.jpg`
 - DoD: ✅
 
+## N0 — สืบสาเหตุจริงจาก log ก่อนแก้ ✅
+- `scripts/diagnose_run.py` (อ่านอย่างเดียว): config ที่ server ได้รับจริงจาก jobs.db, log DEBUG ของ `scoped_select` (logger `sandbox.v2.engine`), ctx.b ดิบเทียบ `_news()` ของ condition ผู้ใช้, sector ของหุ้นที่มีข่าว → `debug/N0_evidence.md` (gitignored)
+- ผล (DECISIONS #25): (1) โหมด Top-N ไม่เคยถูกใช้ในเคสผู้ใช้ — ทุก run ที่ได้ ~1 ตัวคือโหมดทั้งตลาด (bmf20 เลือก XLK 0 / 2 ตัวต่อรอบ); Top-N ทำงานถูก (20) (2) `_news()` อ่าน `class` ก่อน `label` → ±2 กลายเป็น ±1 กฎ ±2 ไม่เคยทำงาน (3) sector ถูกต้อง ข่าวนอก XLK มี 13/463
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน)** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
