@@ -563,6 +563,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
     target = None                   # dict ที่ condition คืนครั้งล่าสุด (เป้าปัจจุบัน)
     pending = None
     trades, eq_rows, pos_rows, funnel_rows = [], [], [], []
+    decisions = []  # N5: เหตุผลการตัดสินใจรายวันต่อหุ้น (ctx.b ดิบ, state, เป้าก่อน/หลัง, note ของ condition)
     held_for_delist = set()
     sim_t0 = time.time()
 
@@ -697,6 +698,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
                                           "weights": weights_now, "units": dict(units)},
                                stage_enabled={m: st[m]["mode"] != "off" for m in "ABC"})
                 res = runner.day(payload)
+                target_before = dict(target or {})
                 w = res["weights"]
                 if w is not None:
                     w = _validate_weights(w, set(universe) | set(ALLOWED_ETFS) | set(units), t)
@@ -716,6 +718,8 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
                         pending = {"weights": w, "reasons": reasons, "notes": res.get("notes") or {},
                                    "decision_date": str(t.date())}
                         target = w
+                decisions.extend(_decision_rows(t, universe, units, weights_now, target_before, w, target, res, a_recs, b_recs,
+                                                c_recs, sector_of, "A" in asof))
                 fun["held"] = sum(1 for v in (target or {}).values() if v > 0)
             else:
                 fun["held"] = len(units)
@@ -757,6 +761,7 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
     pd.DataFrame(pos_rows, columns=["date", "ticker", "weight", "value"]).to_parquet(out_dir / "positions.parquet", index=False)
     trades_df.to_parquet(out_dir / "trades.parquet", index=False)
     funnel.to_parquet(out_dir / "funnel.parquet", index=False)
+    pd.DataFrame(decisions, columns=DECISION_COLS).to_parquet(out_dir / "decisions.parquet", index=False)
     (out_dir / "round_trips.json").write_text(json.dumps(round_trips, ensure_ascii=False))
     (out_dir / "metrics.json").write_text(json.dumps(met, ensure_ascii=False, indent=1))
     conf_out = {k: v for k, v in conf.items() if k != "condition"}
@@ -939,6 +944,57 @@ def dry_run(conf: dict, date=None, history_days: int = 260) -> dict:
     return {"date": str(t.date()), "funnel": fun, "universe_size": len(universe), "weights": w,
             "weight_sum": None if w is None else float(sum(w.values())), "notes": res.get("notes") or {},
             "stdout": "".join(runner.stdout)[-4000:]}
+
+
+DECISION_COLS = ["date", "ticker", "in_universe", "held", "weight_now", "target_before", "target_after", "decided", "summary",
+                 "notes", "b_json", "a_json", "c_json", "state_json"]
+DECISION_MAX_UNIVERSE = 150  # universe ใหญ่กว่านี้ → บันทึกเฉพาะหุ้นที่ถือ/มีเป้า/มี note/มีข่าว B วันนั้น (ไฟล์ไม่บวม)
+
+
+def _pct(x):
+    return f"{100 * x:.2f}%"
+
+
+def _decision_rows(t, universe, units, weights_now, before, w, target, res, a_recs, b_recs, c_recs, sector_of, a_on) -> list:
+    """แถวบันทึก "ทำไมวันนี้ทำ/ไม่ทำ" ต่อหุ้น (บันทึกตอนรัน ไม่ต้องคำนวณใหม่ตอนเปิดดู)"""
+    notes = res.get("notes") or {}
+    state = res.get("state") if isinstance(res.get("state"), dict) else {}
+    uni = set(universe)
+    keys = set(units) | set(before) | set(w or {}) | set(notes)
+    if len(uni) <= DECISION_MAX_UNIVERSE:
+        keys |= uni
+    else:
+        keys |= {k for k in uni if (b_recs.get(k) or {}).get("applicable")}
+    rows = []
+    for tk in sorted(keys):
+        tb, ta = float(before.get(tk, 0.0)), float((target or {}).get(tk, 0.0))
+        if w is None:
+            act = "decide() คืน None → คงเป้าเดิม ไม่ซื้อขาย"
+        elif abs(ta - tb) < 1e-9:
+            act = f"คงเป้า {_pct(ta)}" if ta > 0 else "ไม่ถือ (เป้า 0%)"
+        elif ta > tb:
+            act = f"เพิ่มเป้า {_pct(tb)} → {_pct(ta)} (ซื้อ ณ close วันทำการถัดไป)"
+        else:
+            act = f"ลดเป้า {_pct(tb)} → {_pct(ta)} ({'ขายทั้งหมด' if ta == 0 else 'ขายบางส่วน'} ณ close วันทำการถัดไป)"
+        why = []
+        if tk not in uni:
+            a = a_recs.get(tk) or {}
+            why.append("ไม่อยู่ใน universe วันนี้" + (f" (A: {a.get('class')})" if a_on and a else (" (A ไม่เลือก)" if a_on else "")))
+        st = {}
+        for k, v in state.items():
+            if isinstance(v, dict) and tk in v:
+                st[k] = v[tk]
+            elif isinstance(v, (list, tuple)) and tk in v:
+                st[k] = True
+        e = cfg.SECTOR_ETFS.get(sector_of.get(tk, ""), None)
+        rows.append({"date": str(t.date()), "ticker": tk, "in_universe": tk in uni, "held": tk in units,
+                     "weight_now": float(weights_now.get(tk, 0.0)), "target_before": tb, "target_after": ta, "decided": w is not None,
+                     "summary": " · ".join([act] + why), "notes": list(notes.get(tk, [])),
+                     "b_json": json.dumps(b_recs.get(tk), ensure_ascii=False, default=str) if tk in b_recs else None,
+                     "a_json": json.dumps(a_recs.get(tk), ensure_ascii=False, default=str) if tk in a_recs else None,
+                     "c_json": json.dumps(c_recs.get(e), ensure_ascii=False, default=str) if e and e in c_recs else None,
+                     "state_json": json.dumps(st, ensure_ascii=False, default=str) if st else None})
+    return rows
 
 
 def _price_row(adj, close, vol, i):

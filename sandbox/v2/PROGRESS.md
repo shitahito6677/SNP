@@ -232,6 +232,11 @@
 - เลือกหลาย sector พร้อมกันได้อยู่แล้ว (F3) — test ยืนยัน XLK + XLC ไม่มีข่าวนอกขอบเขต
 - test `tests/test_scope_news.py` 4 ข้อ (sector GICS จริง, นับนอก/ใน, preflight มี/ไม่มีคำเตือน, ลิงก์รายชื่อ)
 
+## N5 — แผง "ทำไมวันนี้ทำ/ไม่ทำ" ต่อหุ้นต่อวัน ✅
+- engine: `decisions.parquet` (บันทึกตอนรัน) + worker ส่ง snapshot `ctx.state`; API `/api/results/<kind>/<id>/decisions?ticker=&date=`; หน้าหุ้น: คลิกวันไหนก็ได้บนกราฟ → แผงแสดงสรุป, note ของ condition, state ของหุ้นนั้น (cut/pending), ctx.b/ctx.a/ctx.c ดิบ — DECISIONS #28
+- `conditions/condition_fixed.py` = condition ของผู้ใช้ + แก้ `_news()` (อ่าน label/score ก่อน class) + `ctx.note` ทุกทางแยก
+- test `tests/test_decision_log.py` 4 ข้อ: ข่าว KR -2 (2021-09-15) → condition_fixed ขายครึ่งวันนั้น (weight 5% → 2.5%); บันทึกวันนั้น: ctx.b label -2, summary "ลดเป้า", note "ข่าว -2 → ขายครึ่งทันที", state cut.done = False; วันถัดไป note "_is_reduced=True"; วันเสาร์ → วันทำการก่อนหน้า; ผลเก่า → available False
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน)** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

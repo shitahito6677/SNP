@@ -447,6 +447,19 @@ def create_app() -> Flask:
         except KeyError as e:
             return jsonify({"error": str(e).strip("'\"")}), 404
 
+    @app.get("/api/results/<kind>/<rid>/decisions")
+    def api_result_decisions(kind, rid):
+        """N5: ทำไมวันนั้นทำ/ไม่ทำอะไร กับหุ้นตัวนี้ (บันทึกตอนรัน)"""
+        try:
+            d = _result_dir(kind, rid)
+        except KeyError as e:
+            return jsonify({"error": str(e).strip("'\"")}), 404
+        t = (request.args.get("ticker") or "").upper()
+        date = request.args.get("date") or ""
+        if not t or not date:
+            return jsonify({"error": "ต้องระบุ ticker และ date"}), 400
+        return jsonify(xs.decisions(d, t, date))
+
     @app.get("/api/results/<kind>/<rid>/trades")
     def api_result_trades(kind, rid):
         try:

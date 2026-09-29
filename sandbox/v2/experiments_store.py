@@ -29,6 +29,26 @@ from sandbox.v2 import config as cfg
 ROOT = cfg.EXPERIMENTS_DIR
 ARTIFACTS = ["config.json", "condition_snapshot.py", "metrics.json", "provenance.json", "equity.parquet",
              "positions.parquet", "trades.parquet", "funnel.parquet", "round_trips.json"]
+OPTIONAL_ARTIFACTS = ["decisions.parquet"]  # N5: บันทึกเหตุผลรายวัน (ผลที่รันก่อน N5 ไม่มี)
+
+
+def decisions(d: Path, ticker: str, date: str) -> dict:
+    """เหตุผลการตัดสินใจของหุ้นหนึ่งตัว ณ วันที่เลือก (วันไม่ใช่วันทำการ/ไม่มีบันทึก → วันที่บันทึกล่าสุดก่อนหน้า)"""
+    f = Path(d) / "decisions.parquet"
+    if not f.exists():
+        return {"available": False, "reason": "ผลนี้รันก่อนมีบันทึกการตัดสินใจรายวัน — กด Re-run เพื่อสร้างใหม่"}
+    df = pd.read_parquet(f, filters=[("ticker", "==", ticker)])
+    if df.empty:
+        return {"available": True, "found": False, "reason": f"ไม่มีบันทึกของ {ticker} ในการทดลองนี้ (ไม่เคยอยู่ใน universe / ไม่เคยถือ / ไม่มี note)"}
+    df = df.sort_values("date")
+    prior = df[df["date"] <= date]
+    row = (prior.iloc[-1] if len(prior) else df.iloc[0]).to_dict()
+    for k in ("b_json", "a_json", "c_json", "state_json"):
+        row[k[:-5]] = json.loads(row.pop(k)) if row.get(k) else None
+    row["notes"] = list(row.get("notes") if row.get("notes") is not None else [])
+    exact = row["date"] == date
+    return {"available": True, "found": True, "exact": exact, "requested": date, "row": _records(pd.DataFrame([row]))[0],
+            "note": None if exact else f"ไม่มีบันทึกวันที่ {date} (ไม่ใช่วันทำการ หรือหุ้นนี้ไม่อยู่ในบันทึกวันนั้น) — แสดงวันที่ {row['date']}"}
 ID_RE = re.compile(r"^[0-9]{8}-[0-9]{6}_[a-z0-9-]{0,40}$")
 
 
@@ -146,8 +166,9 @@ def save(run_dir: Path, name: str) -> str:
     exp_id = f"{now:%Y%m%d-%H%M%S}_{_slug(name)}"
     d = ROOT / exp_id
     d.mkdir(parents=True, exist_ok=False)
-    for f in ARTIFACTS:
-        shutil.copy2(run_dir / f, d / f)
+    for f in ARTIFACTS + OPTIONAL_ARTIFACTS:
+        if f in ARTIFACTS or (run_dir / f).exists():
+            shutil.copy2(run_dir / f, d / f)
     conf = _json(d / "config.json")
     conf["name"] = (name or "").strip()[:120] or conf.get("name") or exp_id
     (d / "config.json").write_text(json.dumps(conf, ensure_ascii=False, indent=1))

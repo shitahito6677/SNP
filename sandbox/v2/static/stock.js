@@ -19,7 +19,7 @@ const STK = { chart: null, rsi: null };
 function stock() {
   return {
     d: null, err: "", q: "", hi: 0, hover: "", hoverItems: [], ctxLabel: "",
-    gallery: null, gErr: "", gSectors: [], gSort: "ticker", logoOk: {},
+    gallery: null, gErr: "", gSectors: [], gSort: "ticker", logoOk: {}, explain: null, explainDate: "", explainErr: "",
     layers: { trades: true, A: true, B: true, C: true, manual: true, sma: false, ema: false, vol: true, rsi: false },
     layerList: [["trades", "Trades ▲▼", "cond"], ["A", "ช่วงที่ A เลือก", "A"], ["B", "สัญญาณ B", "B"], ["C", "เหตุการณ์ C", "C"], ["manual", "ข่าว manual", "manual"],
       ["sma", "SMA 20/50", ""], ["ema", "EMA 20", ""], ["vol", "Volume", ""], ["rsi", "RSI 14", ""]],
@@ -136,6 +136,7 @@ function stock() {
       if (mk.length > 60) for (const x of mk) if (x.text === "BUY" || x.text === "SELL" || x.text.startsWith("B")) x.text = "";  // เยอะเกิน → เหลือแค่สัญลักษณ์
       candle.setMarkers(mk);
       ch.timeScale().fitContent();
+      ch.subscribeClick((p) => { if (p && p.time) this.explainDay(typeof p.time === "string" ? p.time : `${p.time.year}-${String(p.time.month).padStart(2, "0")}-${String(p.time.day).padStart(2, "0")}`); });
       ch.subscribeCrosshairMove((p) => { if (p && p.time) this.setHover(typeof p.time === "string" ? p.time : `${p.time.year}-${String(p.time.month).padStart(2, "0")}-${String(p.time.day).padStart(2, "0")}`); });
       if (this.layers.rsi) {
         const r = LightweightCharts.createChart(this.$refs.rsi, { ...opts, height: this.$refs.rsi.clientHeight || 130, width: this.$refs.rsi.clientWidth });
@@ -147,6 +148,15 @@ function stock() {
         r.timeScale().fitContent();
       }
     },
+    /* N5: คลิกวันไหนก็ได้ → เหตุผลที่ระบบทำ/ไม่ทำอะไรกับหุ้นนี้วันนั้น (อ่านจากบันทึกตอนรัน ไม่คำนวณใหม่) */
+    async explainDay(date) {
+      const rt = Alpine.store("app").route;
+      this.explainDate = date; this.explainErr = ""; this.explain = null;
+      if (!rt.query.kind) { this.explainErr = "เปิดหน้าหุ้นจากผลการทดลอง (คลิกหุ้นใน trade log / holdings) เพื่อดูเหตุผลการตัดสินใจรายวัน"; return; }
+      try { this.explain = await api(`/api/results/${rt.query.kind}/${rt.query.id}/decisions?ticker=${this.d.ticker}&date=${date}`); }
+      catch (e) { this.explainErr = e.message; }
+    },
+    pretty(x) { return x === null || x === undefined ? "—" : JSON.stringify(x, null, 1); },
     resize() { if (STK.chart && this.$refs.chart) STK.chart.applyOptions({ width: this.$refs.chart.clientWidth }); if (STK.rsi) STK.rsi.applyOptions({ width: this.$refs.rsi.clientWidth }); },
     setHover(t) {
       if (t === this.hover) return;

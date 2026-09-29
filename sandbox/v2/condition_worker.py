@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import linecache
 import traceback
 
@@ -137,7 +138,8 @@ def main(conn):
                     ctx._env["hist"].append(payload["date"], payload["prices"])
                     ctx._set_day(payload)
                     out = decide(ctx)
-                    conn.send(("result", {"weights": out, "notes": ctx._notes, "stdout": buf.getvalue()[-4000:]}))
+                    conn.send(("result", {"weights": out, "notes": ctx._notes, "stdout": buf.getvalue()[-4000:],
+                                          "state": _state_snapshot(ctx.state)}))
                 elif msg == "prices":  # วันที่ไม่ต้องตัดสินใจ แต่ต้องต่อ history ให้ครบ
                     ctx._env["hist"].append(payload["date"], payload["prices"])
                     conn.send(("ok", {}))
@@ -145,6 +147,18 @@ def main(conn):
             tb = traceback.format_exc()
             conn.send(("error", {"type": type(e).__name__, "message": str(e), "traceback": _user_tb(tb),
                                  "stdout": buf.getvalue()[-4000:]}))
+
+
+def _state_snapshot(state, limit: int = 200_000):
+    """สำเนา ctx.state แบบ JSON (ค่าที่ serialize ไม่ได้ → str) สำหรับบันทึกการตัดสินใจรายวัน — ใหญ่เกิน limit = ไม่ส่ง"""
+    try:
+        txt = json.dumps(state, default=str, ensure_ascii=False)
+    except Exception:  # noqa: BLE001 — เช่น key ไม่ใช่ str
+        try:
+            txt = json.dumps({str(k): v for k, v in dict(state).items()}, default=str, ensure_ascii=False)
+        except Exception:  # noqa: BLE001
+            return None
+    return json.loads(txt) if len(txt) <= limit else None
 
 
 def _user_tb(tb: str) -> str:
