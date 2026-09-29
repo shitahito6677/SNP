@@ -1441,3 +1441,22 @@ candidate pool จาก SEC frames (dei:EntityPublicFloat ทุกไตรม
 
 **ขั้นต่อไปที่ควรลอง:** ถ้าต้องการกฎที่ต่างจริง (น้ำหนัก/universe/จำนวนหุ้นอื่น) ค่อยนับเป็น trial ใหม่พร้อม HYPOTHESIS
 ---
+
+---
+## Sandbox v2 N6 — Experiment 1: BMF20 Top-20 ในหุ้นที่มีข่าว · B manual oracle · condition_fixed (ตรวจกลไก ไม่ใช่ผลของ Model A) — 2026-09-29 14:39
+
+**วิธีที่ใช้:** หลัง reset workspace (N1, backup 20260929-142129) import `model_b_IT_news.csv` ใหม่เป็น hindsight ทั้งไฟล์ แล้วรันผ่านหน้าเว็บ: scope = 71 ticker ที่มีข่าว, A = `bmf20-weighted` โหมดทดสอบ Top-N คงที่ N=20 (`scoped_fixed_n`), B = `manual-labels-oracle`, C ปิด, condition = `condition_fixed` (condition ของผู้ใช้ที่แก้ `_news()` ให้อ่าน label ±2 ถูก + ctx.note) — ต่างจากรอบก่อนของผู้ใช้ที่ A ถูกส่งเป็นโหมดทั้งตลาด (ได้ ~1 ตัว) และ `_news()` อ่าน ±2 เป็น ±1
+
+**ข้อมูลที่ใช้:** `sandbox/v2/data/manual_news.jsonl` (463 ข่าวจาก CSV, label_method = hindsight) → `model_B/export/manual-labels-oracle`; signal A `bmf20-weighted` (รอบ 2021-06-30, 2022-06-30); ราคา sandbox v2; ช่วง 2021-06-30 → 2023-06-30 (504 วันทำการ, warm-up 90 วันตั้งแต่ 2021-02-22); ผลบันทึกที่ `sandbox/v2/experiments/20260929-143958_experiment-1-bmf20-top-20-b-oracle-condi/`
+
+**ผลลัพธ์:**
+- funnel: universe 71 → ผ่าน A = 20 ทุกวัน (504/504) → ถือ 20 ทุกวัน; `a_ranking_n` per_rebalance {2021-06-30: 20, 2022-06-30: 20}
+- trade 388 รายการ (ซื้อ 199 / ขาย 189); decision log 10,068 แถว
+- ctx.note ของ condition: ข่าว -2 → ขายครึ่งทันที 9 ครั้ง (META 2022-02-02, HPE 2022-06-01, INTC 2022-07-28, META 2022-10-26, WDC 2022-10-27, HPE 2022-11-29, MU 2022-12-21, INTC 2023-01-26, INTC 2023-04-27); ข่าว +2 รับเงินที่พัก 7; ซื้อคืนเมื่อราคาลง ≥ 15% จากจุดขาย 5; ข่าว -1 รอยืนยัน MA50 2 / ยืนยันแล้วขายครึ่ง 2; ข้ามการตรวจข่าวเพราะอยู่ในสถานะขายครึ่งค้าง 749 วัน-หุ้น
+- strategy: total return 1.11%, CAGR 0.55%, Sharpe 0.077, MaxDD −35.35%; SPY 6.05% (Sharpe 0.137, MaxDD −24.50%); EW ของ scope 15.73% (Sharpe 0.323, MaxDD −34.39%)
+- provenance: `contains_oracle_signal = True` → แสดง badge ORACLE + แถบโหมดทดสอบ
+
+**มุมมอง/การตีความ:** ยืนยันกลไกที่ผู้ใช้ติดใจ: Top-N ใน scope ได้ N=20 ตามที่ตั้งทุกวัน และกฎ "ข่าว -2 ขายครึ่งทันที" ทำงานจริงหลังแก้ `_news()` (ก่อนแก้ 0 ครั้ง) — ผลตอบแทนไม่ใช่หลักฐานความสามารถของกลยุทธ์: (1) B เป็น label แบบ hindsight (Oracle) (2) A ใช้โหมดทดสอบที่ไม่ใช่พฤติกรรมจริงของกฎ (3) scope คัดจากหุ้นที่มีข่าวในไฟล์ (ผู้ใช้เลือกเอง) — แม้มี oracle ก็ยังแพ้ EW ของ scope เอง แสดงว่า condition นี้ (ขายครึ่งบนข่าวลบแล้วถือเงินสดรอข่าว +2) ไม่ได้ใช้ประโยชน์จากข้อมูลล่วงหน้าได้ดีนัก และวันที่อยู่ในสถานะขายครึ่งค้าง (749) ข้ามการตรวจข่าวทั้งหมด
+
+**ขั้นต่อไปที่ควรลอง:** ให้ผู้ใช้ตัดสินว่าจะใช้ B oracle หรือ realtime (ไฟล์นี้ hindsight ทั้งหมด → realtime ว่าง); ถ้าจะวัดผลจริงต้องมีข่าว real_time และ A โหมดทั้งตลาด
+---

@@ -14,7 +14,7 @@ function rsi(v, n = 14) {
 }
 
 // chart object อยู่นอก Alpine (ห้ามถูกห่อด้วย reactive proxy)
-const STK = { chart: null, rsi: null };
+const STK = { chart: null, rsi: null, wait: null };
 
 function stock() {
   return {
@@ -86,6 +86,20 @@ function stock() {
       const d = this.d;
       if (!d || !window.LightweightCharts) return;
       const el = this.$refs.chart;
+      // กล่องยังซ่อน (หน้า stock ยังไม่แสดง) → กราฟจะถูกสร้างกว้าง 0: มองไม่เห็นและคลิกแปลงเป็นวันที่ไม่ได้ (ตรวจแล้วใน N6)
+      // → รอจนกล่องมีขนาดจริงแล้วค่อยวาด + focus วันที่
+      if (!el.clientWidth) {
+        if (!STK.wait) {
+          STK.wait = new ResizeObserver(() => {
+            if (!el.clientWidth) return;
+            STK.wait.disconnect(); STK.wait = null;
+            this.render(); if (this._focus) this.focus(this._focus);
+          });
+          STK.wait.observe(el);
+        }
+        return;
+      }
+      if (STK.wait) { STK.wait.disconnect(); STK.wait = null; }
       if (STK.chart) { STK.chart.remove(); STK.chart = null; }
       if (STK.rsi) { STK.rsi.remove(); STK.rsi = null; }
       const opts = {
@@ -136,7 +150,16 @@ function stock() {
       if (mk.length > 60) for (const x of mk) if (x.text === "BUY" || x.text === "SELL" || x.text.startsWith("B")) x.text = "";  // เยอะเกิน → เหลือแค่สัญลักษณ์
       candle.setMarkers(mk);
       ch.timeScale().fitContent();
-      ch.subscribeClick((p) => { if (p && p.time) this.explainDay(typeof p.time === "string" ? p.time : `${p.time.year}-${String(p.time.month).padStart(2, "0")}-${String(p.time.day).padStart(2, "0")}`); });
+      // คลิกวันไหนก็ได้ → เหตุผลวันนั้น: ฟัง click ของ DOM แบบ capture ที่กล่องกราฟ + แปลงตำแหน่ง x เป็นวันที่
+      // (subscribeClick ของ lightweight-charts ไม่ยิงเมื่อคลิกนอกแท่งข้อมูล → ฟัง DOM เอง)
+      if (STK.onClick) el.removeEventListener("click", STK.onClick, true);
+      STK.onClick = (ev) => {
+        // coordinateToTime คืน null ได้ (ทดสอบแล้วหลังซูมไปวันที่ด้วย focus) → ใช้ logical index ของแท่ง + วันที่จาก bars ของเราเอง
+        const lg = STK.chart && STK.chart.timeScale().coordinateToLogical(ev.clientX - el.getBoundingClientRect().left);
+        if (lg === null || lg === undefined || !dates.length) return;
+        this.explainDay(dates[Math.min(dates.length - 1, Math.max(0, Math.round(lg)))]);
+      };
+      el.addEventListener("click", STK.onClick, true);
       ch.subscribeCrosshairMove((p) => { if (p && p.time) this.setHover(typeof p.time === "string" ? p.time : `${p.time.year}-${String(p.time.month).padStart(2, "0")}-${String(p.time.day).padStart(2, "0")}`); });
       if (this.layers.rsi) {
         const r = LightweightCharts.createChart(this.$refs.rsi, { ...opts, height: this.$refs.rsi.clientHeight || 130, width: this.$refs.rsi.clientWidth });

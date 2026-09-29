@@ -237,8 +237,14 @@
 - `conditions/condition_fixed.py` = condition ของผู้ใช้ + แก้ `_news()` (อ่าน label/score ก่อน class) + `ctx.note` ทุกทางแยก
 - test `tests/test_decision_log.py` 4 ข้อ: ข่าว KR -2 (2021-09-15) → condition_fixed ขายครึ่งวันนั้น (weight 5% → 2.5%); บันทึกวันนั้น: ctx.b label -2, summary "ลดเป้า", note "ข่าว -2 → ขายครึ่งทันที", state cut.done = False; วันถัดไป note "_is_reduced=True"; วันเสาร์ → วันทำการก่อนหน้า; ผลเก่า → available False
 
+## N6 — Experiment 1 (BMF20 Top-20 · หุ้นที่มีข่าว · B oracle · condition_fixed) ✅
+- import `model_b_IT_news.csv` ใหม่ (463 แถว, hindsight) → รันผ่านหน้าเว็บ + บันทึก `20260929-143958_experiment-1-bmf20-top-20-b-oracle-condi`
+- หลักฐาน: funnel ผ่าน A = 20 ทุกวัน (504/504) ถือ 20; `a_ranking_n` = 20 ทั้ง 2 รอบ; ข่าว -2 → ขายครึ่ง 9 ครั้ง (เช่น META 2022-02-02 เป้า 5% → 2.5%); ผล 1.11% / SPY 6.05% / EW scope 15.73% (experiments/log.md) — DECISIONS #29
+- แก้แผงคลิกวันที่ (N5): กราฟถูกสร้างกว้าง 0 ตอนหน้ายังซ่อน → รอ ResizeObserver ก่อนวาด; คลิกจริง 15/15; ui_smoke ตรวจคลิก → แผงขึ้น
+- screenshot: `N6_scope_xlk_news_warning.jpg`, `N6_experiment1_results.jpg`, `N5_explain_panel.jpg` (คลิกเมาส์จริงที่ 2022-02-02)
+
 # สรุปรวม
-**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน)** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
+**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน) + N0–N6** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
 **ตรวจแล้วด้วยการรันจริง**
 - signal Model A ทั้ง 5 กฎ reproduce NAV ของ backtest เดิมเป๊ะ (≤ 6e-15); engine ของ sandbox ตาม NAV ของ A1 (corr รายวัน 0.99999)

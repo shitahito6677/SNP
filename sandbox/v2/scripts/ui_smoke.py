@@ -75,9 +75,13 @@ def main():
 
             # คลิก trade แรก → หน้าหุ้น
             pg.locator("table.t tbody tr td a").first.click()
-            pg.wait_for_function("() => [...document.querySelectorAll('.stock-chart canvas')].some(c => c.width > 100)", timeout=20000)  # canvas ตัวแรกของ lightweight-charts กว้าง 0 เสมอ
+            # N6: กราฟต้องถูกสร้างตามขนาดจริง (เดิมบางครั้งสร้างตอนหน้ายังซ่อน → กว้าง 0 → มองไม่เห็น + คลิกวันที่ไม่ได้)
+            pg.wait_for_function("() => STK.chart && STK.chart.options().width > 100 && STK.chart.timeScale().getVisibleLogicalRange()", timeout=20000)
             pg.wait_for_timeout(1500)
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "06_stock.jpg"), full_page=True)
+            box = pg.locator(".stock-chart").bounding_box()  # คลิกเมาส์จริงกลางกราฟ → panel เหตุผลรายวันต้องขึ้น
+            pg.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
+            pg.wait_for_selector("#explain-panel", state="visible", timeout=10000)
 
             # รันอีกครั้ง (hold_SPY) เพื่อใช้ compare
             job = requests.post(base + "/api/jobs", json={"name": "UI smoke SPY", "condition": {"id": "hold_SPY"}}).json()["id"]
