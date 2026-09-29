@@ -94,6 +94,8 @@
       <span class="light" :class="scopeProblem() ? 'none' : 'ready'" style="width:8px;height:8px"></span>
       <span id="scope-summary" x-text="scopeSummary()"></span>
     </div>
+    <div class="warn orange" id="scope-news-warn" x-show="scopeNews?.n_outside" style="margin-top:8px"><b>ข่าวนอกขอบเขต</b>
+      <span><span x-text="outsideText()"></span> · <a :href="outsideLink()">ดูรายชื่อข่าวทั้งหมด →</a></span></div>
   </div>
 
   <!-- กล่อง A B C + เงื่อนไข -->
@@ -645,7 +647,8 @@
                     <option value="" :selected="!r.dup_action">— เลือก —</option><option value="skip">ข้าม (ไม่นำเข้า)</option>
                     <option value="replace">แทนที่ข่าวเดิม</option><option value="keep_both">เก็บทั้งคู่ (คนละข่าว)</option></select>
                 </div></template></td>
-              <td><input :value="r.tickers.join(', ')" @change="r.tickers = $event.target.value.split(/[ ,;]+/).filter(Boolean).map(x=>x.toUpperCase())" style="width:120px"><div class="dim" style="font-size:11px" x-text="r.ticker_source + (r.macro.suggest ? ' · มหภาค?' : '')"></div></td>
+              <td><input :value="r.tickers.join(', ')" @change="r.tickers = $event.target.value.split(/[ ,;]+/).filter(Boolean).map(x=>x.toUpperCase())" style="width:120px"><div class="dim" style="font-size:11px" x-text="r.tickers.map(t => t + ' = ' + tickerInfo(t).sector).join(', ')"></div>
+                <div class="dim" style="font-size:11px" x-text="r.ticker_source + (r.macro.suggest ? ' · มหภาค?' : '')"></div></td>
               <td><select class="label-sel" :class="labelCls(r.label)" x-model.number="r.label">
                   <template x-for="[v, t] in newsLabels()" :key="v"><option :value="v" :selected="r.label===v" x-text="(v>0?'+':'') + v + ' ' + t"></option></template></select>
                 <div class="dim mono" style="font-size:11px" x-show="r.label_raw !== null && r.label_raw !== undefined && r.label_raw !== r.label" x-text="'ค่าในไฟล์: ' + r.label_raw"></div></td>
@@ -670,6 +673,10 @@
             </div></template>
           </div></div>
       </template>
+      <div class="warn orange" id="news-scope-warn" x-show="scopeNews?.n_outside" style="margin-bottom:8px"><b>ข่าวนอกขอบเขต</b>
+        <span x-text="scopeNews ? `ขอบเขตที่เลือกในหน้า Pipeline คือ ${scopeNews.label}: มีข่าว ${scopeNews.n_outside} รายการเป็นของหุ้นนอกขอบเขต (${scopeNews.outside.map(x => x.ticker + ' = ' + x.sector).join(', ')}) จะไม่ถูกใช้ในการทดสอบรอบนั้น` : ''"></span></div>
+      <div class="dim" x-show="nf.tickers" style="font-size:12px;margin-bottom:6px"><span x-text="'แสดงเฉพาะข่าวของ: ' + nf.tickers"></span>
+        <a href="#" @click.prevent="nf.tickers=''; refresh()">(ล้าง)</a></div>
       <div class="news-filter row" id="news-filter">
         <input placeholder="ticker" x-model="nf.ticker" @input="nfChanged()" style="width:90px">
         <select x-model="nf.sector" @change="refresh()"><option value="">ทุก sector</option><template x-for="e in etfs()" :key="e"><option :value="e" x-text="e"></option></template></select>
@@ -688,7 +695,8 @@
         <tbody><template x-for="n in list" :key="n.id"><tr :data-news="n.id">
           <td><input type="checkbox" class="news-sel" :checked="selAll || sel.includes(n.id)" @change="toggleSel(n.id)"></td>
           <td class="mono" x-text="n.effective_date"></td><td x-text="n.headline"></td>
-          <td><div class="row" style="gap:3px"><template x-for="t in n.tickers"><a class="chip B" :href="'#/stock/' + t" x-text="t"></a></template><template x-for="e in n.sectors"><span class="chip C" x-text="e"></span></template></div></td>
+          <td><div class="row" style="gap:3px"><template x-for="t in n.tickers"><a class="chip B ticker-sector" :href="'#/stock/' + t" :title="tickerInfo(t).sector"
+            :style="`border-color:${SECTOR_COLORS[tickerInfo(t).sector] || '#64748B'}`" x-text="t + ' · ' + (tickerInfo(t).etf || tickerInfo(t).sector)"></a></template><template x-for="e in n.sectors"><span class="chip C" x-text="e"></span></template></div></td>
           <td class="mono" :class="labelCls(newsLabelOf(n))" x-text="labelTag(newsLabelOf(n))"></td>
           <td><span class="badge" :class="{hindsight:'oracle', real_time:'manual', unknown:'stub'}[n.label_method]" :title="(methodList().find(x=>x[0]===n.label_method)||['',''])[1]" x-text="{hindsight:'hindsight', real_time:'real-time', unknown:'?'}[n.label_method]"></span></td>
           <td><button class="sm ghost" @click="del(n)">ลบ</button></td></tr></template></tbody></table></div>

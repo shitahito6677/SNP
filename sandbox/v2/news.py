@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import collections
 import csv
 import hashlib
 import io
@@ -321,11 +322,29 @@ def unknown_count(tickers=None, sectors=None) -> int:
     return n
 
 
+def scope_check(members) -> dict:
+    """ข่าว manual ที่ ticker อยู่นอกขอบเขต (members = รายชื่อหุ้นใน scope; None = ทั้งตลาด) — แยกตาม sector จริง (GICS)"""
+    man = prices.manifest()["tickers"]
+    inside, outside = collections.Counter(), collections.Counter()
+    mem = None if members is None else set(members)
+    for r in _load():
+        if r.get("deleted"):
+            continue
+        for t in r.get("tickers") or []:
+            (inside if mem is None or t in mem else outside)[t] += 1
+    def info(t, n):
+        sec = (man.get(t) or {}).get("sector") or "Unknown"
+        return {"ticker": t, "n": n, "sector": sec, "etf": cfg.SECTOR_ETFS.get(sec)}
+    return {"n_inside": sum(inside.values()), "n_outside": sum(outside.values()),
+            "outside": [info(t, n) for t, n in sorted(outside.items(), key=lambda kv: (-kv[1], kv[0]))]}
+
+
 def filter_news(f: dict | None = None, rows=None) -> list:
     """ข่าวที่ยังไม่ถูกลบตามตัวกรอง (ใหม่สุดก่อน) — ticker, sector (ETF: ข่าวมหภาคของ sector นั้น หรือข่าวหุ้นใน sector นั้น),
     date_from/date_to (วันที่ข่าว), method (hindsight / real_time / unknown)"""
     f = f or {}
     tk = (f.get("ticker") or "").strip().upper().replace(".", "-")
+    tks = {x.strip().upper().replace(".", "-") for x in (f.get("tickers") or "").split(",") if x.strip()}
     sec = (f.get("sector") or "").strip().upper()
     d0, d1, m = f.get("date_from") or "", f.get("date_to") or "", f.get("method") or ""
     man = prices.manifest()["tickers"] if sec else {}
@@ -334,6 +353,8 @@ def filter_news(f: dict | None = None, rows=None) -> list:
         if r.get("deleted"):
             continue
         if tk and tk not in (r.get("tickers") or []):
+            continue
+        if tks and not tks & set(r.get("tickers") or []):
             continue
         if sec and sec not in (r.get("sectors") or []) and not any(
                 cfg.SECTOR_ETFS.get((man.get(t) or {}).get("sector") or "") == sec for t in r.get("tickers") or []):

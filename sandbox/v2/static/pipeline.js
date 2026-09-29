@@ -14,7 +14,7 @@ function pipeline() {
       B: { mode: "off", version: null },
       C: { mode: "off", version: null },
     },
-    scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null, boxStats: null, warmup: null, effective: null, stale: false,
+    scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null, boxStats: null, warmup: null, effective: null, stale: false, scopeNews: null,
     condId: "equal_weight_A", condDesc: "", source: "", dirty: false,
     run: { start: "", end: "", capital: 1000000, costPct: 0.1, heldOut: false, confirm: "", includeManual: false, name: "" },
     warnings: [], error: "", validation: null, validating: false,
@@ -63,6 +63,19 @@ function pipeline() {
     vmeta(m) { return this.versions(m).find((v) => v.id === this.stages[m].version) || null; },
     setMode(m, mode) { this.stages[m].mode = mode; this.changed(); this.$nextTick(() => this.drawWires()); },
     changed() { clearTimeout(this._pf); this._pf = setTimeout(() => this.preflight(), 350); },
+    async checkScopeNews() {  // ข่าว manual ของหุ้นนอกขอบเขตที่เลือก (แจ้งทั้งหน้านี้และหน้าเพิ่มข่าว)
+      const scope = { mode: this.scope.mode, sectors: [...this.scope.sectors], tickers: [...this.scope.tickers] };
+      Alpine.store("app").pipelineScope = scope;
+      if (scope.mode === "all") { this.scopeNews = null; return; }
+      try { this.scopeNews = await api("/api/news/scope_check", { method: "POST", body: { scope } }); } catch (e) { this.scopeNews = null; }
+    },
+    outsideLink() { return "#/news?tickers=" + encodeURIComponent((this.scopeNews?.outside || []).map((x) => x.ticker).join(",")); },
+    outsideText() {
+      const s = this.scopeNews;
+      if (!s?.n_outside) return "";
+      const eg = s.outside.slice(0, 5).map((x) => `${x.ticker} (${x.sector}${x.etf ? " · " + x.etf : ""})`).join(", ");
+      return `มีข่าว ${s.n_outside} รายการเป็นของหุ้นนอกขอบเขตที่เลือก (${s.label}) เช่น ${eg}${s.outside.length > 5 ? " …" : ""} — จะไม่ถูกใช้ในการทดสอบรอบนี้ · ในขอบเขต ${s.n_inside} รายการ`;
+    },
 
     statusOf(m) {
       const v = this.vmeta(m);
@@ -106,6 +119,7 @@ function pipeline() {
         const r = await api("/api/preflight", { method: "POST", body });
         this.warnings = r.warnings; this.error = ""; this.scopeInfo = r.scope; this.boxStats = r.box_stats || null; this.warmup = r.warmup || null;
         this.effective = r.effective || null;
+        this.checkScopeNews();
       } catch (e) { this.error = e.message; this.scopeInfo = null; this.boxStats = null; this.effective = null; if (e.data?.kind === "stale_page") this.stale = true; }
     },
     /* ตัวเลขบนกล่อง: หลังรัน = เฉลี่ยต่อวันจาก funnel · ก่อนรัน = ณ วันสุดท้ายของช่วง (จาก preflight) — ไว้ดู ไม่ใช่ไว้กด */
@@ -162,13 +176,14 @@ function pipeline() {
       if (/(^|: )ORACLE:/.test(w)) return "ORACLE";
       if (w.startsWith("LEGACY")) return "LEGACY";
       if (/(^|: )MANUAL:/.test(w)) return "MANUAL";
+      if (w.startsWith("SCOPE-NEWS")) return "ข่าวนอกขอบเขต";
       if (/STUB/.test(w)) return "STUB";
       if (/NEGATIVE|0\/216/.test(w)) return "NEGATIVE";
       if (/ไม่มีข้อมูล|เหตุการณ์แรก|เหตุการณ์สุดท้าย|รอบแรก/.test(w)) return "COVERAGE";
       if (/test set|look-ahead/.test(w)) return "CAVEAT";
       return "NOTE";
     },
-    warnClass(w) { return { STUB: "gray", NEGATIVE: "orange", CAVEAT: "orange", COVERAGE: "", SURVIVORSHIP: "", NOTE: "gray", ORACLE: "oracle", LEGACY: "orange", MANUAL: "gray", "โหมดทดสอบ": "scoped" }[this.warnTag(w)]; },
+    warnClass(w) { return { STUB: "gray", NEGATIVE: "orange", CAVEAT: "orange", COVERAGE: "", SURVIVORSHIP: "", NOTE: "gray", ORACLE: "oracle", LEGACY: "orange", MANUAL: "gray", "โหมดทดสอบ": "scoped", "ข่าวนอกขอบเขต": "orange" }[this.warnTag(w)]; },
     scopedA() { return this.stages.A.mode === "on" && this.stages.A.ranking !== "global"; },
     defaultN() { return Math.max(1, Math.round(this.vmeta("A")?.coverage?.avg_selected || 20)); },  // จำนวนที่กฎเลือกจริงต่อรอบ
     fixedN() { return isNum(this.stages.A.n) && this.stages.A.n >= 1 ? Math.round(this.stages.A.n) : this.defaultN(); },

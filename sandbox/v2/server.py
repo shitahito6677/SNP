@@ -343,12 +343,22 @@ def create_app() -> Flask:
     def api_news_list():
         """ไม่มีตัวกรอง = ข่าวล่าสุด 300 รายการ (list เดิม) · มีตัวกรอง (ticker/sector/date_from/date_to/method) = {rows, total}"""
         from sandbox.v2 import news
-        f = {k: request.args.get(k) for k in ("ticker", "sector", "date_from", "date_to", "method") if request.args.get(k)}
+        f = {k: request.args.get(k) for k in ("ticker", "tickers", "sector", "date_from", "date_to", "method") if request.args.get(k)}
         if not f and not request.args.get("with_total"):
             return jsonify(news.list_news())
         rows = news.filter_news(f)
         limit = min(int(request.args.get("limit", 500)), 5000)
         return jsonify({"total": len(rows), "rows": [dict(r, label=news.label_of(r), label_method=news.label_method_of(r)) for r in rows[:limit]]})
+
+    @app.post("/api/news/scope_check")
+    def api_news_scope_check():
+        """ข่าวที่หุ้นอยู่นอกขอบเขตที่กำลังเลือกทดสอบ (เช่น META/NFLX/GOOGL = Communication Services ไม่ใช่ XLK)"""
+        from sandbox.v2 import engine, news
+        try:
+            sc = engine.normalize_scope((request.get_json(force=True, silent=True) or {}).get("scope"))
+        except engine.ConfigError as e:
+            return jsonify({"error": str(e)}), 400
+        return jsonify(dict(news.scope_check(engine.scope_members(sc)), label=engine.scope_label(sc)))
 
     @app.get("/api/news/methods")
     def api_news_methods():

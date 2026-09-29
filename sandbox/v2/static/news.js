@@ -5,7 +5,7 @@ const NEWS = { charts: {} };  // chart object นอก Alpine reactive state
 
 function news() {
   return {
-    nf: { ticker: "", sector: "", date_from: "", date_to: "", method: "" }, sel: [], selAll: false, total: 0, bulkMethod: "real_time", _nf: null,
+    scopeNews: null, nf: { tickers: "", ticker: "", sector: "", date_from: "", date_to: "", method: "" }, sel: [], selAll: false, total: 0, bulkMethod: "real_time", _nf: null,
     headline: "", body: "", date: "", label: 0, labelMethod: "", csvMethod: "", methods: null, csvResult: null, tickers: [], ignored: [], sectors: [], macroOn: false,
     det: null, dateInfo: null, mq: null, mStart: 0, mi: 0, list: [], csv: null, csvErr: "", csvText: "", csvName: "", dragOver: false, _t: null,
 
@@ -17,9 +17,16 @@ function news() {
     async load() {
       if (!this.date) this.date = Alpine.store("app").meta.config.default_end;
       const q = Alpine.store("app").route.query || {};  // ลิงก์จากหน้าหุ้น เช่น #/news?method=unknown&ticker=MU
-      for (const k of ["ticker", "sector", "date_from", "date_to", "method"]) if (q[k] !== undefined) this.nf[k] = q[k];
+      for (const k of ["ticker", "tickers", "sector", "date_from", "date_to", "method"]) if (q[k] !== undefined) this.nf[k] = q[k];
       await this.refresh();
+      await this.checkScope();
     },
+    async checkScope() {  // ขอบเขตที่กำลังเลือกทดสอบในหน้า Pipeline → ข่าวที่หุ้นอยู่นอกขอบเขต
+      const sc = Alpine.store("app").pipelineScope;
+      if (!sc || sc.mode === "all") { this.scopeNews = null; return; }
+      try { this.scopeNews = await api("/api/news/scope_check", { method: "POST", body: { scope: sc } }); } catch (e) { this.scopeNews = null; }
+    },
+    tickerInfo(t) { const x = (Alpine.store("app").meta?.tickers || []).find((y) => y.t === t); return x ? { sector: x.sector, etf: Alpine.store("app").meta.sector_etfs[x.sector] } : { sector: "Unknown" }; },
     async refresh() {
       const qs = new URLSearchParams({ with_total: 1, limit: 500 });
       for (const [k, v] of Object.entries(this.nf)) if (v) qs.set(k, v);

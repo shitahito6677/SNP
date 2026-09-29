@@ -226,6 +226,12 @@
 - test (+3 ใน `tests/test_csv_dedupe.py`) + อัปเดต test เดิมให้เลือกวิธี label; ผ่านเว็บจริงกับ `model_b_IT_news.csv`: ค่าเริ่มต้นว่าง + ยืนยันกดไม่ได้, แนะนำ hindsight "15 จาก 463 แถว" พร้อมตัวอย่าง, เลือก hindsight → ทุกแถว hindsight + กดได้, รายแถว → กดไม่ได้จนเลือกครบ (ไม่ได้ import) — screenshot `screenshots/N3_method_required.jpg`
 - tests รวม **145 ผ่าน**
 
+## N4 — เตือนข่าวที่หุ้นอยู่นอกขอบเขตที่เลือก ✅
+- `news.scope_check()` + API `/api/news/scope_check`; preflight เตือน "SCOPE-NEWS: มีข่าว N รายการเป็นของหุ้นนอกขอบเขตที่เลือก … META (Communication Services) …" เมื่อใช้ข่าว manual (B manual-labels / toggle) และ scope ไม่ใช่ทั้งตลาด; หน้า Pipeline มีแถบเตือน + ลิงก์ "ดูรายชื่อข่าวทั้งหมด" (`#/news?tickers=…`); หน้าเพิ่มข่าวเตือนตามขอบเขตที่เลือกในหน้า Pipeline
+- หน้าเพิ่มข่าว: ticker ในรายการข่าวแสดง sector ETF กำกับ (`META · XLC`) + preview CSV แสดง sector ของทุก ticker
+- เลือกหลาย sector พร้อมกันได้อยู่แล้ว (F3) — test ยืนยัน XLK + XLC ไม่มีข่าวนอกขอบเขต
+- test `tests/test_scope_news.py` 4 ข้อ (sector GICS จริง, นับนอก/ใน, preflight มี/ไม่มีคำเตือน, ลิงก์รายชื่อ)
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน)** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

@@ -289,6 +289,15 @@ def coverage_warnings(conf: dict) -> list:
     start, end = pd.Timestamp(conf["start"]), pd.Timestamp(conf["end"])
     out = []
     n_unknown = _manual_unknown(conf)
+    uses_news = conf["include_manual"] or str(conf["stages"]["B"].get("version") or "").startswith("B:manual-labels")
+    members = scope_members(conf.get("scope"))
+    if uses_news and members is not None:
+        from sandbox.v2.news import scope_check
+        chk = scope_check(members)
+        if chk["n_outside"]:
+            eg = ", ".join(f"{x['ticker']} ({x['sector']})" for x in chk["outside"][:6]) + (" …" if len(chk["outside"]) > 6 else "")
+            out.append(f"SCOPE-NEWS: มีข่าว {chk['n_outside']} รายการเป็นของหุ้นนอกขอบเขตที่เลือก ({scope_label(conf['scope'])}) — {eg} "
+                       f"จะไม่ถูกใช้ในการทดสอบรอบนี้ (ข่าวในขอบเขต {chk['n_inside']} รายการ)")
     if n_unknown:
         out.append(f"MANUAL: มีข่าว {n_unknown} รายการที่ยังไม่ได้ระบุว่ารู้ผลล่วงหน้าหรือไม่ (label_method = unknown) จึงยังไม่ถูกใช้ในทั้ง "
                    "B-manual และ B-oracle — ctx.b ของหุ้นเหล่านั้นจะเป็น applicable False · ระบุได้ที่หน้าเพิ่มข่าว (ตัวกรอง \"ยังไม่ระบุ\")")
