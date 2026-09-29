@@ -52,3 +52,4 @@ model_B/export/manual-labels*/
 sandbox/v2/static/logos/
 sandbox/v2/data/manual_news.jsonl.bak-*
 sandbox/v2/debug/
+sandbox/v2/backups/

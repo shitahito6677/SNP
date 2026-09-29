@@ -97,6 +97,24 @@ def create_app() -> Flask:
         snap["conditions"] = condition_registry.list_conditions()
         return jsonify(snap)
 
+    @app.get("/api/workspace")
+    def api_workspace_plan():
+        from sandbox.v2 import workspace
+        return jsonify(dict(workspace.plan(), confirm_text=workspace.CONFIRM_TEXT))
+
+    @app.post("/api/workspace/reset")
+    def api_workspace_reset():
+        """ล้างข้อมูลทดลอง — backup อัตโนมัติก่อนลบ (ต้องพิมพ์ยืนยัน)"""
+        from sandbox.v2 import workspace
+        b = request.get_json(force=True, silent=True) or {}
+        try:
+            res = workspace.reset(b.get("confirm", ""))
+        except PermissionError as e:
+            return jsonify({"error": str(e)}), 400
+        rebuild_manual_labels()
+        condition_registry.list_conditions()
+        return jsonify(res)
+
     @app.post("/api/registry/rescan")
     def api_rescan():
         rebuild_manual_labels()

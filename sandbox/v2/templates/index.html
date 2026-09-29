@@ -688,7 +688,8 @@
 <!-- ===================== REGISTRY ===================== -->
 <section x-show="$store.app.route.name==='registry'" x-data>
   <div class="page-head"><div><h1>Model Registry</h1><p>เพิ่ม version = สร้างโฟลเดอร์ + manifest.json + signals → กด Rescan (ไม่ต้องแก้โค้ดเว็บ) · ดู <span class="mono">model_B/export/README.md</span></p></div>
-    <button @click="$store.app.rescan()">↻ Rescan</button></div>
+    <div class="row"><button @click="$store.app.rescan()">↻ Rescan</button>
+      <button class="danger" id="reset-workspace" @click="$store.app.resetWorkspace()">ล้างข้อมูลทดลอง (backup อัตโนมัติ)</button></div></div>
   <div class="grid g3">
     <template x-for="m in ['A','B','C']"><div class="panel stack">
       <h2 x-text="'Model ' + m"></h2>

@@ -208,6 +208,13 @@
 - `scripts/diagnose_run.py` (อ่านอย่างเดียว): config ที่ server ได้รับจริงจาก jobs.db, log DEBUG ของ `scoped_select` (logger `sandbox.v2.engine`), ctx.b ดิบเทียบ `_news()` ของ condition ผู้ใช้, sector ของหุ้นที่มีข่าว → `debug/N0_evidence.md` (gitignored)
 - ผล (DECISIONS #25): (1) โหมด Top-N ไม่เคยถูกใช้ในเคสผู้ใช้ — ทุก run ที่ได้ ~1 ตัวคือโหมดทั้งตลาด (bmf20 เลือก XLK 0 / 2 ตัวต่อรอบ); Top-N ทำงานถูก (20) (2) `_news()` อ่าน `class` ก่อน `label` → ±2 กลายเป็น ±1 กฎ ±2 ไม่เคยทำงาน (3) sector ถูกต้อง ข่าวนอก XLK มี 13/463
 
+## N1 — ล้างข้อมูลทดลอง (backup ก่อนเสมอ) ✅
+- `workspace.py` + `scripts/reset_workspace.py` (แสดงแผน / `--yes` / `--restore <dir>`) + ปุ่ม "ล้างข้อมูลทดลอง (backup อัตโนมัติ)" ในหน้า Registry (ต้องพิมพ์ "ล้างข้อมูลทดลอง") + API `/api/workspace[/reset]`
+- backup: `sandbox/v2/backups/<ts>/` (gitignored) = `manual_news.jsonl` (กู้คืนตรงทุก field) + `manual_news_backup_<ts>.csv` + `conditions_backup_<ts>/` + `experiments_backup_<ts>/` + `BACKUP.json`; ตรวจว่า backup ครบก่อนลบ
+- ไม่แตะ: export Model A/C, ราคา, stub, template condition ของระบบ
+- รันจริง: backup `sandbox/v2/backups/20260929-142129/` = ข่าว 465 แถว (463 ที่ใช้งาน), condition 3 ไฟล์ (equal_weight_A_v2, _v2_v2, _v2_v2_v2), ผลการทดลอง 3 รายการ → หลังล้าง ข่าว 0 · condition ผู้ใช้ 0 · ผลที่บันทึก 0
+- test `tests/test_workspace_reset.py`: ต้องพิมพ์ยืนยัน, backup ครบ (ข่าวตรงไบต์), template ระบบยังอยู่, กู้คืนได้
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน)** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

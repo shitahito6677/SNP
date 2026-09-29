@@ -133,6 +133,17 @@ document.addEventListener("alpine:init", () => {
       window.dispatchEvent(new CustomEvent("route", { detail: this.route }));
       window.scrollTo(0, 0);
     },
+    async resetWorkspace() {
+      const p = await api("/api/workspace");
+      const typed = prompt(`ล้างข้อมูลทดลอง — จะ backup ไว้ที่ sandbox/v2/backups/ ก่อนลบ:\n• ข่าว manual ${p.news} รายการ\n• condition ที่เพิ่มเอง ${p.conditions.length} ไฟล์ ${p.conditions.join(", ")}\n• ผลการทดลองที่บันทึก ${p.experiments.length} รายการ\nไม่แตะ: ${p.keeps}\n\nพิมพ์ "${p.confirm_text}" เพื่อยืนยัน`);
+      if (typed === null) return;
+      try {
+        const r = await api("/api/workspace/reset", { method: "POST", body: { confirm: typed } });
+        this.toast(`ล้างแล้ว — backup อยู่ที่ ${r.backup}`, "ok", 9000);
+        await this.rescan();
+        window.dispatchEvent(new CustomEvent("news-changed"));
+      } catch (e) { this.toast(e.message, "err", 6000); }
+    },
     async rescan() {
       this.registry = await api("/api/registry/rescan", { method: "POST" });
       const n = this.registry.invalid.length;
