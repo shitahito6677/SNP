@@ -243,6 +243,10 @@
 - แก้แผงคลิกวันที่ (N5): กราฟถูกสร้างกว้าง 0 ตอนหน้ายังซ่อน → รอ ResizeObserver ก่อนวาด; คลิกจริง 15/15; ui_smoke ตรวจคลิก → แผงขึ้น
 - screenshot: `N6_scope_xlk_news_warning.jpg`, `N6_experiment1_results.jpg`, `N5_explain_panel.jpg` (คลิกเมาส์จริงที่ 2022-02-02)
 
+## Q0 — สาเหตุจริงของ SELL/BUY บนหุ้นที่ไม่มีข่าวร้าย ✅
+- `trade_causes.py` (จัดชนิด trade จากบันทึกตอนรัน) + `scripts/diagnose_trades.py` (อ่านอย่างเดียว)
+- สมมติฐาน "ถูกดึงเงินคืน" ผิดเป็นส่วนใหญ่: สาเหตุหลัก = engine ปรับทุกตัวกลับเป้าเมื่อเป้าตัวใดตัวหนึ่งเปลี่ยน (NOW: SELL 3 = รายปี 1 + ปรับกลับเป้า 2, ดึงคืน 0) — DECISIONS #30
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน) + N0–N6** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
