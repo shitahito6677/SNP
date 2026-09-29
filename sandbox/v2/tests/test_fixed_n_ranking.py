@@ -71,3 +71,47 @@ def test_warning_texts_in_ui():
     assert engine.FIXED_N_WARNING == FIXED_WARN and FIXED_WARN in js
     for x in ('value="scoped_fixed_n"', 'id="a-fixed-n"', "rankingWarning(stages.A.ranking)", "scopedText()", "rankingWarning(d.a_ranking)"):
         assert x in html, x
+
+
+# ------------------------------------------------------------------ N2 regression (จากสาเหตุจริงที่พบใน N0)
+
+def test_regression_scope_entirely_outside_global_selection(tmp_path):
+    """รอบ 2021-06-30: bmf20 ทั้งตลาดเลือกหุ้น XLK 0 ตัว → Top-N 20 ใน XLK ต้องได้ 20 ตัวทุกวันของรอบนั้น"""
+    sig = registry.signals(BMFW)
+    mem = set(engine.scope_members(XLK))
+    g = sig[(pd.to_datetime(sig["date"]) == pd.Timestamp("2021-06-30")) & sig["ticker"].isin(mem)]
+    assert int((g["class"] == "selected").sum()) == 0 and int(g["applicable"].sum()) >= 20
+    for ranking, want in ((None, 0), ("scoped_fixed_n", 20)):
+        a = {"mode": "on", "version": BMFW, **({"ranking": ranking, "n": 20} if ranking else {})}
+        conf, _ = engine.normalize_config({"start": "2021-06-30", "end": "2022-06-29", "stages": {"A": a}, "scope": XLK,
+                                           "condition": {"id": "equal_weight_A"}})
+        engine.run(conf, tmp_path / str(ranking), log=lambda m: None)
+        f = pd.read_parquet(tmp_path / str(ranking) / "funnel.parquet")
+        assert set(f["after_A"]) == {want}, (ranking, f["after_A"].value_counts().to_dict())
+
+
+def test_regression_picks_ignore_global_class():
+    """ทุกตัวใน scope มีคะแนนต่ำกว่า cutoff ของทั้งตลาด (กฎเลือก top 4%) → ยังได้ N ตัวดีที่สุดใน scope; เปลี่ยน class ทั้งหมดแบบสุ่มแล้วผลต้องเหมือนเดิม"""
+    import random
+    snap = {f"T{i:03d}": {"score": 100 - i, "applicable": True, "class": "selected" if i < 4 else "not_selected"} for i in range(100)}
+    snap["X_NA"] = {"score": 99.5, "applicable": False, "class": "not_applicable"}
+    scope = {f"T{i:03d}" for i in range(50, 80)} | {"X_NA"}
+    picks, info = engine.scoped_select(snap, scope, 10)
+    assert picks == [f"T{i:03d}" for i in range(50, 60)] and info["k"] == 10
+    rnd = random.Random(0)
+    shuffled = {k: dict(v, **{"class": rnd.choice(["selected", "not_selected"])}) if v["applicable"] else v for k, v in snap.items()}
+    assert engine.scoped_select(shuffled, scope, 10)[0] == picks
+
+
+def test_stale_page_is_blocked_and_page_not_cached():
+    from sandbox.v2.server import app_version, create_app
+    c = create_app().test_client()
+    r = c.get("/")
+    assert r.headers["Cache-Control"] == "no-store" and f'window.APP_VERSION = "{app_version()}"' in r.get_data(as_text=True)
+    body = {"stages": {"A": {"mode": "on", "version": BMFW, "ranking": "scoped_fixed_n", "n": 20}}, "scope": XLK, "condition": {"id": "equal_weight_A"}}
+    old = c.post("/api/preflight", json=body, headers={"X-App-Version": "old-page"})
+    assert old.status_code == 409 and old.get_json()["kind"] == "stale_page"
+    assert c.post("/api/jobs", json=body, headers={"X-App-Version": "old-page"}).status_code == 409
+    ok = c.post("/api/preflight", json=body, headers={"X-App-Version": app_version()}).get_json()
+    assert ok["effective"]["ranking"] == "scoped_fixed_n" and ok["effective"]["n"] == 20  # สิ่งที่ server จะรันจริง
+    assert c.post("/api/preflight", json=body).status_code == 200  # script/test ที่ไม่ส่ง header ยังใช้ได้

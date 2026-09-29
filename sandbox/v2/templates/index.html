@@ -9,6 +9,7 @@
 <script src="/static/vendor/lightweight-charts.js"></script>
 <script src="/static/vendor/plotly.min.js" onerror="window.__noPlotly=true"></script>
 <script src="/static/vendor/confetti.js"></script>
+<script>window.APP_VERSION = "{{ app_version }}";</script>
 <script src="/static/app.js?v={{ v }}"></script>
 <script src="/static/pipeline.js?v={{ v }}"></script>
 <script src="/static/results.js?v={{ v }}"></script>
@@ -57,6 +58,7 @@
     </div>
   </div>
 
+  <div class="warn red sticky-banner" id="stale-banner" x-show="stale"><b>ต้องรีโหลด</b><span>หน้าเว็บนี้เปิดไว้ตั้งแต่ก่อน server อัปเดต ตัวเลือกบนหน้าอาจไม่ตรงกับโค้ดปัจจุบัน — กด Ctrl/Cmd + R ก่อนรัน</span></div>
   <div class="warn scoped sticky-banner" id="scoped-banner-pipeline" x-show="scopedA()"><b>โหมดทดสอบ</b><span x-text="rankingWarning(stages.A.ranking) + (stages.A.ranking==='scoped_fixed_n' ? ' · N = ' + fixedN() : '')"></span></div>
   <!-- ขั้น 0: ขอบเขตการลงทุน (ก่อนกล่อง A) -->
   <div class="panel scope-panel" id="scope-panel">
@@ -123,7 +125,7 @@
         </div>
         <div class="field">
           <label class="lbl">version (สแกนอัตโนมัติ)</label>
-          <select class="vsel" x-model="stages[m].version" @change="changed()">
+          <select class="vsel" x-model="stages[m].version" @change="versionChanged(m)">
             <template x-for="v in versions(m)" :key="v.id">
               <option :value="v.id" x-text="`${v.short_label} · ${v.display_name}  [${badgeLabel(v.result_badge)}]`" :selected="v.id===stages[m].version"></option>
             </template>
@@ -145,7 +147,7 @@
             <option value="scoped" :selected="stages.A.ranking==='scoped'">จัดอันดับใหม่เฉพาะใน scope (คงสัดส่วนเดิม · ทดสอบ)</option>
             <option value="scoped_fixed_n" :selected="stages.A.ranking==='scoped_fixed_n'">Top-N คงที่ภายใน scope (สำหรับทดสอบ)</option></select>
           <label class="row" style="gap:6px;margin-top:6px;font-size:12.5px" x-show="stages.A.ranking==='scoped_fixed_n'">N =
-            <input id="a-fixed-n" type="number" min="1" max="5000" step="1" style="width:80px" x-model.number="stages.A.n" @change="changed()">
+            <input id="a-fixed-n" type="number" min="1" max="5000" step="1" style="width:80px" x-model.number="stages.A.n" @change="stages.A.nTouched = true; changed()">
             <span class="dim" x-text="`(กฎนี้เลือกจริง ~${defaultN()} ตัวต่อรอบในตลาดทั้งหมด · หุ้นไม่พอ = ได้เท่าที่มี)`"></span></label>
           <div class="warn scoped" x-show="scopedA()" style="margin-top:8px;font-size:12px"><b>โหมดทดสอบ</b><span x-text="rankingWarning(stages.A.ranking)"></span></div>
         </div></template>
@@ -242,6 +244,7 @@
       <div class="row"><label class="switch" style="--x:1"><input type="checkbox" x-model="run.includeManual" @change="changed()"><i></i></label>
         <span>รวมข่าว manual (badge MANUAL — ไม่ใช่ output โมเดล)</span></div>
       <div><label class="lbl">ชื่อการทดลอง (ใช้ตอนบันทึก)</label><input id="run-name" style="width:100%" x-model="run.name" placeholder="เช่น A1 + C-veto ทดลองรอบแรก"></div>
+      <div class="mono effective-line" id="effective-line" x-show="effective" x-text="effectiveText()"></div>
       <div class="runbar">
         <div class="stack">
           <div class="stepper">
@@ -256,7 +259,7 @@
           </div>
         </div>
         <div class="stack" style="text-align:center">
-          <button class="run-btn" @click="runNow()" :disabled="running" x-text="running ? 'RUNNING…' : 'RUN'"></button>
+          <button class="run-btn" @click="runNow()" :disabled="running || stale" x-text="running ? 'RUNNING…' : 'RUN'"></button>
           <button class="sm danger" x-show="running" @click="cancel()">ยกเลิก</button>
         </div>
       </div>

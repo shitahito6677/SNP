@@ -10,11 +10,11 @@ const WIRE_COLORS = ["#10B981", "#A855F7", "#F59E0B"];
 function pipeline() {
   return {
     stages: {
-      A: { mode: "on", version: null, ranking: "global", n: null },
+      A: { mode: "on", version: null, ranking: "global", n: null, nTouched: false },
       B: { mode: "off", version: null },
       C: { mode: "off", version: null },
     },
-    scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null, boxStats: null, warmup: null,
+    scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null, boxStats: null, warmup: null, effective: null, stale: false,
     condId: "equal_weight_A", condDesc: "", source: "", dirty: false,
     run: { start: "", end: "", capital: 1000000, costPct: 0.1, heldOut: false, confirm: "", includeManual: false, name: "" },
     warnings: [], error: "", validation: null, validating: false,
@@ -105,7 +105,8 @@ function pipeline() {
       try {
         const r = await api("/api/preflight", { method: "POST", body });
         this.warnings = r.warnings; this.error = ""; this.scopeInfo = r.scope; this.boxStats = r.box_stats || null; this.warmup = r.warmup || null;
-      } catch (e) { this.error = e.message; this.scopeInfo = null; this.boxStats = null; }
+        this.effective = r.effective || null;
+      } catch (e) { this.error = e.message; this.scopeInfo = null; this.boxStats = null; this.effective = null; if (e.data?.kind === "stale_page") this.stale = true; }
     },
     /* ตัวเลขบนกล่อง: หลังรัน = เฉลี่ยต่อวันจาก funnel · ก่อนรัน = ณ วันสุดท้ายของช่วง (จาก preflight) — ไว้ดู ไม่ใช่ไว้กด */
     passText(m) {
@@ -171,7 +172,18 @@ function pipeline() {
     scopedA() { return this.stages.A.mode === "on" && this.stages.A.ranking !== "global"; },
     defaultN() { return Math.max(1, Math.round(this.vmeta("A")?.coverage?.avg_selected || 20)); },  // จำนวนที่กฎเลือกจริงต่อรอบ
     fixedN() { return isNum(this.stages.A.n) && this.stages.A.n >= 1 ? Math.round(this.stages.A.n) : this.defaultN(); },
-    setRanking(v) { this.stages.A.ranking = v; if (v === "scoped_fixed_n" && !isNum(this.stages.A.n)) this.stages.A.n = this.defaultN(); this.changed(); },
+    setRanking(v) { this.stages.A.ranking = v; if (v === "scoped_fixed_n" && !this.stages.A.nTouched) this.stages.A.n = this.defaultN(); this.changed(); },
+    versionChanged(m) {  // N เริ่มต้นตามจำนวนที่กฎของ version ใหม่เลือกจริง — ถ้าผู้ใช้ยังไม่ได้แก้ N เอง
+      if (m === "A" && this.stages.A.ranking === "scoped_fixed_n" && !this.stages.A.nTouched) this.stages.A.n = this.defaultN();
+      this.changed();
+    },
+    effectiveText() {  // สิ่งที่ server รับไปแล้วจะรันจริง (จาก preflight) — ไม่ใช่สิ่งที่หน้าเว็บคิดว่าตั้งไว้
+      const e = this.effective;
+      if (!e) return "";
+      const rk = { global: "ทั้งตลาด", scoped: "จัดอันดับใน scope (คงสัดส่วน · ทดสอบ)", scoped_fixed_n: `Top-${e.n} คงที่ใน scope (ทดสอบ)` }[e.ranking] || "—";
+      const sc = e.scope === "all" ? "ทั้งตลาด" : (e.scope === "sectors" ? "sector " + e.sectors.join(" ") : "หุ้น " + e.tickers.slice(0, 6).join(" ") + (e.tickers.length > 6 ? " …" : ""));
+      return `จะรัน: A ${e.A || "ปิด"}${e.A ? " · การจัดอันดับ " + rk : ""} · ขอบเขต ${sc} · B ${e.B || "ปิด"} · C ${e.C || "ปิด"} · เงื่อนไข ${e.condition}`;
+    },
 
     /* ---------- condition / editor ---------- */
     async loadCondition() {
@@ -262,13 +274,14 @@ function pipeline() {
       if (this.scopeProblem()) { this.error = "ขอบเขต: " + this.scopeProblem(); Alpine.store("app").toast(this.error, "err", 5000); return; }
       try {
         const r = await api("/api/jobs", { method: "POST", body: this.config() });
-        this.warnings = r.warnings; this.error = "";
+        this.warnings = r.warnings; this.error = ""; this.effective = r.effective || this.effective;
         this.logs = []; this.funnel = null;
         this.job = { id: r.id, status: "queued", stage: "load", pct: 0 };
         localStorage.setItem("v2.lastJob", r.id);
         this.follow(r.id);
       } catch (e) {
         this.error = e.message;
+        if (e.data?.kind === "stale_page") this.stale = true;
         Alpine.store("app").toast(e.status === 403 ? "held-out: ต้องเปิด toggle + พิมพ์ยืนยัน" : e.message, "err", 6000);
       }
     },

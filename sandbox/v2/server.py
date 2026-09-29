@@ -69,6 +69,15 @@ def rebuild_manual_labels():
         return None
 
 
+def app_version() -> str:
+    """เวอร์ชันของหน้าเว็บที่ server นี้เสิร์ฟ = static + template + เวลา start ของ process — หน้าที่เปิดค้างจาก server รุ่นก่อนจะไม่ตรง"""
+    tpl = cfg.V2 / "templates" / "index.html"
+    return f"{_asset_version()}-{int(tpl.stat().st_mtime) if tpl.exists() else 0}-{_STARTED}"
+
+
+_STARTED = str(int(time.time()))
+
+
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static", template_folder="templates")
     app.json.ensure_ascii = False
@@ -171,6 +180,7 @@ def create_app() -> Flask:
             log.exception("box_stats failed")
             stats = {}
         return jsonify({"ok": True, "warnings": warnings, "held_out_touched": conf["held_out"]["touched"], "box_stats": stats,
+                        "effective": _effective(conf),
                         "start": conf["start"], "warmup": conf["warmup"],
                         "scope": {"mode": sc["mode"], "label": engine.scope_label(sc), "sectors": sc["sectors"], "tickers": sc["tickers"],
                                   "n_members": len(sc["members"]) if "members" in sc else None}})
@@ -182,7 +192,19 @@ def create_app() -> Flask:
         except Exception as e:  # noqa: BLE001
             return _err(e)
         job_id = jobs.submit(conf, warnings)
-        return jsonify({"id": job_id, "warnings": warnings}), 201
+        a = conf["stages"]["A"]
+        log.info("job %s: A=%s ranking=%s n=%s scope=%s B=%s C=%s cond=%s", job_id, a.get("version"), a.get("ranking", "global"), a.get("n"),
+                 conf["scope"]["mode"] + ":" + ",".join(conf["scope"]["sectors"] or conf["scope"]["tickers"]),
+                 conf["stages"]["B"].get("version"), conf["stages"]["C"].get("version"), conf["condition"].get("id") or conf["condition"].get("name"))
+        return jsonify({"id": job_id, "warnings": warnings, "effective": _effective(conf)}), 201
+
+    def _effective(conf):
+        """สิ่งที่ server จะรันจริง (แสดงให้ผู้ใช้เห็นก่อน/หลังกด RUN)"""
+        a = conf["stages"]["A"]
+        return {"A": a.get("version") if a["mode"] == "on" else None, "ranking": a.get("ranking", "global") if a["mode"] == "on" else None,
+                "n": a.get("n"), "scope": conf["scope"]["mode"], "sectors": conf["scope"]["sectors"], "tickers": conf["scope"]["tickers"],
+                "B": conf["stages"]["B"].get("version"), "C": conf["stages"]["C"].get("version"),
+                "condition": conf["condition"].get("id") or conf["condition"].get("name")}
 
     @app.get("/api/jobs")
     def api_jobs():
@@ -228,7 +250,17 @@ def create_app() -> Flask:
     # ------------------------------------------------------------ meta / stock / validate
     @app.get("/")
     def index():
-        return render_template("index.html", v=_asset_version())
+        r = app.make_response(render_template("index.html", v=_asset_version(), app_version=app_version()))
+        r.headers["Cache-Control"] = "no-store"  # ห้ามเบราว์เซอร์ใช้หน้าเก่าที่ cache ไว้ (หน้าเก่า + JS ใหม่ = ส่ง config ผิด)
+        return r
+
+    @app.before_request
+    def reject_stale_page():
+        """หน้าที่เปิดค้างไว้จาก server รุ่นก่อน (ตัวเลือกบนหน้าอาจไม่ตรงกับโค้ดปัจจุบัน) → ห้าม preflight/รัน จนกว่าจะรีโหลด"""
+        v = request.headers.get("X-App-Version")
+        if v and v != app_version() and request.method == "POST" and request.path in ("/api/jobs", "/api/preflight"):
+            return jsonify({"error": "หน้าเว็บนี้เปิดไว้ตั้งแต่ก่อน server อัปเดต — ตัวเลือกบนหน้าอาจไม่ตรงกับโค้ดปัจจุบัน "
+                                     "กรุณารีโหลดหน้า (Ctrl/Cmd + R) ก่อนรัน", "kind": "stale_page"}), 409
 
     @app.get("/api/meta")
     def api_meta():

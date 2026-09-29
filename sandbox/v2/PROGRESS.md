@@ -215,6 +215,11 @@
 - รันจริง: backup `sandbox/v2/backups/20260929-142129/` = ข่าว 465 แถว (463 ที่ใช้งาน), condition 3 ไฟล์ (equal_weight_A_v2, _v2_v2, _v2_v2_v2), ผลการทดลอง 3 รายการ → หลังล้าง ข่าว 0 · condition ผู้ใช้ 0 · ผลที่บันทึก 0
 - test `tests/test_workspace_reset.py`: ต้องพิมพ์ยืนยัน, backup ครบ (ข่าวตรงไบต์), template ระบบยังอยู่, กู้คืนได้
 
+## N2 — Top-N: ล็อกพฤติกรรมด้วย regression test + กันหน้าเว็บเก่า/โหมดไม่ตรง ✅
+- ตามหลักฐาน N0 โค้ดคัด Top-N ถูก → ไม่แก้ตรรกะ; เพิ่ม regression test (XLK รอบ 2021: ทั้งตลาด 0 → Top-N 20 ได้ 20 ทุกวัน; ชุดสังเคราะห์ต่ำกว่า cutoff + สลับ class แล้วผลเดิม) — DECISIONS #26
+- กันสาเหตุจริง: `no-store` บนหน้าเว็บ, `X-App-Version` + 409 `stale_page` + แถบ "ต้องรีโหลด" + ปิด RUN, บรรทัด "จะรัน: …" จาก preflight, log โหมด A ใน server/job, N ตาม version
+- ผ่านเว็บจริง: N 63 → 20 เมื่อเปลี่ยนเป็น bmf20 (พิมพ์เองแล้วไม่ถูกทับ), "จะรัน: A A:bmf20-weighted · การจัดอันดับ Top-15 คงที่ใน scope (ทดสอบ) · ขอบเขต sector XLK …", restart server ขณะหน้าเปิด → แถบแดง + RUN กดไม่ได้ → รีโหลด → หาย — screenshot `screenshots/N2_effective_line.jpg`
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน)** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

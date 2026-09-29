@@ -2,7 +2,7 @@
 "use strict";
 
 async function api(path, opts = {}) {
-  const o = { headers: {}, ...opts };
+  const o = { headers: { "X-App-Version": window.APP_VERSION || "" }, ...opts };
   if (o.body && typeof o.body !== "string") { o.body = JSON.stringify(o.body); o.headers["Content-Type"] = "application/json"; }
   const r = await fetch(path, o);
   let data = null;

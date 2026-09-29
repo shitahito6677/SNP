@@ -525,7 +525,8 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
                 manual_methods[r.get("label_method") or "unknown"] = manual_methods.get(r.get("label_method") or "unknown", 0) + 1
             log(f"{m}: รวมข่าว manual {len(manual)} รายการ")
         asof[m] = AsOf(st[m]["version"], manual)
-        log(f"{m}: {st[m]['version']} ({st[m]['mode']})")
+        log(f"{m}: {st[m]['version']} ({st[m]['mode']})" + (
+            f" · การจัดอันดับ {st[m].get('ranking', 'global')}" + (f" N={st[m]['n']}" if st[m].get("n") else "") if m == "A" else ""))
     label = {m: registry.get(st[m]["version"])["short_label"] for m in asof}
 
     # ---- condition
