@@ -187,6 +187,29 @@ def main():
             pg.wait_for_function("document.body.innerText.includes('แถวที่จะบันทึก')", timeout=10000)
             pg.wait_for_timeout(800)
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "10c_news_csv.jpg"), full_page=True)
+
+            # Q3: ค่าที่ตั้งในกล่อง Pipeline ต้องไม่หายเมื่อรีโหลด + สิ่งที่เลือกไว้ถูกลบ → ค่าเริ่มต้นพร้อมแจ้ง
+            P = "Alpine.$data(document.querySelector('.box.A').closest('[x-data]'))"
+            pg.goto(base + "/#/pipeline")
+            pg.wait_for_selector(".box.A", timeout=20000)
+            pg.wait_for_timeout(1500)
+            pg.evaluate(f"""() => {{ const c = {P}; c.stages.A.version = 'A:bmf20-weighted'; c.stages.A.ranking = 'scoped_fixed_n'; c.stages.A.n = 20;
+                c.stages.A.nTouched = true; c.scope = {{mode: 'sectors', sectors: ['XLK'], tickers: []}}; c.changed(); }}""")
+            pg.select_option(".box.G select", "condition_fixed")
+            pg.wait_for_selector("#cond-param-MA_DAYS", timeout=10000)
+            pg.fill("#cond-param-MA_DAYS", "100")
+            pg.wait_for_function("() => document.querySelector('#effective-line')?.innerText.includes('MA_DAYS=100')", timeout=10000)
+            want = pg.inner_text("#effective-line")
+            pg.wait_for_timeout(800)
+            pg.reload()
+            pg.wait_for_function(f"() => document.querySelector('#effective-line')?.innerText === {want!r}", timeout=20000)
+            assert pg.is_visible("#settings-restored") and "bmf20-weighted" in pg.inner_text("#settings-restored")
+            pg.evaluate("() => { const x = JSON.parse(localStorage.getItem('v2.pipelineSettings')); x.condId = 'removed_by_reset'; localStorage.setItem('v2.pipelineSettings', JSON.stringify(x)); }")
+            pg.reload()
+            pg.wait_for_selector("#settings-fallback", state="visible", timeout=20000)
+            assert "removed_by_reset" in pg.inner_text("#settings-fallback") and pg.evaluate(f"() => {P}.condId") == "equal_weight_A"
+            assert pg.evaluate(f"() => {P}.stages.A.ranking") == "scoped_fixed_n"  # ค่าอื่นที่ยังใช้ได้ไม่หาย
+            pg.evaluate("() => localStorage.removeItem('v2.pipelineSettings')")
             b.close()
     except Exception:
         print("errors so far:", *errors[:20], sep="\n  ")

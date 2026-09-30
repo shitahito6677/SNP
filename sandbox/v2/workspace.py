@@ -43,7 +43,8 @@ def plan() -> dict:
     rows = _news_rows()
     return {"news": sum(1 for r in rows if not r.get("deleted")), "news_rows_total": len(rows),
             "conditions": [p.name for p in _user_conditions()], "experiments": [p.name for p in _experiments()],
-            "keeps": "Model A/C export, ราคา, template condition ของระบบ (" + ", ".join(sorted(SYSTEM_CONDITIONS)) + ")"}
+            "keeps": "Model A/C export, ราคา, template condition ของระบบ (" + ", ".join(sorted(SYSTEM_CONDITIONS)) + "), "
+                     "ค่าที่ตั้งในกล่อง Pipeline (เก็บในเบราว์เซอร์ — ถ้า condition ที่เลือกไว้ถูกลบ หน้า Pipeline จะเปลี่ยนเป็นค่าเริ่มต้นพร้อมแจ้ง)"}
 
 
 def backup(ts: str | None = None) -> Path:

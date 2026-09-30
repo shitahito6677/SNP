@@ -6,6 +6,9 @@ const LAB = { editor: null, es: null };
 
 const STEP_LIST = [["load", "โหลดข้อมูล"], ["A", "A"], ["B", "B"], ["C", "C"], ["condition", "เงื่อนไข"], ["simulate", "จำลอง"], ["metrics", "metrics"]];
 const WIRE_COLORS = ["#10B981", "#A855F7", "#F59E0B"];
+// Q3: ค่าที่ตั้งในกล่อง Pipeline เก็บในเบราว์เซอร์ (แยกจาก "ข้อมูลทดลอง" ที่ปุ่มล้างข้อมูลลบ) — รีโหลด/รีสตาร์ท server แล้วไม่หาย
+const SETTINGS_KEY = "v2.pipelineSettings";
+const DEFAULT_COND = "equal_weight_A";
 
 function pipeline() {
   return {
@@ -15,7 +18,8 @@ function pipeline() {
       C: { mode: "off", version: null },
     },
     scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null, boxStats: null, warmup: null, effective: null, stale: false, scopeNews: null,
-    condId: "equal_weight_A", condDesc: "", source: "", dirty: false, condParams: {}, paramVals: {},
+    condId: DEFAULT_COND, condDesc: "", source: "", dirty: false, condParams: {}, paramVals: {}, paramsByCond: {},
+    settingsNotice: null, settingsFallback: [], _restoring: false, _saveT: null,
     run: { start: "", end: "", capital: 1000000, costPct: 0.1, heldOut: false, confirm: "", includeManual: false, name: "" },
     warnings: [], error: "", validation: null, validating: false,
     job: null, logs: [], running: false, funnel: null,
@@ -28,15 +32,19 @@ function pipeline() {
       window.addEventListener("resize", () => this.drawWires());
       window.addEventListener("route", (e) => { if (e.detail.name === "pipeline") setTimeout(() => { this.drawWires(); LAB.editor && LAB.editor.layout(); }, 30); });
       window.addEventListener("shortcut-run", () => this.runNow());
-      window.addEventListener("registry-updated", () => this.fixVersions());
+      window.addEventListener("registry-updated", () => { this.fixVersions(true); this.checkCondition(); });
     },
     async setup() {
       const meta = Alpine.store("app").meta;
       this.run.start = meta.config.decision_start; this.run.end = meta.config.default_end;  // เริ่มซื้อขายที่รอบ rebalance ของ A
       this.run.capital = meta.config.capital; this.run.costPct = meta.config.cost * 100;
-      this.fixVersions();
-      await this.loadCondition();
+      const saved = this.readSettings();
+      if (saved) this.applySettings(saved);
+      this.fixVersions(!!saved);
+      this.checkCondition(!!saved);
+      await this.loadCondition(saved && saved.condId === this.condId ? saved.source : null);
       this.initEditor();
+      Alpine.effect(() => { const snap = JSON.stringify(this.settingsSnapshot()); if (!this._restoring) this.saveSettings(snap); });
       await this.$nextTick();
       this.drawWires();
       this.preflight();
@@ -51,13 +59,75 @@ function pipeline() {
         } catch (e) { localStorage.removeItem("v2.lastJob"); }
       }
     },
-    fixVersions() {
+    fixVersions(report) {
       const reg = Alpine.store("app").registry;
       const pref = { A: "A:A1_r001_Q_LOWACC_overall", B: "B:stub", C: "C:rulebase-exp03" };
       for (const m of ["A", "B", "C"]) {
         const vs = reg.models[m] || [];
-        if (!vs.some((v) => v.id === this.stages[m].version)) this.stages[m].version = (vs.find((v) => v.id === pref[m]) || vs[0] || {}).id || null;
+        const was = this.stages[m].version;
+        if (!vs.some((v) => v.id === was)) {
+          this.stages[m].version = (vs.find((v) => v.id === pref[m]) || vs[0] || {}).id || null;
+          if (report && was) this.settingsFallback.push(`${m} version ที่เคยเลือก (${was}) ไม่มีใน registry แล้ว → เปลี่ยนเป็นค่าเริ่มต้น ${this.stages[m].version || "—"}`);
+        }
       }
+    },
+    checkCondition(report = true) {  // condition ที่เลือกไว้ถูกลบ (เช่น ล้างข้อมูลทดลอง) → กลับค่าเริ่มต้น + แจ้ง
+      const conds = Alpine.store("app").registry?.conditions || [];
+      if (!conds.length || conds.some((c) => c.id === this.condId)) return;
+      const was = this.condId;
+      this.condId = conds.some((c) => c.id === DEFAULT_COND) ? DEFAULT_COND : conds[0].id;
+      if (report) this.settingsFallback.push(`condition ที่เคยเลือก (${was}) ถูกล้างไปแล้ว → เปลี่ยนกลับเป็นค่าเริ่มต้น ${this.condId}`);
+      if (LAB.editor || this.source) this.loadCondition();
+    },
+    /* ---------- Q3: เก็บ/คืนค่าที่ตั้งในกล่อง Pipeline ---------- */
+    settingsSnapshot() {
+      return {
+        v: 1, stages: JSON.parse(JSON.stringify(this.stages)), scope: JSON.parse(JSON.stringify(this.scope)), condId: this.condId,
+        params: { ...JSON.parse(JSON.stringify(this.paramsByCond)), ...(Object.keys(this.condParams).length ? { [this.condId]: { ...this.paramVals } } : {}) },
+        run: { start: this.run.start, end: this.run.end, capital: this.run.capital, costPct: this.run.costPct, includeManual: this.run.includeManual },
+        dirty: this.dirty,
+      };
+    },
+    readSettings() {
+      try { const x = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null"); return x && x.v === 1 ? x : null; } catch (e) { return null; }
+    },
+    saveSettings(snap) {
+      clearTimeout(this._saveT);
+      this._saveT = setTimeout(() => {
+        try {
+          const x = JSON.parse(snap);
+          x.saved_at = new Date().toISOString();
+          x.source = x.dirty ? (LAB.editor ? LAB.editor.getValue() : this.source) : null;  // โค้ดที่แก้แต่ยังไม่บันทึก
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(x));
+        } catch (e) { /* storage เต็ม/ถูกปิด → ใช้ต่อได้ แค่ไม่จำ */ }
+      }, 300);
+    },
+    applySettings(x) {
+      this._restoring = true;
+      for (const m of ["A", "B", "C"]) if (x.stages?.[m]) {
+        const st = x.stages[m];
+        this.stages[m].mode = ["on", "off", "filter"].includes(st.mode) ? st.mode : this.stages[m].mode;
+        this.stages[m].version = st.version ?? null;
+        if (m === "A") { this.stages.A.ranking = st.ranking || "global"; this.stages.A.n = st.n ?? null; this.stages.A.nTouched = !!st.nTouched; }
+      }
+      if (x.scope) this.scope = { mode: x.scope.mode || "all", sectors: [...(x.scope.sectors || [])], tickers: [...(x.scope.tickers || [])] };
+      if (x.condId) this.condId = x.condId;
+      this.paramsByCond = x.params || {};
+      if (x.run) for (const k of ["start", "end", "capital", "costPct", "includeManual"]) if (x.run[k] !== undefined && x.run[k] !== "") this.run[k] = x.run[k];
+      this.settingsNotice = { at: (x.saved_at || "").replace("T", " ").slice(0, 16), text: this.settingsText(x) };
+      this._restoring = false;
+    },
+    settingsText(x) {
+      const a = x.stages?.A || {}, b = x.stages?.B || {}, c = x.stages?.C || {};
+      const rk = { global: "ทั้งตลาด", scoped: "จัดอันดับใน scope", scoped_fixed_n: `Top-${a.n ?? "?"} ใน scope` }[a.ranking || "global"];
+      const sc = x.scope?.mode === "sectors" ? x.scope.sectors.join("+") : x.scope?.mode === "tickers" ? `${x.scope.tickers.length} หุ้น` : "ทั้งตลาด";
+      return `A ${a.mode === "off" ? "ปิด" : `${a.version} · ${rk}`} · ขอบเขต ${sc} · B ${b.mode === "off" ? "ปิด" : b.version} · C ${c.mode === "off" ? "ปิด" : c.version} · เงื่อนไข ${x.condId}${this.paramsText((x.params || {})[x.condId])}${x.dirty ? " (มีโค้ดที่แก้ยังไม่บันทึก)" : ""}`;
+    },
+    resetSettings() {
+      if (!confirm("ล้างค่าที่ตั้งในกล่อง Pipeline กลับเป็นค่าเริ่มต้น? (ไม่แตะข่าว / condition / ผลการทดลอง)")) return;
+      try { localStorage.removeItem(SETTINGS_KEY); } catch (e) { /* ไม่มี storage */ }
+      this._restoring = true;  // กันไม่ให้ effect เขียนค่าเดิมกลับก่อนรีโหลด
+      location.reload();
     },
     versions(m) { return (Alpine.store("app").registry?.models?.[m]) || []; },
     vmeta(m) { return this.versions(m).find((v) => v.id === this.stages[m].version) || null; },
@@ -202,24 +272,31 @@ function pipeline() {
     },
 
     /* ---------- condition / editor ---------- */
-    async loadCondition() {
+    async loadCondition(restoredSource) {
       const c = (Alpine.store("app").registry.conditions || []).find((x) => x.id === this.condId);
       this.condDesc = c ? c.description : "";
       const r = await api(`/api/conditions/${this.condId}`);
       this.source = r.source; this.dirty = false; this.validation = null;
-      this.setParams(r.params || {});
-      if (LAB.editor) { this._ignore = true; LAB.editor.setValue(r.source); this._ignore = false; }
+      this.setParams(r.params || {}, this.paramsByCond[this.condId]);
+      if (restoredSource && restoredSource !== r.source) { this.source = restoredSource; this.dirty = true; }  // โค้ดที่แก้ค้างไว้ก่อนรีโหลด
+      if (LAB.editor) { this._ignore = true; LAB.editor.setValue(this.source); this._ignore = false; }
     },
     /* Q2: ค่าที่ปรับได้ของ condition (PARAMS) — ค่าที่ตั้งส่งไปกับ config และถูกบันทึกในผล */
     setParams(spec, keep) {
       this.condParams = spec;
       const v = {};
-      for (const [k, sp] of Object.entries(spec)) v[k] = keep && keep[k] !== undefined ? keep[k] : sp.default;
+      for (const [k, sp] of Object.entries(spec)) {
+        const x = keep ? keep[k] : undefined;
+        const ok = x !== undefined && (sp.type === "choice" ? sp.choices.includes(x) : typeof x === "number" && x >= sp.min && x <= sp.max);
+        if (x !== undefined && !ok) this.settingsFallback.push(`${sp.label} (${k}) ที่เคยตั้ง ${x} ใช้ไม่ได้กับ condition ปัจจุบัน → ค่าเริ่มต้น ${sp.default}`);
+        v[k] = ok ? x : sp.default;
+      }
       this.paramVals = v;
     },
     paramChanged(k) {
       const sp = this.condParams[k];
       if (sp && sp.type !== "choice" && this.paramVals[k] !== "" && this.paramVals[k] !== null) this.paramVals[k] = Number(this.paramVals[k]);
+      this.paramsByCond = { ...this.paramsByCond, [this.condId]: { ...this.paramVals } };
       this.changed();
     },
     paramsText(p) { const e = Object.entries(p || {}); return e.length ? " (" + e.map(([k, v]) => `${k}=${v}`).join(", ") + ")" : ""; },
@@ -233,7 +310,7 @@ function pipeline() {
           monaco.editor.defineTheme("lab", { base: "vs-dark", inherit: true, rules: [{ token: "comment", foreground: "6F7BA3" }, { token: "string", foreground: "FDE68A" }, { token: "keyword", foreground: "C084FC" }],
             colors: { "editor.background": "#0A0F1D", "editorLineNumber.foreground": "#3A4668", "editor.lineHighlightBackground": "#121A30" } });
           LAB.editor = monaco.editor.create(this.$refs.editor, { value: this.source, language: "python", theme: "lab", fontFamily: "JB Mono, monospace", fontSize: 13, minimap: { enabled: false }, automaticLayout: true, scrollBeyondLastLine: false, tabSize: 4 });
-          LAB.editor.onDidChangeModelContent(() => { if (!this._ignore) { this.dirty = true; } });
+          LAB.editor.onDidChangeModelContent(() => { if (!this._ignore) { this.dirty = true; this.saveSettings(JSON.stringify(this.settingsSnapshot())); } });
           const items = [
             ["date", "วันที่ตัดสินใจ 'YYYY-MM-DD'"], ["universe", "list ticker ที่ผ่านกล่องที่เปิดทั้งหมด"], ["a", "dict ticker → สัญญาณ A {class, score, weight, reasons, date}"],
             ["b", "dict ticker → สัญญาณ B ล่าสุด (ภายในอายุ) · ข่าว manual มี label -2..+2 (ความแรง) + class 3 กลุ่ม"], ["c", "dict sector ETF/GICS → สัญญาณ C"], ["c_for(ticker)", "สัญญาณ C ของ sector ของหุ้น"],

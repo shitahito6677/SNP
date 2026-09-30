@@ -259,6 +259,11 @@
 - ตรวจด้วยการรันจริง: ค่าเริ่มต้น = Experiment 1 ทุก trade; SMA100 รันซ้ำตรงกัน; SMA20 เปลี่ยนวันยืนยันข่าว -1 ของ META (trade 368) — experiments/log.md
 - test `tests/test_condition_params.py` 4 ข้อ; ui_smoke: ตั้ง MA_DAYS=100 + EMA แล้วบรรทัด "จะรัน:" ต้องแสดง, ใส่ 999 ต้องขึ้น error
 
+## Q3 — ค่ากล่อง Pipeline ไม่หายหลังรีโหลด/ล้างข้อมูล ✅
+- สาเหตุจริง: ค่าอยู่ใน memory ของหน้าอย่างเดียว → หายทุกครั้งที่รีโหลด (ล้างข้อมูลไม่ได้แตะ) — DECISIONS #33
+- เก็บใน localStorage แยกจากข้อมูลทดลอง; แถบ "ค่าที่ตั้งไว้" + ปุ่มกลับค่าเริ่มต้น; version/condition/ค่า PARAMS ที่หายไป → ค่าเริ่มต้นเฉพาะตัวนั้น + แถบแจ้ง (ทั้งตอนเปิดหน้าและหลัง Rescan)
+- ตรวจด้วย Playwright: ตั้ง bmf20 + Top-20 + XLK + B oracle + condition_fixed MA_DAYS=100 → รีโหลด → บรรทัด "จะรัน:" ตรงกันทุกตัวอักษร; condition/version ที่ไม่มีแล้ว → แจ้งทั้ง 2 รายการ ค่าอื่น (Top-N) คงอยู่; สร้าง condition → เลือก → ลบไฟล์ → Rescan → แจ้ง "ถูกล้างไปแล้ว"; ui_smoke ครอบคลุมรีโหลด + fallback
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน) + N0–N6** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

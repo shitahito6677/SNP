@@ -59,6 +59,13 @@
   </div>
 
   <div class="warn red sticky-banner" id="stale-banner" x-show="stale"><b>ต้องรีโหลด</b><span>หน้าเว็บนี้เปิดไว้ตั้งแต่ก่อน server อัปเดต ตัวเลือกบนหน้าอาจไม่ตรงกับโค้ดปัจจุบัน — กด Ctrl/Cmd + R ก่อนรัน</span></div>
+  <div class="warn orange" id="settings-fallback" x-show="settingsFallback.length" style="margin-bottom:8px"><b>ค่าที่ตั้งไว้เปลี่ยน</b>
+    <span><template x-for="m in settingsFallback"><span style="display:block" x-text="m"></span></template></span>
+    <button class="sm" @click="settingsFallback = []">รับทราบ</button></div>
+  <div class="warn gray" id="settings-restored" x-show="settingsNotice" style="margin-bottom:8px"><b>ค่าที่ตั้งไว้</b>
+    <span>ใช้ค่ากล่อง Pipeline ที่ตั้งไว้ครั้งก่อน (จำไว้ในเบราว์เซอร์นี้ · <span class="mono" x-text="settingsNotice?.at"></span>): <span x-text="settingsNotice?.text"></span>
+      — การล้างข้อมูลทดลอง (ข่าว / condition ที่เพิ่มเอง / ผลที่บันทึก) ไม่ล้างค่านี้ ถ้าสิ่งที่เลือกไว้ถูกลบจะเปลี่ยนเป็นค่าเริ่มต้นพร้อมแจ้ง</span>
+    <button class="sm" id="settings-reset" @click="resetSettings()">กลับเป็นค่าเริ่มต้น</button><button class="sm" @click="settingsNotice = null">ปิด</button></div>
   <div class="warn scoped sticky-banner" id="scoped-banner-pipeline" x-show="scopedA()"><b>โหมดทดสอบ</b><span x-text="rankingWarning(stages.A.ranking) + (stages.A.ranking==='scoped_fixed_n' ? ' · N = ' + fixedN() : '')"></span></div>
   <!-- ขั้น 0: ขอบเขตการลงทุน (ก่อนกล่อง A) -->
   <div class="panel scope-panel" id="scope-panel">
