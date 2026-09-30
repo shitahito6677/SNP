@@ -372,7 +372,25 @@
     </div>
 
     <div class="grid" style="grid-template-columns: 2fr 1fr; margin-top:16px">
-      <div class="panel"><h3 x-text="'Equity curve — strategy vs SPY vs ' + ewLabel()"></h3><div class="chart tall" x-ref="eq"></div></div>
+      <div class="panel" id="journey-panel"><h3 x-text="'การเดินทางของพอร์ต — equity (strategy vs SPY vs ' + ewLabel() + ') + เหตุการณ์ + จำนวนหุ้นที่ถือ'"></h3>
+        <div class="chart" style="height:520px" x-ref="eq" id="equity-journey"></div>
+        <div class="trade-legend" id="event-legend" style="margin-top:6px">
+          <template x-for="[k, L] in eventLegend()" :key="k"><div class="tl-item" :class="{ none: !(r?.events?.items || []).some(i => i.event === k) }">
+            <span class="tl-sym" :style="`color:${L.color}`" x-text="k.startsWith('sell') ? '▼' : k === 'rebalance' ? '◆' : '▲'"></span>
+            <b :style="`color:${L.color}`" x-text="L.label"></b><span class="mono dim" x-text="'×' + (r?.events?.items || []).filter(i => i.event === k).length + ' วัน'"></span>
+            <span class="tl-help" x-text="L.help"></span></div></template>
+        </div>
+        <p class="dim" style="font-size:11.5px;margin:6px 0 0">ลากบนกราฟเพื่อซูม (ดับเบิลคลิก = ทั้งช่วง) — กราฟจำนวนหุ้นและ underwater ขยับตาม · ชี้ที่จุดเพื่อดูว่าหุ้นตัวไหน · คลิกจุดเพื่อดูรายละเอียด · ไม่แสดงการปรับกลับเป้า (ซื้อขายเล็กน้อยทั้งพอร์ตเมื่อเป้าตัวอื่นเปลี่ยน)</p>
+        <div class="warn gray" x-show="r?.events?.note" style="margin-top:6px"><b>หมายเหตุ</b><span x-text="r?.events?.note"></span></div>
+        <div class="panel" id="event-detail" x-show="eventPick" style="padding:10px;margin-top:8px">
+          <div class="row" style="justify-content:space-between"><b x-text="'เหตุการณ์วันที่ ' + (eventPick?.date || '') + ' (วันที่ซื้อขายจริง)'"></b><button class="sm" @click="eventPick = null">ปิด</button></div>
+          <template x-for="i in eventPick?.items || []"><div style="margin-top:6px">
+            <div :style="`color:${i.color};font-weight:600`" x-text="i.label + ' · ' + i.tickers.length + ' ตัว (ตัดสินใจ ' + i.decision_date + ')'"></div>
+            <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:4px"><template x-for="x in i.rows"><a class="chip mono" :href="eventStockLink(x.ticker, i)"
+              x-text="`${x.ticker} ${(100 * x.w_before).toFixed(2)}% → ${(100 * x.w_after).toFixed(2)}%` + (x.ref.length ? (x.side === 'sell' ? ' → คืนให้ ' : ' ← จาก ') + x.ref.join(', ') + (x.ref_inferred ? ' (อนุมาน)' : '') : '')"></a></template></div>
+          </div></template>
+        </div>
+      </div>
       <div class="panel"><h3>Funnel — หุ้นหายไปตรงไหน (เฉลี่ยต่อวัน)</h3><div class="chart tall" x-ref="sankey"></div></div>
     </div>
     <div class="grid g2" style="margin-top:16px">

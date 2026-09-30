@@ -222,6 +222,11 @@ def load_dir(d: Path, exp_id: str | None = None) -> dict:
     for c in ("strategy", "spy", "ew"):
         eq[f"dd_{c}"] = eq[c] / eq[c].cummax() - 1
     out["equity"] = _records(eq)
+    try:  # Q4: เหตุการณ์ของทั้งพอร์ตบน equity curve (ชนิดเดียวกับป้ายบนกราฟหุ้นรายตัว)
+        from sandbox.v2 import trade_causes
+        out["events"] = trade_causes.events(d)
+    except Exception as e:  # noqa: BLE001 — จุดเหตุการณ์พังไม่ให้ทั้งหน้าผลพัง
+        out["events"] = {"items": [], "legend": {}, "note": f"คำนวณจุดเหตุการณ์ไม่สำเร็จ: {type(e).__name__}: {e}"}
     fun = pd.read_parquet(d / "funnel.parquet")
     out["funnel"] = _records(fun.drop(columns=[c for c in ("a_rebalance",) if c in fun]))
     pos = pd.read_parquet(d / "positions.parquet")

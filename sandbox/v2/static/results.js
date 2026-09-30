@@ -3,7 +3,7 @@
 
 function results() {
   return {
-    kind: null, id: null, r: null, loading: false, err: "", saveName: "",
+    kind: null, id: null, r: null, loading: false, err: "", saveName: "", eventPick: null,
     trades: { total: 0, offset: 0, rows: [] }, tq: "", tside: "",
     rerunning: false, rerunDiff: null,
 
@@ -15,7 +15,7 @@ function results() {
     },
     async load(kind, id) {
       if (this.kind === kind && this.id === id && this.r) { this.$nextTick(() => this.renderCharts()); return; }
-      this.kind = kind; this.id = id; this.r = null; this.err = ""; this.loading = true; this.rerunDiff = null;
+      this.kind = kind; this.id = id; this.r = null; this.err = ""; this.loading = true; this.rerunDiff = null; this.eventPick = null;
       try {
         this.r = await api(`/api/results/${kind}/${id}`);
         this.saveName = this.r.config?.name || "";
@@ -90,11 +90,33 @@ function results() {
       if (!this.r || !this.r.has_artifacts || !PL.ok()) return;
       const eq = this.r.equity, x = eq.map((e) => e.date);
       const annot = this.heldOutShape().length ? [{ x: Alpine.store("app").meta.config.held_out_start, y: 1, yref: "paper", text: "HELD-OUT", showarrow: false, font: { color: "#FCA5A5", size: 11 }, xanchor: "left" }] : [];
+      // Q4: equity + จุดเหตุการณ์ของทั้งพอร์ต (บน) และจำนวนหุ้นที่ถือ (ล่าง) ในรูปเดียว แกนเวลาร่วมกัน → ซูม/เลื่อนไปพร้อมกัน
+      const strat = new Map(eq.map((e) => [e.date, e.strategy]));
+      const evTraces = this.eventLegend().map(([k, L]) => {
+        const its = (this.r.events.items || []).filter((i) => i.event === k && strat.has(i.date));
+        return { x: its.map((i) => i.date), y: its.map((i) => strat.get(i.date)), name: L.label, mode: "markers", type: "scatter", xaxis: "x", yaxis: "y",
+          marker: { color: L.color, size: 11, symbol: k.startsWith("sell") ? "triangle-down" : k === "rebalance" ? "diamond" : "triangle-up", line: { color: "#0B1020", width: 1 } },
+          customdata: its.map((i) => i.date + "|" + k), text: its.map((i) => this.eventText(i)), hovertemplate: "%{text}<extra>" + L.label + "</extra>",
+          visible: its.length ? true : "legendonly" };
+      });
+      const shapes2 = this.heldOutShape().map((sh) => ({ ...sh, yref: "paper" }));
       Plotly.react(this.$refs.eq, [
         { x, y: eq.map((e) => e.spy), name: "SPY buy & hold", line: { color: "#60A5FA", width: 1.5 } },
         { x, y: eq.map((e) => e.ew), name: this.ewLabel(), line: { color: "#A78BFA", width: 1.5, dash: "dot" } },
         { x, y: eq.map((e) => e.strategy), name: "Strategy", line: { color: "#FDE68A", width: 2.4 } },
-      ], PL.layout({ shapes: this.heldOutShape(), annotations: annot, yaxis: { gridcolor: "rgba(120,150,220,.10)", tickformat: ",.0f" } }), PL.config);
+        ...evTraces,
+        { x, y: eq.map((e) => e.n_holdings), name: "จำนวนหุ้นที่ถือ", xaxis: "x", yaxis: "y2", line: { color: "#34D399", width: 1.6, shape: "hv" },
+          fill: "tozeroy", fillcolor: "rgba(52,211,153,.10)", hovertemplate: "%{y} ตัว<extra>จำนวนหุ้นที่ถือ</extra>" },
+      ], PL.layout({ shapes: shapes2, annotations: annot, hovermode: "x unified",
+        yaxis: { domain: [0.3, 1], gridcolor: "rgba(120,150,220,.10)", tickformat: ",.0f" },
+        yaxis2: { domain: [0, 0.22], gridcolor: "rgba(120,150,220,.10)", rangemode: "tozero", title: { text: "ถือ (ตัว)", font: { size: 11 } }, tickformat: "d" },
+        xaxis: { anchor: "y2", gridcolor: "rgba(120,150,220,.10)" }, legend: { orientation: "h", y: 1.1, x: 0, font: { size: 11 } } }), PL.config);
+      const eqEl = this.$refs.eq;
+      if (!eqEl._q4) {  // ผูกครั้งเดียวต่อ element
+        eqEl._q4 = true;
+        eqEl.on("plotly_click", (ev) => { const cd = ev.points.map((p) => p.customdata).find(Boolean); if (cd) this.pickEvent(cd); });
+        eqEl.on("plotly_relayout", (rl) => this.syncRange(rl, this.$refs.dd));
+      }
       Plotly.react(this.$refs.dd, [
         { x, y: eq.map((e) => e.dd_strategy), name: "Strategy", fill: "tozeroy", line: { color: "#F87171", width: 1.2 }, fillcolor: "rgba(248,113,113,.25)" },
         { x, y: eq.map((e) => e.dd_spy), name: "SPY", line: { color: "#60A5FA", width: 1 } },
@@ -113,6 +135,26 @@ function results() {
         PL.layout({ yaxis: { tickformat: ".0%", gridcolor: "rgba(120,150,220,.10)" }, legend: { orientation: "h", y: -0.18, font: { size: 10.5 } }, margin: { l: 50, r: 10, t: 6, b: 60 } }), PL.config);
       this.renderSankey();
       setTimeout(() => [this.$refs.eq, this.$refs.dd, this.$refs.heat, this.$refs.sector, this.$refs.sankey].forEach((el) => el && el.offsetParent && Plotly.Plots.resize(el)), 60);
+    },
+    /* ---------- Q4: เหตุการณ์ของพอร์ต ---------- */
+    eventLegend() {  // ลำดับคงที่ (JSON จาก server ถูกเรียง key ตามตัวอักษร)
+      const L = this.r?.events?.legend || {};
+      return ["rebalance", "sell_news", "buy_buyback", "sell_pullback", "buy_receive"].filter((k) => L[k]).map((k) => [k, L[k]]);
+    },
+    eventText(i) {
+      const rows = i.rows.slice(0, 8).map((r) => `${r.ticker} ${(100 * r.w_before).toFixed(1)}%→${(100 * r.w_after).toFixed(1)}%${r.ref.length ? (r.side === "sell" ? " → " : " ← ") + r.ref.join(",") : ""}`);
+      return `${i.tickers.length} ตัว: ` + rows.join(" · ") + (i.rows.length > 8 ? ` · +${i.rows.length - 8}` : "");
+    },
+    pickEvent(cd) {
+      const [date] = cd.split("|");
+      this.eventPick = { date, items: (this.r.events?.items || []).filter((i) => i.date === date) };
+    },
+    eventStockLink(t, i) { return `#/stock/${t}?kind=${this.kind}&id=${encodeURIComponent(this.id)}&date=${i.decision_date}`; },
+    syncRange(rl, el) {  // ซูม/เลื่อนกราฟ equity → underwater ขยับตาม
+      if (!el || !el.data) return;
+      if (rl["xaxis.autorange"]) Plotly.relayout(el, { "xaxis.autorange": true });
+      else if (rl["xaxis.range[0]"] !== undefined) Plotly.relayout(el, { "xaxis.range": [rl["xaxis.range[0]"], rl["xaxis.range[1]"]] });
+      else if (rl["xaxis.range"]) Plotly.relayout(el, { "xaxis.range": rl["xaxis.range"] });
     },
     renderSankey() {
       // เฉพาะกล่องที่เปิด — กล่องที่ปิด (bypass) ไม่แสดงเป็น node

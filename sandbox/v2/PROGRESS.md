@@ -264,8 +264,12 @@
 - เก็บใน localStorage แยกจากข้อมูลทดลอง; แถบ "ค่าที่ตั้งไว้" + ปุ่มกลับค่าเริ่มต้น; version/condition/ค่า PARAMS ที่หายไป → ค่าเริ่มต้นเฉพาะตัวนั้น + แถบแจ้ง (ทั้งตอนเปิดหน้าและหลัง Rescan)
 - ตรวจด้วย Playwright: ตั้ง bmf20 + Top-20 + XLK + B oracle + condition_fixed MA_DAYS=100 → รีโหลด → บรรทัด "จะรัน:" ตรงกันทุกตัวอักษร; condition/version ที่ไม่มีแล้ว → แจ้งทั้ง 2 รายการ ค่าอื่น (Top-N) คงอยู่; สร้าง condition → เลือก → ลบไฟล์ → Rescan → แจ้ง "ถูกล้างไปแล้ว"; ui_smoke ครอบคลุมรีโหลด + fallback
 
+## Q4 — การเดินทางของพอร์ตในหน้าผล ✅
+- equity + จุดเหตุการณ์ (สีเดียวกับ Q1) + จำนวนหุ้นที่ถือ ในรูปเดียวแกนเวลาร่วม; underwater ซูมตาม; ชี้ = หุ้นที่เกิดเหตุการณ์ · คลิก = รายละเอียด + ลิงก์หน้าหุ้น — DECISIONS #34
+- `trade_causes.events()` + `load_dir()["events"]`; test `tests/test_portfolio_events.py` 2 ข้อ; ui_smoke ตรวจ trace ทุกชนิด, คลิกจุด "ถูกดึงเงินคืน" → แผงแสดง MSFT คืนให้ AAPL, ซูมแล้ว underwater ตาม
+
 # สรุปรวม
-**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน) + N0–N6** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
+**ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน) + N0–N6 + Q0–Q4** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 
 **ตรวจแล้วด้วยการรันจริง**
 - signal Model A ทั้ง 5 กฎ reproduce NAV ของ backtest เดิมเป๊ะ (≤ 6e-15); engine ของ sandbox ตาม NAV ของ A1 (corr รายวัน 0.99999)

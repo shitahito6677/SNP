@@ -123,6 +123,21 @@ def main():
             assert "SELL → คืนให้ AAPL" in texts and "BUY ← รับเงินจาก AAPL" in texts, texts
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "06b_stock_trade_causes.jpg"), full_page=True)
 
+            # Q4: หน้าผล — equity + จุดเหตุการณ์ + จำนวนหุ้นที่ถือ (แกนเวลาร่วม) + คลิกจุด → รายละเอียด + ซูมแล้ว underwater ตาม
+            pg.goto(f"{base}/#/results/run/{dj}")
+            pg.wait_for_selector("#equity-journey .main-svg", timeout=30000)
+            pg.wait_for_timeout(1500)
+            names = pg.evaluate("() => document.getElementById('equity-journey').data.filter(t => (t.x || []).length).map(t => t.name)")
+            for n in ("rebalance รายปี (A)", "ขายเพราะข่าวร้าย", "ซื้อคืน (ลง ≥ 15%)", "จำนวนหุ้นที่ถือ"):
+                assert n in names, (n, names)
+            pg.evaluate("""() => { const el = document.getElementById('equity-journey'); const t = el.data.find(t => t.name === 'ถูกดึงเงินคืน');
+                el.emit('plotly_click', { points: [{ customdata: t.customdata[0] }] }); }""")
+            pg.wait_for_selector("#event-detail", state="visible", timeout=5000)
+            assert "MSFT" in pg.inner_text("#event-detail") and "คืนให้ AAPL" in pg.inner_text("#event-detail")
+            pg.evaluate("() => Plotly.relayout('equity-journey', {'xaxis.range[0]': '2022-02-01', 'xaxis.range[1]': '2022-05-01'})")
+            pg.wait_for_function("() => [...document.querySelectorAll('[x-ref=dd]')].some(e => e.offsetParent && e.layout && String(e.layout.xaxis.range[0]).startsWith('2022-02-01'))", timeout=5000)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "06c_results_journey.jpg"), full_page=False)
+
             # รันอีกครั้ง (hold_SPY) เพื่อใช้ compare
             job = requests.post(base + "/api/jobs", json={"name": "UI smoke SPY", "condition": {"id": "hold_SPY"}}).json()["id"]
             for _ in range(120):

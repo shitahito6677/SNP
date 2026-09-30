@@ -177,3 +177,41 @@ def _classify_dir(d: Path) -> pd.DataFrame:
         tr[k] = [x.get(k, []) for x in c]
     tr["ref_inferred"] = [bool(x.get("ref_inferred")) for x in c]
     return tr
+
+
+# Q4: เหตุการณ์ของทั้งพอร์ตบน equity curve — ชนิดเดียวกับป้ายบนกราฟหุ้นรายตัว (สีเดียวกัน)
+EVENT_KINDS = {  # ชนิดเหตุการณ์ → ชนิด trade ที่รวมเข้าด้วยกัน
+    "rebalance": ("buy_rebalance", "sell_rebalance"),
+    "sell_news": ("sell_news",),
+    "buy_buyback": ("buy_buyback",),
+    "buy_receive": ("buy_receive",),
+    "sell_pullback": ("sell_pullback",),
+}
+EVENT_LABELS = {"rebalance": "rebalance รายปี (A)", "sell_news": "ขายเพราะข่าวร้าย", "buy_buyback": "ซื้อคืน (ลง ≥ 15%)",
+                "buy_receive": "รับเงินจากข่าว +2", "sell_pullback": "ถูกดึงเงินคืน"}
+
+
+def events(d: Path) -> dict:
+    """จุดเหตุการณ์ต่อวัน (วันที่ซื้อขายจริง) — {"items": [...], "legend": {...}, "note": ...}"""
+    d = Path(d)
+    legend = {k: {"label": EVENT_LABELS[k], "color": KINDS[v[0]][2], "help": KINDS[v[0]][1]} for k, v in EVENT_KINDS.items()}
+    if not (d / "trades.parquet").exists():
+        return {"items": [], "legend": legend, "note": "ไม่มีไฟล์ trade ในเครื่อง"}
+    tr = classify_dir(d)
+    note = None
+    if not (d / "decisions.parquet").exists():
+        note = "ผลนี้รันก่อนมีบันทึกรายวัน (N5) จึงแยกชนิดเหตุการณ์ไม่ได้ — กด Re-run เพื่อดูจุดเหตุการณ์"
+    of = {k: ev for ev, ks in EVENT_KINDS.items() for k in ks}
+    tr = tr[tr["kind"].isin(of)]
+    items = []
+    if len(tr):
+        tr = tr.assign(ev=tr["kind"].map(of), day=pd.to_datetime(tr["date"]).dt.strftime("%Y-%m-%d"))
+        for (day, ev), g in tr.groupby(["day", "ev"], sort=True):
+            rows = []
+            for r in g.sort_values("ticker").itertuples():
+                ref = list(r.ref) if r.ref is not None else []
+                rows.append({"ticker": r.ticker, "side": r.side, "label": r.label, "ref": ref, "ref_inferred": bool(r.ref_inferred),
+                             "w_before": float(r.weight_before), "w_after": float(r.weight_after), "decision_date": str(r.decision_date)})
+            items.append({"date": day, "event": ev, "label": EVENT_LABELS[ev], "color": legend[ev]["color"],
+                          "decision_date": rows[0]["decision_date"], "tickers": [x["ticker"] for x in rows], "rows": rows})
+    return {"items": items, "legend": legend, "note": note}
