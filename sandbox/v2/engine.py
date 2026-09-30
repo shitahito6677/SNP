@@ -264,6 +264,10 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
     if not chk["ok"]:
         raise ConfigError("condition ไม่ผ่านการตรวจ: " + "; ".join(chk["errors"]))
     cond["name"] = chk["name"]
+    try:
+        params = condition_registry.resolve_params(chk["params"], cond.get("params"))
+    except ValueError as e:
+        raise ConfigError(str(e)) from None
     out = {
         "name": (c.get("name") or "").strip()[:120],
         "start": str(start.date()), "end": str(end.date()),
@@ -276,7 +280,8 @@ def normalize_config(c: dict, allow_legacy: bool = False) -> tuple:
         "stages": stages,
         **({"legacy_migration": legacy} if legacy else {}),
         "include_manual": bool(c.get("include_manual")),
-        "condition": {"id": cond.get("id"), "name": cond["name"], "source": cond["source"]},
+        "condition": {"id": cond.get("id"), "name": cond["name"], "source": cond["source"],
+                      **({"params": params} if params else {})},  # condition ที่ไม่มี PARAMS → config เหมือนเดิมทุกตัวอักษร
     }
     if out["cost"] < 0 or out["cost"] > 0.05:
         raise ConfigError("cost ต่อขาต้องอยู่ระหว่าง 0 ถึง 5%")
@@ -363,7 +368,7 @@ def _scope_vs_A(conf, a, start, end) -> list:
 class ConditionRunner:
     """คุม process ของ condition — timeout ต่อ decide(), kill ได้ทุกเมื่อ"""
 
-    def __init__(self, source, columns, sector_of, timeout=cfg.DECIDE_TIMEOUT_SEC):
+    def __init__(self, source, columns, sector_of, timeout=cfg.DECIDE_TIMEOUT_SEC, params=None):
         os.environ["PYTHONHASHSEED"] = "0"  # ลำดับของ set/dict ในโค้ดผู้ใช้ต้องเหมือนเดิมทุกครั้งที่รัน
         ctx = mp.get_context("spawn")
         self.parent, child = ctx.Pipe()
@@ -373,7 +378,7 @@ class ConditionRunner:
         child.close()  # ให้ parent เห็น EOF ทันทีถ้า process ของ condition ตาย
         self.timeout = timeout
         self.stdout = []
-        self._call("init", {"source": source, "columns": columns, "fields": ["adj", "close", "volume"],
+        self._call("init", {"source": source, "columns": columns, "fields": ["adj", "close", "volume"], "params": dict(params or {}),
                             "sector_of": sector_of, "gics_to_etf": cfg.SECTOR_ETFS}, timeout=max(timeout, 30))
 
     def _call(self, msg, payload, timeout=None):
@@ -540,8 +545,9 @@ def run(conf: dict, out_dir: Path, progress=lambda *a, **k: None, cancelled=lamb
 
     # ---- condition
     progress("condition", 14, None, "เริ่ม process ของ condition")
-    runner = ConditionRunner(conf["condition"]["source"], columns, sector_of)
-    log(f"condition: {conf['condition']['name']}")
+    runner = ConditionRunner(conf["condition"]["source"], columns, sector_of, params=conf["condition"].get("params"))
+    log(f"condition: {conf['condition']['name']}" + (" · ค่าที่ตั้ง " + ", ".join(f"{k}={v}" for k, v in conf["condition"]["params"].items())
+                                                     if conf["condition"].get("params") else ""))
     wu = conf.get("warmup") or {}
     if wu.get("days"):  # ส่งราคา warm-up ให้ condition (ไม่ตัดสินใจ ไม่ซื้อขาย ไม่อยู่ใน equity/metrics)
         ws, we = pd.Timestamp(wu["start"]), pd.Timestamp(wu["end"])
@@ -926,7 +932,7 @@ def dry_run(conf: dict, date=None, history_days: int = 260) -> dict:
     members = scope_members(conf.get("scope"))
     scope = None if members is None else set(members)
     universe, a_recs, b_recs, c_recs, fun = stage_day(t, adj.iloc[-1], stocks, [], asof, st, sector_of, scope)
-    runner = ConditionRunner(conf["condition"]["source"], columns, sector_of)
+    runner = ConditionRunner(conf["condition"]["source"], columns, sector_of, params=conf["condition"].get("params"))
     try:
         for i in range(len(cal) - 1):
             runner.prices_only({"date": str(cal[i].date()), "prices": _price_row(adj, close, vol, i)})

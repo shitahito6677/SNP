@@ -253,6 +253,12 @@
 - `ctx.note(..., kind=, ref=)` + `tags_json` ใน decisions; ผลเก่าใช้ข้อความ note (ต้นทางขึ้น "(อนุมาน)") — DECISIONS #31
 - test `tests/test_trade_causes.py` 4 ข้อ (condition สาธิต `tests/fixtures/cause_demo_condition.py` ได้ครบทุกชนิด, fallback ผลเก่า, คำที่เคยชน, kind ผิด = error); ui_smoke รัน condition สาธิตแล้วตรวจ marker ทั้ง 4 ชนิด + legend บนกราฟจริง
 
+## Q2 — MA_DAYS / SMA-EMA ปรับได้จากหน้าเว็บ ✅
+- กลไก PARAMS ของ condition (registry ตรวจ, config.condition.params, worker แทนค่าก่อน decide, chip/log/"จะรัน:" แสดงค่า) — DECISIONS #32
+- condition_fixed: MA_DAYS 5–250 + MA_TYPE SMA/EMA พร้อมคำอธิบายว่าใช้แค่ยืนยันข่าว -1
+- ตรวจด้วยการรันจริง: ค่าเริ่มต้น = Experiment 1 ทุก trade; SMA100 รันซ้ำตรงกัน; SMA20 เปลี่ยนวันยืนยันข่าว -1 ของ META (trade 368) — experiments/log.md
+- test `tests/test_condition_params.py` 4 ข้อ; ui_smoke: ตั้ง MA_DAYS=100 + EMA แล้วบรรทัด "จะรัน:" ต้องแสดง, ใส่ 999 ต้องขึ้น error
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน) + N0–N6** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

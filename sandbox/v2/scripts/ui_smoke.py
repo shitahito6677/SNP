@@ -48,6 +48,22 @@ def main():
             pg.wait_for_timeout(2500)  # monaco + preflight
             pg.screenshot(type="jpeg", quality=72, path=str(OUT / "01_pipeline.jpg"), full_page=True)
 
+            # Q2: ค่าที่ปรับได้ของ condition — MA_DAYS จากหน้าเว็บ ต้องไปถึงสิ่งที่ server จะรันจริง + ค่าผิดช่วงต้องถูกปฏิเสธ
+            pg.select_option(".box.G select", "condition_fixed")
+            pg.wait_for_selector("#cond-param-MA_DAYS", timeout=10000)
+            assert "ใช้แค่จังหวะยืนยันข่าว -1" in pg.inner_text("#cond-params")
+            pg.fill("#cond-param-MA_DAYS", "100")
+            pg.select_option("#cond-param-MA_TYPE", "EMA")
+            pg.wait_for_function("() => document.querySelector('#effective-line')?.innerText.includes('MA_DAYS=100, MA_TYPE=EMA')", timeout=10000)
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "01b_condition_params.jpg"), full_page=False)
+            n_err = len(errors)
+            pg.fill("#cond-param-MA_DAYS", "999")
+            pg.wait_for_function("() => [...document.querySelectorAll('.warn.red')].some(x => x.offsetParent && x.innerText.includes('ต้องอยู่ระหว่าง'))", timeout=10000)
+            errors[n_err:] = [e for e in errors[n_err:] if "status of 400" not in e]  # preflight ตอบ 400 = ที่ตั้งใจทดสอบ
+            pg.select_option(".box.G select", "equal_weight_A")  # กลับไป condition เดิมของ smoke run
+            pg.wait_for_function("() => !document.querySelector('#cond-params') || document.querySelector('#cond-params').offsetParent === null", timeout=10000)
+            pg.wait_for_timeout(800)
+
             # เปิด B stub (กรอง) + C rulebase (กรอง) ผ่าน UI
             pg.click(".box.B .seg button[data-mode=on]")
             pg.click(".box.C .seg button[data-mode=on]")

@@ -106,7 +106,8 @@ def chips(conf, prov) -> list:
             out.append(f"{lab}{' (กรองในกล่อง·เดิม)' if s['mode'] == 'filter' and m != 'A' else ''}"
                        f"{' (จัดอันดับใน scope·ทดสอบ)' if m == 'A' and s.get('ranking') == 'scoped' else ''}"
                        f"{' (Top-' + str(s.get('n')) + ' ใน scope·ทดสอบ)' if m == 'A' and s.get('ranking') == 'scoped_fixed_n' else ''}")
-    out.append(f"cond: {conf['condition'].get('id') or conf['condition'].get('name')}")
+    out.append(f"cond: {conf['condition'].get('id') or conf['condition'].get('name')}"
+               + (" · " + ", ".join(f"{k}={v}" for k, v in conf["condition"]["params"].items()) if conf["condition"].get("params") else ""))
     sc = conf.get("scope") or {}
     if sc.get("mode") == "sectors":
         out.insert(0, "scope: " + " ".join(sc["sectors"]))

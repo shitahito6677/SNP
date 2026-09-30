@@ -176,6 +176,17 @@
         </template>
       </select>
       <p class="muted" style="font-size:12.5px" x-text="condDesc"></p>
+      <div class="cond-params" id="cond-params" x-show="Object.keys(condParams).length">
+        <template x-for="[k, sp] in Object.entries(condParams)" :key="k"><div class="cond-param" :title="sp.help">
+          <label class="lbl" :for="'cond-param-' + k"><span x-text="sp.label"></span> <span class="mono dim" x-text="k"></span> <span class="info-dot">?</span></label>
+          <template x-if="sp.type === 'choice'"><select :id="'cond-param-' + k" x-model="paramVals[k]" @change="paramChanged(k)">
+            <template x-for="c in sp.choices"><option :value="c" x-text="c" :selected="paramVals[k] === c"></option></template></select></template>
+          <template x-if="sp.type !== 'choice'"><input type="number" :id="'cond-param-' + k" :min="sp.min" :max="sp.max" :step="sp.type === 'int' ? 1 : 'any'"
+            x-model="paramVals[k]" @input="paramChanged(k)" style="width:110px"></template>
+          <span class="dim mono" style="font-size:11px" x-text="sp.type === 'choice' ? 'ค่าเริ่มต้น ' + sp.default : `ช่วง ${sp.min}–${sp.max} · ค่าเริ่มต้น ${sp.default}`"></span>
+          <div class="param-help" x-text="sp.help"></div>
+        </div></template>
+      </div>
       <div class="row">
         <span class="chip cond" x-show="dirty">แก้ไขแล้ว (ยังไม่บันทึก)</span>
       </div>

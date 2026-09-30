@@ -15,7 +15,7 @@ function pipeline() {
       C: { mode: "off", version: null },
     },
     scope: { mode: "all", sectors: [], tickers: [] }, scopeQ: "", scopeHi: 0, scopeInfo: null, boxStats: null, warmup: null, effective: null, stale: false, scopeNews: null,
-    condId: "equal_weight_A", condDesc: "", source: "", dirty: false,
+    condId: "equal_weight_A", condDesc: "", source: "", dirty: false, condParams: {}, paramVals: {},
     run: { start: "", end: "", capital: 1000000, costPct: 0.1, heldOut: false, confirm: "", includeManual: false, name: "" },
     warnings: [], error: "", validation: null, validating: false,
     job: null, logs: [], running: false, funnel: null,
@@ -107,7 +107,8 @@ function pipeline() {
           B: { mode: this.stages.B.mode, version: this.stages.B.version },
           C: { mode: this.stages.C.mode, version: this.stages.C.version },
         },
-        condition: this.dirty ? { id: null, source: src } : { id: this.condId },
+        condition: { ...(this.dirty ? { id: null, source: src } : { id: this.condId }),
+                     ...(Object.keys(this.condParams).length ? { params: { ...this.paramVals } } : {}) },
       };
     },
     async preflight() {
@@ -197,7 +198,7 @@ function pipeline() {
       if (!e) return "";
       const rk = { global: "ทั้งตลาด", scoped: "จัดอันดับใน scope (คงสัดส่วน · ทดสอบ)", scoped_fixed_n: `Top-${e.n} คงที่ใน scope (ทดสอบ)` }[e.ranking] || "—";
       const sc = e.scope === "all" ? "ทั้งตลาด" : (e.scope === "sectors" ? "sector " + e.sectors.join(" ") : "หุ้น " + e.tickers.slice(0, 6).join(" ") + (e.tickers.length > 6 ? " …" : ""));
-      return `จะรัน: A ${e.A || "ปิด"}${e.A ? " · การจัดอันดับ " + rk : ""} · ขอบเขต ${sc} · B ${e.B || "ปิด"} · C ${e.C || "ปิด"} · เงื่อนไข ${e.condition}`;
+      return `จะรัน: A ${e.A || "ปิด"}${e.A ? " · การจัดอันดับ " + rk : ""} · ขอบเขต ${sc} · B ${e.B || "ปิด"} · C ${e.C || "ปิด"} · เงื่อนไข ${e.condition}${this.paramsText(e.params)}`;
     },
 
     /* ---------- condition / editor ---------- */
@@ -206,8 +207,22 @@ function pipeline() {
       this.condDesc = c ? c.description : "";
       const r = await api(`/api/conditions/${this.condId}`);
       this.source = r.source; this.dirty = false; this.validation = null;
+      this.setParams(r.params || {});
       if (LAB.editor) { this._ignore = true; LAB.editor.setValue(r.source); this._ignore = false; }
     },
+    /* Q2: ค่าที่ปรับได้ของ condition (PARAMS) — ค่าที่ตั้งส่งไปกับ config และถูกบันทึกในผล */
+    setParams(spec, keep) {
+      this.condParams = spec;
+      const v = {};
+      for (const [k, sp] of Object.entries(spec)) v[k] = keep && keep[k] !== undefined ? keep[k] : sp.default;
+      this.paramVals = v;
+    },
+    paramChanged(k) {
+      const sp = this.condParams[k];
+      if (sp && sp.type !== "choice" && this.paramVals[k] !== "" && this.paramVals[k] !== null) this.paramVals[k] = Number(this.paramVals[k]);
+      this.changed();
+    },
+    paramsText(p) { const e = Object.entries(p || {}); return e.length ? " (" + e.map(([k, v]) => `${k}=${v}`).join(", ") + ")" : ""; },
     initEditor() {
       if (!Alpine.store("app").meta.vendor.monaco || LAB.editor) return;
       const s = document.createElement("script");
@@ -243,7 +258,7 @@ function pipeline() {
     async validate() {
       this.validating = true; this.validation = null;
       try {
-        const body = { config: { ...this.config(), condition: { id: this.dirty ? null : this.condId, source: LAB.editor ? LAB.editor.getValue() : this.source } }, date: this.run.end };
+        const body = { config: { ...this.config(), condition: { ...this.config().condition, id: this.dirty ? null : this.condId, source: LAB.editor ? LAB.editor.getValue() : this.source } }, date: this.run.end };
         if (this.touchesHeldOut() && !this.run.heldOut) body.date = Alpine.store("app").meta.config.default_end, body.config.end = body.date;
         this.validation = await api("/api/validate", { method: "POST", body });
         if (this.validation.ok && this.validation.funnel) this.funnel = { ...this.validation.funnel, held: this.validation.weights ? Object.keys(this.validation.weights).length : 0 };

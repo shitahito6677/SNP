@@ -134,7 +134,8 @@ def create_app() -> Flask:
     @app.get("/api/conditions/<cid>")
     def api_condition(cid):
         try:
-            return jsonify({"id": cid, "source": condition_registry.source(cid)})
+            src = condition_registry.source(cid)
+            return jsonify({"id": cid, "source": src, "params": condition_registry.static_check(src)["params"]})
         except (KeyError, ValueError) as e:
             return jsonify({"error": str(e)}), 404
 
@@ -204,7 +205,7 @@ def create_app() -> Flask:
         return {"A": a.get("version") if a["mode"] == "on" else None, "ranking": a.get("ranking", "global") if a["mode"] == "on" else None,
                 "n": a.get("n"), "scope": conf["scope"]["mode"], "sectors": conf["scope"]["sectors"], "tickers": conf["scope"]["tickers"],
                 "B": conf["stages"]["B"].get("version"), "C": conf["stages"]["C"].get("version"),
-                "condition": conf["condition"].get("id") or conf["condition"].get("name")}
+                "condition": conf["condition"].get("id") or conf["condition"].get("name"), "params": conf["condition"].get("params") or {}}
 
     @app.get("/api/jobs")
     def api_jobs():

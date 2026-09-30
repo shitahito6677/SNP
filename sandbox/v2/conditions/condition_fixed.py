@@ -28,14 +28,27 @@ DESCRIPTION = (
 # 6) (Q1) ctx.note แนบชนิดของ trade (kind/ref) ให้กราฟแยกป้าย SELL ข่าวร้าย / SELL ดึงเงินคืน / BUY รับเงิน / BUY ซื้อคืน
 #    + note บนหุ้นที่ถูกดึงเงินคืน (เดิมมี note แค่ที่หุ้นที่ซื้อคืน) + note ข่าว +2 ไม่บอกว่า "ไม่ทำอะไร" แล้ว (อาจรับเงินในขั้นที่ 4)
 #    — ไม่เปลี่ยนน้ำหนักที่คืน (test: tests/test_trade_causes.py เทียบกับผลก่อนแก้)
-# ไฟล์นี้ = equal_weight_A_v2_v2_v2.py ของผู้ใช้ (backup: sandbox/v2/backups/20260929-142129/) + แก้ข้อ 4–6 เท่านั้น
+# 7) (Q2) MA_DAYS / MA_TYPE ปรับได้จากหน้าเว็บ (PARAMS) + เลือก EMA ได้ — ค่าเริ่มต้น SMA50 = คำนวณเหมือนเดิมทุกบรรทัด
+# ไฟล์นี้ = equal_weight_A_v2_v2_v2.py ของผู้ใช้ (backup: sandbox/v2/backups/20260929-142129/) + แก้ข้อ 4–7 เท่านั้น
 
 # ===== ค่าที่ปรับได้ =====
 SELL_FRACTION = 0.5   # ขายกี่ส่วนเมื่อเจอข่าวร้าย
-MA_DAYS = 50          # เส้นค่าเฉลี่ยกี่วันที่ใช้ยืนยันข่าว -1
+MA_DAYS = 50          # เส้นค่าเฉลี่ยกี่วันที่ใช้ยืนยันข่าว -1 (ปรับได้จากหน้าเว็บ — ดู PARAMS)
+MA_TYPE = "SMA"       # SMA = ค่าเฉลี่ยธรรมดา · EMA = ถ่วงน้ำหนักราคาล่าสุดมากกว่า (ไวกว่า)
 PENDING_DAYS = 20     # ข่าว -1 รอยืนยันได้กี่วันทำการ ก่อนยกเลิก
 DIP_PCT = 0.15        # ลงต่อกี่ % จากราคาที่ขาย ถึงจะซื้อคืน
 STRONG_BAD, BAD, STRONG_GOOD = -2, -1, 2
+
+# ค่าที่ปรับได้จากหน้าเว็บ (ต้องเป็นตัวอักษรล้วน — ระบบอ่านด้วย ast ไม่รันโค้ด) · ค่าที่ตั้งจะแทน MA_DAYS / MA_TYPE ข้างบนตอนรัน
+PARAMS = {
+    "MA_DAYS": {"type": "int", "default": 50, "min": 5, "max": 250, "label": "เส้นค่าเฉลี่ยยืนยันข่าว -1 (วัน)",
+                "help": ("ใช้แค่จังหวะยืนยันข่าว -1 เท่านั้น: หลังข่าว -1 ระบบรอดูว่าราคาปิดหลุดต่ำกว่าเส้นค่าเฉลี่ยนี้ภายใน 20 วันทำการไหม ถ้าหลุดจึงขายครึ่ง · "
+                        "ไม่มีผลกับ SELL ข่าว -2, SELL → คืนให้ (ถูกดึงเงินคืนเมื่อหุ้นอื่นซื้อคืน), BUY รับเงินจากข่าว +2, rebalance รายปี หรือการปรับกลับเป้า"
+                         " · ต้องมีราคาย้อนหลังพอ (SMA ≥ 80% ของจำนวนวัน, EMA ≥ จำนวนวัน) — ช่วงต้นการทดสอบมี warm-up 90 วันทำการ ถ้าตั้งเกินนั้นข่าว -1 ช่วงแรกจะยืนยันไม่ได้")},
+    "MA_TYPE": {"type": "choice", "default": "SMA", "choices": ["SMA", "EMA"], "label": "ชนิดเส้นค่าเฉลี่ย",
+                "help": ("SMA = ค่าเฉลี่ยธรรมดา N วัน · EMA = ค่าเฉลี่ยถ่วงน้ำหนักราคาล่าสุดมากกว่า (ไวกว่า; k = 2/(N+1) เริ่มจาก SMA ของ N วันแรกในช่วง 3N วัน) · "
+                         "ใช้แค่จังหวะยืนยันข่าว -1 เท่านั้น เหมือนจำนวนวันด้านบน — ไม่มีผลกับ SELL → คืนให้ หรือ trade ชนิดอื่น")},
+}
 
 _MEM = {}  # สำรอง ถ้า ctx.state ไม่ใช่ dict
 
@@ -98,9 +111,9 @@ def _price(ctx, t):
 
 
 def _ma(ctx, t, n):
-    """ค่าเฉลี่ยราคาปิด n วันล่าสุด"""
+    """ค่าเฉลี่ยราคาปิด n วันล่าสุด (SMA) หรือ EMA n วัน ตาม MA_TYPE"""
     try:
-        h = ctx.history(t, n)
+        h = ctx.history(t, n if MA_TYPE == "SMA" else 3 * n)
     except Exception:
         return None
     if hasattr(h, "columns"):
@@ -113,6 +126,13 @@ def _ma(ctx, t, n):
     except Exception:
         return None
     vals = [x for x in vals if x == x]  # ตัด NaN
+    if MA_TYPE == "EMA":
+        if len(vals) < n:
+            return None
+        k, e = 2 / (n + 1), sum(vals[:n]) / n
+        for x in vals[n:]:
+            e = x * k + e * (1 - k)
+        return e
     return sum(vals) / len(vals) if len(vals) >= int(n * 0.8) else None
 
 
@@ -160,7 +180,7 @@ def decide(ctx):
             ctx.note(t, f"ข่าว {c:+d} → ขายครึ่งทันที (เงินพักเป็นเงินสด รอหุ้นข่าว +2)", kind="news_sell")
             _cut(ctx, st, t)
         elif c == BAD and t not in pending:
-            ctx.note(t, f"ข่าว -1 → รอยืนยันด้วยราคาหลุดเส้น MA{MA_DAYS} ภายใน {PENDING_DAYS} วันทำการ")
+            ctx.note(t, f"ข่าว -1 → รอยืนยันด้วยราคาหลุดเส้น {MA_TYPE}{MA_DAYS} ภายใน {PENDING_DAYS} วันทำการ")
             pending[t] = PENDING_DAYS
         elif c == STRONG_GOOD:
             ctx.note(t, "ข่าว +2 → ไม่ขาย · เป็นปลายทางรับเงินที่พักจากการขายครึ่ง (ถ้ามีเงินพักอยู่)")
@@ -176,11 +196,11 @@ def decide(ctx):
         p, ma = _price(ctx, t), _ma(ctx, t, MA_DAYS)
         if p is not None and ma is not None and p < ma:
             pending.pop(t)
-            ctx.note(t, f"ข่าว -1 ยืนยันแล้ว: ราคา {p:.2f} < MA{MA_DAYS} {ma:.2f} → ขายครึ่ง", kind="news_sell")
+            ctx.note(t, f"ข่าว -1 ยืนยันแล้ว: ราคา {p:.2f} < {MA_TYPE}{MA_DAYS} {ma:.2f} → ขายครึ่ง", kind="news_sell")
             _cut(ctx, st, t)
         else:
             pending[t] -= 1
-            ctx.note(t, f"รอยืนยันข่าว -1: ราคา {p} ยังไม่หลุด MA{MA_DAYS} ({ma}) · เหลือ {max(pending[t], 0)} วันทำการ"
+            ctx.note(t, f"รอยืนยันข่าว -1: ราคา {p} ยังไม่หลุด {MA_TYPE}{MA_DAYS} ({ma}) · เหลือ {max(pending[t], 0)} วันทำการ"
                         if pending[t] > 0 else "ครบกำหนดรอยืนยันข่าว -1 แล้ว ราคาไม่หลุด MA → ยกเลิก ไม่ขาย")
             if pending[t] <= 0:
                 pending.pop(t)

@@ -358,3 +358,9 @@ button.sm.on { background: var(--panel-hi); box-shadow: inset 0 0 0 1px var(--li
 .badge.scoped_a, .badge.scoped_fixed_n { color: #FEF08A; border-color: #EAB308; background: rgba(234, 179, 8, .2); }
 .effective-line { font-size: 12px; padding: 6px 10px; border-radius: 8px; background: rgba(96, 165, 250, .08); border: 1px dashed rgba(96, 165, 250, .4); color: var(--text); }
 .explain-panel pre.tb { max-height: 220px; overflow: auto; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
+
+/* Q2: ค่าที่ปรับได้ของ condition */
+.cond-params { display: grid; gap: 10px; margin: 6px 0 8px; }
+.cond-param .lbl { display: block; margin-bottom: 3px; }
+.cond-param .info-dot { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line-hi); font-size: 10px; color: var(--text-2); cursor: help; }
+.cond-param .param-help { font-size: 11px; line-height: 1.4; color: var(--text-2); margin-top: 4px; }

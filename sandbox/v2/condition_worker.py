@@ -142,6 +142,7 @@ def main(conn):
                     src = payload["source"]
                     linecache.cache["<condition>"] = (len(src), None, src.splitlines(True), "<condition>")
                     exec(compile(payload["source"], "<condition>", "exec"), ns)  # noqa: S102 — ดู docstring
+                    ns.update(payload.get("params") or {})  # ค่าจากหน้าเว็บ (PARAMS) แทนค่าที่เขียนไว้ในไฟล์ — ก่อน decide ครั้งแรก
                     decide = ns.get("decide")
                     if not callable(decide):
                         raise TypeError("ไม่พบ def decide(ctx)")
