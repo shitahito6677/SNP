@@ -1,0 +1,50 @@
+{
+ "model": "A",
+ "version": "bmf20-funnel",
+ "short_label": "BMF20 funnel",
+ "display_name": "BMF20 คัดสองชั้น: BM 100 ตัวแรก → F-score 20 ตัว · เท่ากัน · รายปี",
+ "rule_id": "r013_BMF20_FUNNEL",
+ "model_version": "experimental-not-frozen",
+ "is_stub": false,
+ "result_badge": "real",
+ "signal_files": [
+  "signals.parquet"
+ ],
+ "key": "ticker",
+ "coverage": {
+  "start": "2011-06-30",
+  "end": "2022-06-30",
+  "valid_through": "2023-06-30",
+  "n_rebalances": 12,
+  "n_tickers": 728,
+  "avg_selected": 20.0
+ },
+ "rebalance": "annual_june",
+ "classes": [
+  "selected",
+  "not_selected",
+  "not_applicable"
+ ],
+ "score_meaning": "percentile ของอันดับตามกฎ (100 ตัวแรกของ BM เรียงด้วย F-score ก่อน แล้วต่อด้วยตัวที่เหลือตามอันดับ BM) 0–100 มาก = ดี",
+ "source_experiment": "model_A round 013 trial r013_BMF20_FUNNEL (rounds/round_013/run.py, trials.csv)",
+ "research_stats": {
+  "dec_sharpe": 0.405180936642538,
+  "dec_cagr": 0.0889858778463892,
+  "dec_maxdd": -0.5068826709538232,
+  "dec_sharpe_ew": 0.6400131870274632,
+  "dec_sharpe_spy": 0.6810897132316699,
+  "S1": "False",
+  "S2": "False",
+  "S6": "False",
+  "DSR": 0.0011644567145307,
+  "S3": "False"
+ },
+ "created_at": "2026-09-27T22:30:45+00:00",
+ "notes": "ทดลองระบบ ข้อมูลไม่ครบ ไม่ใช่หลักฐานว่ากฎชนะตลาด · ใช้ข้อมูลถึง 30 มิ.ย. 2023 เท่านั้น (held-out ล็อก) · backtest เดิมซื้อที่ close วัน R",
+ "warnings": [
+  "ระดับ C: ตก S1, S2, S3 และ S6 (ถือ 20 ตัว < 30)",
+  "ยังไม่ freeze",
+  "ทดลองระบบ ข้อมูลไม่ครบ ไม่ใช่หลักฐานว่ากฎชนะตลาด",
+  "survivorship: universe มีเฉพาะหุ้นที่ Yahoo ยังมีราคา"
+ ]
+}

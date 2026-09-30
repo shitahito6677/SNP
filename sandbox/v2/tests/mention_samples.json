@@ -1,0 +1,15 @@
+{
+ "note": "10 ข้อความตัวอย่างสำหรับวัด auto-detect (เขียนก่อนรันวัดผล ห้ามปรับ alias ให้ตรงชุดนี้โดยเฉพาะ) — expected = ticker ที่คนอ่านแล้วตอบว่าข่าวพูดถึง, macro = ควรแนะนำเป็นข่าว C",
+ "samples": [
+  {"text": "Nvidia shares jumped 8% after the chipmaker raised its data-center revenue guidance.", "expected": ["NVDA"], "macro": false},
+  {"text": "Fed holds rates steady; Powell signals two cuts later this year as inflation cools.", "expected": [], "macro": true},
+  {"text": "Apple and Microsoft led the Nasdaq higher while Tesla slipped on weaker China deliveries.", "expected": ["AAPL", "MSFT", "TSLA"], "macro": false},
+  {"text": "JPMorgan Chase beat estimates as net interest income rose; Wells Fargo lagged.", "expected": ["JPM", "WFC"], "macro": false},
+  {"text": "Oil prices surged after OPEC+ announced deeper production cuts, lifting Exxon Mobil and Chevron.", "expected": ["XOM", "CVX"], "macro": false},
+  {"text": "US CPI rose 3.2% year over year, hotter than expected, pushing Treasury yields higher.", "expected": [], "macro": true},
+  {"text": "Boeing (BA) said 737 MAX deliveries will slow; FedEx warned on freight demand.", "expected": ["BA", "FDX"], "macro": false},
+  {"text": "เอ็นวิเดียและไมโครซอฟท์ประกาศความร่วมมือด้าน AI ขณะที่เฟดส่งสัญญาณคงดอกเบี้ย", "expected": ["NVDA", "MSFT"], "macro": true},
+  {"text": "Target cut its full-year outlook as shoppers pulled back on discretionary spending.", "expected": ["TGT"], "macro": false},
+  {"text": "New tariffs on Chinese imports weigh on $AAPL and Caterpillar, analysts say.", "expected": ["AAPL", "CAT"], "macro": true}
+ ]
+}

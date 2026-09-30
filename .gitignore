@@ -9,8 +9,47 @@ data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 
+# sandbox dashboard event history (local UI test data, not a deliverable — regenerable
+# by using the tool; see sandbox/events_store.py). Never contains real training data —
+# see Phase 3 in experiments/log.md for the separation-from-training-data check.
+sandbox/data/manual_events.csv
+sandbox/data/events/*.jsonl
+
+# sandbox Phase 5 experiment persistence (local SQLite, regenerable via the Experiments page)
+sandbox/experiments.db
+
+# sandbox fundamentals cache (Alpha Vantage OVERVIEW snapshot, regenerable via
+# sandbox/scripts/fetch_fundamentals.py or the dashboard itself — see sandbox/fundamentals.py)
+sandbox/data/fundamentals/
+
+# sector news collection — RAW article text must never reach git (repo is public, several
+# sources' ToS forbid redistribution regardless of local-use legality) — only derived
+# metadata (sandbox/data/sector_news_processed/) is committed. See DECISIONS_NEEDED.md.
+sandbox/data/sector_news_raw/
+
 # OS / editor
 .DS_Store
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# sandbox v2 — raw prices / caches / job state / experiment binaries never go to git
+sandbox/v2/data/prices/
+sandbox/v2/data/manual_news.jsonl
+sandbox/v2/cache/
+sandbox/v2/logs/
+sandbox/v2/jobs.db
+sandbox/v2/jobs.db-*
+sandbox/v2/experiments/*/*.parquet
+sandbox/v2/experiments/*/*.zip
+sandbox/v2/experiments/*/round_trips.json
+sandbox/v2/static/vendor/monaco/
+sandbox/v2/static/vendor/plotly.min.js
+sandbox/v2/screenshots/*.tmp
+
+# sandbox v2 — B version ที่ build จากข่าว manual ของผู้ใช้ (gitignored data) — สร้างใหม่อัตโนมัติ
+model_B/export/manual-labels*/
+sandbox/v2/static/logos/
+sandbox/v2/data/manual_news.jsonl.bak-*
+sandbox/v2/debug/
+sandbox/v2/backups/

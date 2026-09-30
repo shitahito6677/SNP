@@ -1,0 +1,86 @@
+[
+  {
+    "date": "1999-08-24",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/boarddocs/press/general/1999/19990824/default.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2002-03-06",
+    "source": "Beige_Book",
+    "url": "https://www.federalreserve.gov/fomc/beigebook/2002/20020306/default.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2002-12-10",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/boarddocs/press/monetary/2002/20021210/default.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2005-11-01",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/boarddocs/press/monetary/2005/20051101/default.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2005-12-13",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/boarddocs/press/monetary/2005/20051213/default.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2009-12-16",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20091216a.htm",
+    "reason": "run 2/2 ล้มเหลว: financial_stability_concern=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2016-07-27",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20160727a.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2018-05-02",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20180502a.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2019-11-27",
+    "source": "Beige_Book",
+    "url": "https://www.federalreserve.gov/monetarypolicy/beigebook201911.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2019-12-11",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20191211a.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2021-04-28",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20210428a.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2021-06-16",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20210616a.htm",
+    "reason": "run 2/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2022-06-15",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20220615a.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  },
+  {
+    "date": "2025-06-18",
+    "source": "FOMC_statement",
+    "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250618a.htm",
+    "reason": "run 1/2 ล้มเหลว: uncertainty_language=-1 ไม่ใช่ int ในช่วง 0..2"
+  }
+]

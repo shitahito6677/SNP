@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Experiments — SP Ensemble Sandbox{% endblock %}
+{% block content %}
+
+<div class="panel wide">
+  <h1>Run a new experiment</h1>
+  <p class="note">
+    Experiment = เลือก rule version + ticker_set + date range แล้วรัน
+    <code>combine()</code> บนทุกคู่ (ticker, date) ที่มี**ทั้ง** manual event แบบ B และ C ใน
+    ช่วงนั้น (คู่ที่ไม่ครบ B+C ถูกข้าม ไม่ fabricate) บันทึกผลลง
+    <code>sandbox/experiments.db</code> (SQLite)
+  </p>
+
+  {% if not rule_version_options %}
+  <p class="hint">ยังไม่มี rule version เลย — ไปหน้า <a href="/rules">Rules</a> ก่อน</p>
+  {% else %}
+  <form id="run-experiment-form">
+    <label>Rule version
+      <select id="exp-rule-version">
+        {% for v in rule_version_options|reverse %}
+        <option value="{{ v }}">{{ v }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <fieldset class="ticker-checkboxes">
+      <legend>Ticker set</legend>
+      {% for t in tickers %}
+      <label class="checkbox-label">
+        <input type="checkbox" class="exp-ticker-checkbox" value="{{ t }}" checked> {{ t }}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <label>From
+      <input type="date" id="exp-date-start" min="{{ date_min }}" max="{{ date_max }}" value="{{ date_min }}">
+    </label>
+    <label>To
+      <input type="date" id="exp-date-end" min="{{ date_min }}" max="{{ date_max }}" value="{{ date_max }}">
+    </label>
+
+    <label>Notes (optional)
+      <input type="text" id="exp-notes" placeholder="เช่น 'v1 vs v2 baseline comparison'">
+    </label>
+
+    <button type="submit">Run experiment</button>
+  </form>
+  <p id="run-error" class="error" hidden></p>
+  <div id="run-result" class="result-box" hidden></div>
+  {% endif %}
+</div>
+
+<div class="panel wide">
+  <h1>Saved experiments</h1>
+  <p class="note">
+    เลือก 2 อันเพื่อ diff — ดูว่า (ticker, date) ไหน decision ต่างกันระหว่าง rule version
+    (diff รองรับเฉพาะ rule-lookup experiment เท่านั้น ไม่รองรับ strategy run — ดู
+    <a href="/strategies">Strategies</a> สำหรับผลจำลอง strategy โดยเฉพาะ) strategy run
+    แสดง metric (return/drawdown/win rate) ในตารางนี้ด้วย เทียบข้าม run ได้ตรงๆ
+  </p>
+
+  {% if not runs %}
+  <p class="hint">ยังไม่มี experiment ที่ save ไว้เลย</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Diff?</th><th>Kind</th><th>Created</th><th>Rule/Strategy</th><th>Tickers</th>
+          <th>Date range</th><th># rows</th><th>Return %</th><th>Max DD %</th><th>Win rate</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in runs %}
+        {% set m = r.strategy_result.metrics if r.is_strategy else None %}
+        <tr>
+          <td><input type="checkbox" class="diff-checkbox" value="{{ r.experiment_id }}" {{ "disabled" if r.is_strategy }}></td>
+          <td>{{ "strategy" if r.is_strategy else "rule-lookup" }}</td>
+          <td>{{ r.created_at }}</td>
+          <td>{{ r.rule_version }}</td>
+          <td>{{ r.ticker_set|join(", ") }}</td>
+          <td>{{ r.date_range_start }} → {{ r.date_range_end }}</td>
+          <td>{{ r.decisions|length }}</td>
+          <td>{{ (m.total_return_pct ~ "%") if m else "-" }}</td>
+          <td>{{ (m.max_drawdown_pct ~ "%") if m else "-" }}</td>
+          <td>{{ (m.win_rate_pct ~ "%") if m and m.win_rate_pct is not none else ("n/a" if m else "-") }}</td>
+          <td>{{ r.notes }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <button type="button" id="diff-btn">Diff selected (exactly 2)</button>
+  <p id="diff-error" class="error" hidden></p>
+  <div id="diff-result" class="result-box" hidden></div>
+  {% endif %}
+</div>
+
+<div class="panel wide">
+  <h1>Manual event log</h1>
+  <p class="note">
+    ล่าสุด {{ events|length }} แถว (ใหม่สุดก่อน) — จาก
+    <code>sandbox/data/manual_events.csv</code> (แยกจาก dataset ข่าวจริงของ Model C เสมอ,
+    ทุกแถวมี <code>source = "manual"</code>)
+  </p>
+
+  {% if not events %}
+  <p class="hint">ยังไม่มี event เลย — ไปที่หน้า <a href="/events">Events</a> เพื่อ inject อันแรก</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>เวลา</th><th>Source</th><th>Kind</th><th>Ticker</th><th>Date</th><th>Headline</th><th>Class</th><th>Score</th></tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td>{{ e.created_at }}</td>
+          <td>{{ e.source }}</td>
+          <td>{{ e.kind|upper }}</td>
+          <td>{{ e.ticker }}</td>
+          <td>{{ e.date }}</td>
+          <td class="headline-cell" title="{{ e.headline }}">{{ e.headline[:60] }}{% if e.headline|length > 60 %}…{% endif %}</td>
+          <td>{{ e['class'] }}</td>
+          <td>{{ e.score }} {% if e.is_stub %}<span class="stub-tag">STUB</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>window.__PAGE__ = "experiments";</script>
+{% endblock %}

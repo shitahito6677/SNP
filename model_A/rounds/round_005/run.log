@@ -1,0 +1,51 @@
+r005_trend_SPY done
+r005_voltarget_SPY done
+r005_ddstop_SPY done
+r005_trend_EW done
+r005_voltarget_EW done
+r005_ddstop_EW done
+              trial_id  dec_sharpe  dec_sharpe_ew  dec_sharpe_spy  dec_cagr  dec_cagr_ew  dec_maxdd  dec_maxdd_ew  S1_10  S1_25  S2_share  DSR  S6_avg_n  S6_min_n  S5_better_count  info_sharpe  info_sharpe_ew                                 notes
+85      r005_trend_SPY       0.457          0.614           0.681     0.068        0.122     -0.249        -0.384  False  False     0.054  0.0   415.069         0                4        0.993           1.093  share of months fully in cash: 0.174
+86  r005_voltarget_SPY       0.592          0.614           0.681     0.091        0.122     -0.322        -0.384  False  False     0.000  0.0   502.319       497                5        1.130           1.093  share of months fully in cash: 0.000
+87     r005_ddstop_SPY       0.486          0.614           0.681     0.081        0.122     -0.337        -0.384  False  False     0.000  0.0   481.389         0                5        1.027           1.093  share of months fully in cash: 0.042
+88       r005_trend_EW       0.369          0.614           0.681     0.058        0.122     -0.235        -0.384  False  False     0.027  0.0   265.562         0                4        1.098           1.093  share of months fully in cash: 0.167
+89   r005_voltarget_EW       0.451          0.614           0.681     0.077        0.122     -0.376        -0.384  False  False     0.000  0.0   323.049       255                5        0.989           1.093  share of months fully in cash: 0.000
+90      r005_ddstop_EW       0.347          0.614           0.681     0.063        0.122     -0.384        -0.384  False  False     0.000  0.0   315.382         0                5        1.093           1.093  share of months fully in cash: 0.021
+                set       start         end  sharpe_overlay  sharpe_buyhold  better            trial_id
+0   ^GSPC 1970-2010  1970-01-02  2010-12-31           0.600           0.456    True      r005_trend_SPY
+1             ^N225  1970-01-05  2023-06-30           0.432           0.348    True      r005_trend_SPY
+2             ^FTSE  1984-01-03  2023-06-30           0.351           0.382   False      r005_trend_SPY
+3            ^GDAXI  1987-12-30  2023-06-30           0.556           0.463    True      r005_trend_SPY
+4              ^HSI  1986-12-31  2023-06-30           0.291           0.348   False      r005_trend_SPY
+5              ^STI  1987-12-28  2023-06-30           0.447           0.301    True      r005_trend_SPY
+6   ^GSPC 1970-2010  1970-01-02  2010-12-31           0.492           0.456    True  r005_voltarget_SPY
+7             ^N225  1970-01-05  2023-06-30           0.390           0.348    True  r005_voltarget_SPY
+8             ^FTSE  1984-01-03  2023-06-30           0.388           0.382    True  r005_voltarget_SPY
+9            ^GDAXI  1987-12-30  2023-06-30           0.474           0.463    True  r005_voltarget_SPY
+10             ^HSI  1986-12-31  2023-06-30           0.413           0.348    True  r005_voltarget_SPY
+11             ^STI  1987-12-28  2023-06-30           0.272           0.301   False  r005_voltarget_SPY
+12  ^GSPC 1970-2010  1970-01-02  2010-12-31           0.599           0.456    True     r005_ddstop_SPY
+13            ^N225  1970-01-05  2023-06-30           0.355           0.348    True     r005_ddstop_SPY
+14            ^FTSE  1984-01-03  2023-06-30           0.407           0.382    True     r005_ddstop_SPY
+15           ^GDAXI  1987-12-30  2023-06-30           0.525           0.463    True     r005_ddstop_SPY
+16             ^HSI  1986-12-31  2023-06-30           0.281           0.348   False     r005_ddstop_SPY
+17             ^STI  1987-12-28  2023-06-30           0.312           0.301    True     r005_ddstop_SPY
+18  ^GSPC 1970-2010  1970-01-02  2010-12-31           0.600           0.456    True       r005_trend_EW
+19            ^N225  1970-01-05  2023-06-30           0.432           0.348    True       r005_trend_EW
+20            ^FTSE  1984-01-03  2023-06-30           0.351           0.382   False       r005_trend_EW
+21           ^GDAXI  1987-12-30  2023-06-30           0.556           0.463    True       r005_trend_EW
+22             ^HSI  1986-12-31  2023-06-30           0.291           0.348   False       r005_trend_EW
+23             ^STI  1987-12-28  2023-06-30           0.447           0.301    True       r005_trend_EW
+24  ^GSPC 1970-2010  1970-01-02  2010-12-31           0.492           0.456    True   r005_voltarget_EW
+25            ^N225  1970-01-05  2023-06-30           0.390           0.348    True   r005_voltarget_EW
+26            ^FTSE  1984-01-03  2023-06-30           0.388           0.382    True   r005_voltarget_EW
+27           ^GDAXI  1987-12-30  2023-06-30           0.474           0.463    True   r005_voltarget_EW
+28             ^HSI  1986-12-31  2023-06-30           0.413           0.348    True   r005_voltarget_EW
+29             ^STI  1987-12-28  2023-06-30           0.272           0.301   False   r005_voltarget_EW
+30  ^GSPC 1970-2010  1970-01-02  2010-12-31           0.599           0.456    True      r005_ddstop_EW
+31            ^N225  1970-01-05  2023-06-30           0.355           0.348    True      r005_ddstop_EW
+32            ^FTSE  1984-01-03  2023-06-30           0.407           0.382    True      r005_ddstop_EW
+33           ^GDAXI  1987-12-30  2023-06-30           0.525           0.463    True      r005_ddstop_EW
+34             ^HSI  1986-12-31  2023-06-30           0.281           0.348   False      r005_ddstop_EW
+35             ^STI  1987-12-28  2023-06-30           0.312           0.301    True      r005_ddstop_EW
+CANDIDATES: []

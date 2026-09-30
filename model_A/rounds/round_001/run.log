@@ -1,0 +1,68 @@
+r001_Q_GPA_overall done
+r001_Q_GPA_sector done
+r001_Q_ROIC_overall done
+r001_Q_ROIC_sector done
+r001_Q_LOWACC_overall done
+r001_Q_LOWACC_sector done
+r001_V_BM_overall done
+r001_V_BM_sector done
+r001_V_EP_overall done
+r001_V_EP_sector done
+r001_V_EBITEV_overall done
+r001_V_EBITEV_sector done
+r001_V_FCFP_overall done
+r001_V_FCFP_sector done
+r001_I_LOWISS_overall done
+r001_I_LOWISS_sector done
+r001_I_LOWAG_overall done
+r001_I_LOWAG_sector done
+r001_A_FSCORE_overall done
+r001_A_FSCORE_sector done
+r001_A_GSCORE_overall done
+r001_A_GSCORE_sector done
+r001_A_ALTMANZ_overall done
+r001_A_ALTMANZ_sector done
+r001_A_SHY_overall done
+r001_A_SHY_sector done
+r001_A_STAB_overall done
+r001_A_STAB_sector done
+r001_A_LOWLEV_overall done
+r001_A_LOWLEV_sector done
+r001_F_ALTMAN done
+r001_F_BENEISH done
+r001_F_BOTH done
+                  trial_id  dec_sharpe  dec_sharpe_ew  dec_sharpe_spy  dec_cagr  dec_cagr_ew  dec_maxdd  dec_maxdd_ew  S1_10  S1_25  S2_share    DSR  S6_avg_n  S6_min_n  info_sharpe  info_sharpe_ew
+12      r001_Q_GPA_overall       0.775           0.64           0.681     0.161        0.125     -0.351        -0.376  False  False     1.000  0.399    51.417        50        1.006           1.137
+13       r001_Q_GPA_sector       0.769           0.64           0.681     0.157        0.125     -0.352        -0.376  False  False     1.000  0.335    51.417        50        1.014           1.137
+14     r001_Q_ROIC_overall       0.817           0.64           0.681     0.165        0.125     -0.332        -0.376  False  False     0.973  0.421    54.333        50        0.942           1.137
+15      r001_Q_ROIC_sector       0.762           0.64           0.681     0.147        0.125     -0.351        -0.376  False  False     0.892  0.241    54.333        50        1.244           1.137
+16   r001_Q_LOWACC_overall       0.863           0.64           0.681     0.186        0.125     -0.362        -0.376   True   True     1.000  0.860    63.250        51        0.787           1.137
+17    r001_Q_LOWACC_sector       0.812           0.64           0.681     0.169        0.125     -0.367        -0.376  False  False     1.000  0.700    63.250        51        0.921           1.137
+18       r001_V_BM_overall       0.484           0.64           0.681     0.109        0.125     -0.494        -0.376  False  False     0.405  0.040    63.667        51        1.116           1.137
+19        r001_V_BM_sector       0.514           0.64           0.681     0.113        0.125     -0.446        -0.376  False  False     0.216  0.041    63.667        51        1.036           1.137
+20       r001_V_EP_overall       0.475           0.64           0.681     0.103        0.125     -0.470        -0.376  False  False     0.351  0.020    63.417        51        0.991           1.137
+21        r001_V_EP_sector       0.535           0.64           0.681     0.113        0.125     -0.428        -0.376  False  False     0.405  0.024    63.417        51        0.990           1.137
+22   r001_V_EBITEV_overall       0.553           0.64           0.681     0.124        0.125     -0.445        -0.376  False  False     0.514  0.067    52.167        50        1.099           1.137
+23    r001_V_EBITEV_sector       0.482           0.64           0.681     0.101        0.125     -0.437        -0.376  False  False     0.189  0.011    52.167        50        1.199           1.137
+24     r001_V_FCFP_overall       0.629           0.64           0.681     0.137        0.125     -0.405        -0.376  False  False     0.595  0.123    60.250        50        1.031           1.137
+25      r001_V_FCFP_sector       0.565           0.64           0.681     0.120        0.125     -0.420        -0.376  False  False     0.622  0.046    60.250        50        1.050           1.137
+26   r001_I_LOWISS_overall       0.651           0.64           0.681     0.136        0.125     -0.395        -0.376  False  False     1.000  0.159    62.833        50        1.090           1.137
+27    r001_I_LOWISS_sector       0.668           0.64           0.681     0.133        0.125     -0.384        -0.376  False  False     0.973  0.170    62.833        50        1.089           1.137
+28    r001_I_LOWAG_overall       0.638           0.64           0.681     0.130        0.125     -0.375        -0.376  False  False     0.486  0.069    63.583        51        1.099           1.137
+29     r001_I_LOWAG_sector       0.686           0.64           0.681     0.142        0.125     -0.393        -0.376  False  False     0.486  0.183    63.583        51        1.181           1.137
+30   r001_A_FSCORE_overall       0.584           0.64           0.681     0.115        0.125     -0.385        -0.376  False  False     0.432  0.013    58.583        50        1.048           1.137
+31    r001_A_FSCORE_sector       0.574           0.64           0.681     0.113        0.125     -0.400        -0.376  False  False     0.486  0.009    58.583        50        1.157           1.137
+32   r001_A_GSCORE_overall       0.793           0.64           0.681     0.147        0.125     -0.308        -0.376  False  False     0.730  0.176    63.083        50        1.190           1.137
+33    r001_A_GSCORE_sector       0.667           0.64           0.681     0.122        0.125     -0.327        -0.376  False  False     0.135  0.021    63.083        50        1.217           1.137
+34  r001_A_ALTMANZ_overall       0.783           0.64           0.681     0.162        0.125     -0.338        -0.376  False  False     0.838  0.243    54.000        50        1.000           1.137
+35   r001_A_ALTMANZ_sector       0.733           0.64           0.681     0.143        0.125     -0.334        -0.376  False  False     0.649  0.132    54.000        50        1.008           1.137
+36      r001_A_SHY_overall       0.751           0.64           0.681     0.168        0.125     -0.406        -0.376  False  False     0.919  0.362    63.750        51        1.236           1.137
+37       r001_A_SHY_sector       0.690           0.64           0.681     0.145        0.125     -0.401        -0.376  False  False     0.730  0.213    63.750        51        1.147           1.137
+38     r001_A_STAB_overall       0.627           0.64           0.681     0.111        0.125     -0.366        -0.376  False  False     0.081  0.007    57.750         5        1.392           1.137
+39      r001_A_STAB_sector       0.610           0.64           0.681     0.117        0.125     -0.382        -0.376  False  False     0.595  0.010    57.750         5        1.423           1.137
+40   r001_A_LOWLEV_overall       0.622           0.64           0.681     0.126        0.125     -0.357        -0.376  False  False     0.486  0.060    63.667        51        0.953           1.137
+41    r001_A_LOWLEV_sector       0.681           0.64           0.681     0.139        0.125     -0.371        -0.376  False  False     0.865  0.218    63.667        51        1.023           1.137
+42           r001_F_ALTMAN       0.669           0.64           0.681     0.131        0.125     -0.368        -0.376  False  False     0.973  0.205   265.750       227        1.077           1.137
+43          r001_F_BENEISH       0.640           0.64           0.681     0.125        0.125     -0.376        -0.376  False  False     0.405  0.016   315.083       253        1.148           1.137
+44             r001_F_BOTH       0.673           0.64           0.681     0.132        0.125     -0.368        -0.376  False  False     0.973  0.241   263.083       225        1.088           1.137
+CANDIDATES: []

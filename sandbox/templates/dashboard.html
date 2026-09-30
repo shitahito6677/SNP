@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — SP Ensemble Sandbox{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <h2>Controls</h2>
+
+    <label>Ticker
+      <select id="ticker-select">
+        {% for t in tickers %}
+        <option value="{{ t }}">{{ t }} — {{ ticker_sector[t] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>From
+      <input type="date" id="date-start" min="{{ date_min }}" max="{{ date_max }}">
+    </label>
+    <label>To
+      <input type="date" id="date-end" min="{{ date_min }}" max="{{ date_max }}">
+    </label>
+
+    <button id="reload-btn" type="button">Reload</button>
+
+    <h3>Event markers</h3>
+    <fieldset class="ticker-checkboxes indicator-checkboxes">
+      <label class="checkbox-label"><input type="checkbox" id="show-c-events" checked> Show macro (C) events</label>
+      <label class="checkbox-label"><input type="checkbox" id="show-b-events" checked> Show company (B) events</label>
+    </fieldset>
+
+    <h3>Indicators</h3>
+    <fieldset class="ticker-checkboxes indicator-checkboxes">
+      <label class="checkbox-label"><input type="checkbox" id="ind-sma20" checked> SMA20 (overlay)</label>
+      <label class="checkbox-label"><input type="checkbox" id="ind-sma50" checked> SMA50 (overlay)</label>
+      <label class="checkbox-label"><input type="checkbox" id="ind-volume"> Volume</label>
+      <label class="checkbox-label"><input type="checkbox" id="ind-rsi"> RSI(14)</label>
+      <label class="checkbox-label"><input type="checkbox" id="ind-macd"> MACD(12,26,9)</label>
+    </fieldset>
+
+    <h3>Fundamentals</h3>
+    <div id="fundamentals-panel" class="fundamentals-panel">
+      <p class="hint">Loading...</p>
+    </div>
+
+    <h3>Model status</h3>
+    <ul class="model-status-list">
+      {% for m in model_status %}
+      <li>
+        <span class="model-status-name">{{ m.name }}</span>
+        <span class="model-status-badge {{ m.inference }}">{{ m.inference|upper }}{% if m.key == 'C' %} (live inference){% endif %}</span>
+        {% if m.data_note %}<span class="model-status-note">{{ m.data_note }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+
+    <div class="legend">
+      <h3>Legend</h3>
+      <div class="legend-row"><span class="dot" style="background:#26a69a"></span> Macro / company — positive</div>
+      <div class="legend-row"><span class="dot" style="background:#ef5350"></span> Macro / company — negative</div>
+      <div class="legend-row"><span class="dot" style="background:#9aa0a6"></span> Macro / company — neutral</div>
+      <div class="legend-row"><span class="marker-sample triangle"></span> Macro event (dashed line, top marker)</div>
+      <div class="legend-row"><span class="marker-sample circle"></span> Company news event (on candle)</div>
+    </div>
+
+    <p class="hint">คลิก marker บนกราฟเพื่อดูรายละเอียด (วันที่, class, score, ที่มา)</p>
+  </aside>
+
+  <section class="chart-area">
+    <div id="chart-status" class="chart-status"></div>
+    <div id="candlestick-chart"></div>
+  </section>
+</div>
+
+<div id="event-popup" class="event-popup" hidden>
+  <button id="event-popup-close" class="popup-close" type="button">&times;</button>
+  <div id="event-popup-body"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.__PAGE__ = "dashboard";</script>
+{% endblock %}
