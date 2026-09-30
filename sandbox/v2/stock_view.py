@@ -54,6 +54,11 @@ def _reasons(x):
     return [str(r) for r in (x if isinstance(x, (list, tuple, np.ndarray)) else [x])]
 
 
+def _trade_kinds():
+    from sandbox.v2 import trade_causes
+    return trade_causes.KINDS
+
+
 def build(ticker: str, kind=None, rid=None, start=None, end=None, versions=None) -> dict:
     tickers = prices.manifest()["tickers"]
     man = tickers.get(ticker)
@@ -80,7 +85,8 @@ def build(ticker: str, kind=None, rid=None, start=None, end=None, versions=None)
             if conf["stages"][m]["mode"] != "off":
                 versions.setdefault(m, conf["stages"][m]["version"])
         if (d / "trades.parquet").exists():
-            tr = pd.read_parquet(d / "trades.parquet")
+            from sandbox.v2 import trade_causes
+            tr = trade_causes.classify_dir(d)  # Q1: ชนิดของ trade (ข่าวร้ายของตัวเอง / ดึงเงินคืน / รอบปี / รับเงิน / ปรับกลับเป้า …)
             trades = xs._records(tr[tr["ticker"] == ticker])
             if not trades:
                 notices.append(f"{ticker} ไม่มีการซื้อขายในการทดลองนี้ — แสดงราคาและสัญญาณอย่างเดียว")
@@ -132,6 +138,7 @@ def build(ticker: str, kind=None, rid=None, start=None, end=None, versions=None)
             "status": man.get("status"), "start": str(start.date()), "end": str(end.date()), "held_out_visible": allow,
             "bars": bars, "trades": trades, "layers": layers, "labels": labels, "notices": notices,
             "manual_unknown": manual_unknown, "a_ranking": a_ranking,
+            "trade_kinds": {k: {"label": v[0], "help": v[1], "color": v[2]} for k, v in _trade_kinds().items()},
             "price_note": "แท่งเทียน = ราคาดิบ (ปรับ split แล้ว ไม่ปรับปันผล); simulator ใช้ Adj Close (รวมปันผล)"}
 
 

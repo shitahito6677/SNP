@@ -45,6 +45,7 @@ class Ctx:
         self._env = env
         self.state = {}
         self._notes = {}
+        self._tags = {}
 
     # -- ตั้งค่าต่อวัน --
     def _set_day(self, p):
@@ -57,6 +58,7 @@ class Ctx:
         self.stage_enabled = dict(p["stage_enabled"])
         self.manual = list(p.get("manual", []))
         self._notes = {}
+        self._tags = {}
 
     # -- API สำหรับผู้ใช้ --
     def sector_of(self, ticker):
@@ -83,8 +85,19 @@ class Ctx:
             s = s.loc[:pd.Timestamp(end)]
         return s.iloc[-int(lookback_days):] if lookback_days else s
 
-    def note(self, ticker, text):
-        self._notes.setdefault(str(ticker), []).append(str(text)[:300])
+    NOTE_KINDS = ("news_sell", "pullback", "buyback", "receive")
+
+    def note(self, ticker, text, kind=None, ref=None):
+        """เหตุผลของวันนี้ต่อหุ้น — kind (ไม่บังคับ) บอกชนิดของ trade ให้กราฟแยกป้ายได้:
+        "news_sell" ขายเพราะข่าวร้ายของตัวเอง · "pullback" ถูกดึงเงินคืน (ref = หุ้นที่ซื้อคืน) ·
+        "buyback" ซื้อคืน (ref = หุ้นที่ถูกดึงเงิน) · "receive" รับเงินจากหุ้นอื่น (ref = หุ้นต้นทาง)"""
+        t = str(ticker)
+        self._notes.setdefault(t, []).append(str(text)[:300])
+        if kind is not None:
+            if kind not in self.NOTE_KINDS:
+                raise ValueError(f"ctx.note kind={kind!r} ไม่รู้จัก — ใช้ได้: {', '.join(self.NOTE_KINDS)}")
+            refs = [ref] if isinstance(ref, str) else list(ref or [])
+            self._tags.setdefault(t, []).append({"kind": kind, "ref": [str(x) for x in refs][:50]})
 
 
 class _History:
@@ -138,7 +151,7 @@ def main(conn):
                     ctx._env["hist"].append(payload["date"], payload["prices"])
                     ctx._set_day(payload)
                     out = decide(ctx)
-                    conn.send(("result", {"weights": out, "notes": ctx._notes, "stdout": buf.getvalue()[-4000:],
+                    conn.send(("result", {"weights": out, "notes": ctx._notes, "tags": ctx._tags, "stdout": buf.getvalue()[-4000:],
                                           "state": _state_snapshot(ctx.state)}))
                 elif msg == "prices":  # วันที่ไม่ต้องตัดสินใจ แต่ต้องต่อ history ให้ครบ
                     ctx._env["hist"].append(payload["date"], payload["prices"])

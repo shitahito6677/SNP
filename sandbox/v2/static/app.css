@@ -278,6 +278,11 @@ table.t td.n, table.t th.n { text-align: right; font-family: var(--mono); font-v
 /* stock page */
 .stock-chart { height: 460px; border-radius: 12px; overflow: hidden; }
 .rsi-chart { height: 130px; margin-top: 6px; border-radius: 12px; overflow: hidden; }
+.trade-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 14px; margin-top: 10px; font-size: 12px; }
+.trade-legend .tl-item { display: grid; grid-template-columns: 16px auto auto 1fr; align-items: baseline; gap: 0 6px; }
+.trade-legend .tl-item.none { opacity: .45; }
+.trade-legend .tl-sym { font-size: 13px; }
+.trade-legend .tl-help { grid-column: 2 / -1; color: var(--text-2); font-size: 11px; line-height: 1.35; }
 .side-reasons { max-height: 590px; overflow: auto; }
 
 /* toast / skeleton / palette */

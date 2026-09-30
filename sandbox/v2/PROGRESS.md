@@ -247,6 +247,12 @@
 - `trade_causes.py` (จัดชนิด trade จากบันทึกตอนรัน) + `scripts/diagnose_trades.py` (อ่านอย่างเดียว)
 - สมมติฐาน "ถูกดึงเงินคืน" ผิดเป็นส่วนใหญ่: สาเหตุหลัก = engine ปรับทุกตัวกลับเป้าเมื่อเป้าตัวใดตัวหนึ่งเปลี่ยน (NOW: SELL 3 = รายปี 1 + ปรับกลับเป้า 2, ดึงคืน 0) — DECISIONS #30
 
+## Q1 — ป้าย SELL/BUY บอกสาเหตุบนกราฟหุ้นรายตัว ✅
+- ชนิด: SELL ข่าวร้าย · SELL → คืนให้ <ticker> · SELL/BUY รอบปี · BUY ← รับเงินจาก <ticker> · BUY ซื้อคืน · ปรับกลับเป้า (จุดเทาเล็ก) · delist / เงื่อนไขอื่น — สีเดียวกันทั้งระบบ (`trade_causes.KINDS`)
+- legend ใต้กราฟแสดงคำอธิบายทุกชนิด + จำนวนในหุ้นนั้น (ไม่ต้องชี้/คลิก); แผงชี้เมาส์ + แผง "ทำไมวันนี้" + ตาราง trade แสดงสาเหตุ
+- `ctx.note(..., kind=, ref=)` + `tags_json` ใน decisions; ผลเก่าใช้ข้อความ note (ต้นทางขึ้น "(อนุมาน)") — DECISIONS #31
+- test `tests/test_trade_causes.py` 4 ข้อ (condition สาธิต `tests/fixtures/cause_demo_condition.py` ได้ครบทุกชนิด, fallback ผลเก่า, คำที่เคยชน, kind ผิด = error); ui_smoke รัน condition สาธิตแล้วตรวจ marker ทั้ง 4 ชนิด + legend บนกราฟจริง
+
 # สรุปรวม
 **ทำครบ W0–W8 + F1–F3 + F1b + G1–G2b + I1–I2 + J1 + K1 + L1–L2 + M2 (M1 ซ้ำ trial 127 — ไม่รัน) + N0–N6** — commit แยกทุก phase (`git log --oneline feature/model-a-rebuild..feature/sandbox-v2`)
 

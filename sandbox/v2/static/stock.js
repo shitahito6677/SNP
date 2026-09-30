@@ -141,14 +141,14 @@ function stock() {
       if (this.layers.sma) { line(sma(closes, 20), "#FDE68A"); line(sma(closes, 50), "#60A5FA"); }
       if (this.layers.ema) line(ema(closes, 20), "#E879F9");
       const mk = [];
-      if (this.layers.trades) for (const t of d.trades) { const tm = this.snap(dates, t.date); if (!tm) continue;
-        mk.push(t.side === "buy" ? { time: tm, position: "belowBar", color: "#34D399", shape: "arrowUp", text: "BUY" } : { time: tm, position: "aboveBar", color: "#F87171", shape: "arrowDown", text: "SELL" }); }
+      if (this.layers.trades) for (const t of d.trades) { const tm = this.snap(dates, t.date); if (tm) mk.push(this.tradeMarker(t, tm)); }
       if (this.layers.B) for (const b of d.layers.B) { const tm = this.snap(dates, b.time); if (tm) mk.push({ time: tm, position: "belowBar", color: { positive: "#C084FC", negative: "#F472B6", neutral: "#8B8FB0" }[b.class], shape: "circle", text: "B" + (b.class === "negative" ? "−" : b.class === "positive" ? "+" : "") }); }
       if (this.layers.C) for (const c of d.layers.C) { const tm = this.snap(dates, c.time); if (tm) mk.push({ time: tm, position: "aboveBar", color: { positive: "#34D399", negative: "#FB923C", neutral: "#FBBF24" }[c.class], shape: "square", text: "C" }); }
       if (this.layers.manual) for (const n of d.layers.manual) { const tm = this.snap(dates, n.time); if (tm) mk.push({ time: tm, position: "aboveBar", color: LABEL_COLORS[String(n.label)] || "#38BDF8", shape: "circle", text: "M" + (n.label > 0 ? "+" : "") + n.label }); }
       mk.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
-      if (mk.length > 60) for (const x of mk) if (x.text === "BUY" || x.text === "SELL" || x.text.startsWith("B")) x.text = "";  // เยอะเกิน → เหลือแค่สัญลักษณ์
-      candle.setMarkers(mk);
+      if (mk.length > 60) for (const x of mk) if (!x.kind && x.text.startsWith("B")) x.text = "";  // เยอะเกิน → ป้ายสัญญาณ B เหลือแค่สัญลักษณ์ (ป้ายสาเหตุ trade คงไว้เสมอ)
+      STK.markers = mk;  // ให้ ui_smoke ตรวจชนิด marker ได้
+      candle.setMarkers(mk.map(({ kind, ...m }) => m));
       ch.timeScale().fitContent();
       // คลิกวันไหนก็ได้ → เหตุผลวันนั้น: ฟัง click ของ DOM แบบ capture ที่กล่องกราฟ + แปลงตำแหน่ง x เป็นวันที่
       // (subscribeClick ของ lightweight-charts ไม่ยิงเมื่อคลิกนอกแท่งข้อมูล → ฟัง DOM เอง)
@@ -171,6 +171,24 @@ function stock() {
         r.timeScale().fitContent();
       }
     },
+    /* Q1: ป้าย trade บอกสาเหตุ — ข่าวร้ายของตัวเอง / ถูกดึงเงินคืนให้หุ้นอื่น / รอบปี / รับเงินจากหุ้นอื่น / ซื้อคืน / ปรับกลับเป้า */
+    kindInfo(k) { return (this.d?.trade_kinds || {})[k] || { label: "SELL/BUY", help: "", color: "#CBD5E1" }; },
+    refText(t) { const r = t.ref || []; return r.length ? " " + r.slice(0, 3).join(", ") + (r.length > 3 ? ` +${r.length - 3}` : "") + (t.ref_inferred ? " (อนุมาน)" : "") : ""; },
+    tradeLabel(t) { return this.kindInfo(t.kind).label + (t.kind === "drift" ? "" : this.refText(t)); },
+    tradeMarker(t, tm) {
+      const K = this.kindInfo(t.kind), buy = t.side === "buy";
+      if (t.kind === "drift") return { kind: t.kind, time: tm, position: buy ? "belowBar" : "aboveBar", color: K.color, shape: "circle", size: 0.5, text: "" };
+      const text = t.kind === "unknown" || t.kind === "buy_condition" || t.kind === "sell_condition" ? (buy ? "BUY" : "SELL") : this.tradeLabel(t);
+      return { kind: t.kind, time: tm, position: buy ? "belowBar" : "aboveBar", color: K.color, shape: buy ? "arrowUp" : "arrowDown", text };
+    },
+    get legend() {  // ทุกชนิดที่อาจเกิด + จำนวนในหุ้นนี้ (แสดงคำอธิบายบนหน้าเลย ไม่ต้องชี้/คลิก)
+      const order = ["sell_news", "sell_pullback", "buy_rebalance", "buy_receive", "drift", "sell_rebalance", "buy_buyback", "sell_condition", "buy_condition", "sell_delist", "unknown"];
+      const cnt = {};
+      for (const t of this.d?.trades || []) cnt[t.kind] = (cnt[t.kind] || 0) + 1;
+      return order.filter((k) => cnt[k] || ["sell_news", "sell_pullback", "buy_rebalance", "buy_receive", "drift"].includes(k))
+        .map((k) => ({ k, n: cnt[k] || 0, ...this.kindInfo(k), sym: k === "drift" ? "●" : k.startsWith("buy") ? "▲" : "▼" }));
+    },
+    tradesDecided(date) { return (this.d?.trades || []).filter((t) => t.decision_date === date); },
     /* N5: คลิกวันไหนก็ได้ → เหตุผลที่ระบบทำ/ไม่ทำอะไรกับหุ้นนี้วันนั้น (อ่านจากบันทึกตอนรัน ไม่คำนวณใหม่) */
     async explainDay(date) {
       const rt = Alpine.store("app").route;
@@ -185,7 +203,8 @@ function stock() {
       if (t === this.hover) return;
       this.hover = t;
       const d = this.d, items = [];
-      for (const x of d.trades) if (x.date === t) items.push({ title: `${x.side === "buy" ? "▲ ซื้อ" : "▼ ขาย"} ${fmtMoney(x.notional)} @ ${fmtNum(x.price_close)} (ตัดสินใจ ${x.decision_date})`, cls: x.side === "buy" ? "pos" : "neg", reasons: x.reasons });
+      for (const x of d.trades) if (x.date === t) items.push({ title: `${x.side === "buy" ? "▲" : "▼"} ${this.tradeLabel(x)} · ${fmtMoney(x.notional)} @ ${fmtNum(x.price_close)} (ตัดสินใจ ${x.decision_date})`, cls: x.side === "buy" ? "pos" : "neg",
+        reasons: [`สาเหตุ: ${this.kindInfo(x.kind).help}`, ...(x.kind === "drift" && (x.ref || []).length ? [`เป้าที่เปลี่ยนวันนั้น: ${x.ref.join(", ")}`] : []), ...(x.ref_inferred ? ["ต้นทาง/ปลายทางอนุมานจาก ctx.state (ผลนี้รันก่อน Q1) — Re-run เพื่อดูค่าที่ condition บันทึกเอง"] : []), ...(x.detail ? [x.detail] : []), ...x.reasons] });
       for (const p of d.layers.A) if (t >= p.from && t < p.to) items.push({ title: `A ${d.labels.A?.short_label || ""}: ${p.class} (score ${fmtNum(p.score, 1)}) · รอบ ${p.rebalance}`, cls: p.class === "selected" ? "pos" : "", reasons: p.reasons.map((r) => "A: " + r) });
       for (const b of d.layers.B) if (b.time === t) items.push({ title: `B ${d.labels.B?.short_label || ""}: ${b.class}`, cls: "", reasons: b.reasons.map((r) => "B: " + r) });
       for (const c of d.layers.C) if (c.time === t) items.push({ title: `C ${d.labels.C?.short_label || ""} ${d.etf}: ${c.class} (${fmtNum(c.score)})`, cls: "", reasons: c.reasons.map((r) => "C: " + r) });

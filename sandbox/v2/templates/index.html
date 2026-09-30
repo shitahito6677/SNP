@@ -512,6 +512,13 @@
       <template x-for="n in d?.notices || []"><div class="warn gray" style="margin-bottom:6px"><b>หมายเหตุ</b><span x-text="n"></span></div></template>
       <div class="stock-chart" x-ref="chart"></div>
       <div class="rsi-chart" x-ref="rsi" x-show="layers.rsi"></div>
+      <div class="trade-legend" id="trade-legend" x-show="d?.trades?.length && layers.trades">
+        <template x-for="l in legend" :key="l.k"><div class="tl-item" :class="{ none: !l.n }" :data-kind="l.k">
+          <span class="tl-sym" :style="`color:${l.color}`" x-text="l.sym"></span>
+          <b :style="`color:${l.color}`" x-text="l.label"></b><span class="mono dim" x-text="`×${l.n}`"></span>
+          <span class="tl-help" x-text="l.help"></span>
+        </div></template>
+      </div>
     </div>
     <div class="panel side-reasons">
       <h3>วันที่ <span class="mono" x-text="hover || '—'"></span></h3>
@@ -528,6 +535,9 @@
           <div class="dim" style="font-size:11.5px" x-show="explain.note" x-text="explain.note"></div>
           <div id="explain-summary"><b x-text="explain.row.summary"></b></div>
           <div class="mono" style="font-size:11.5px" x-text="`อยู่ใน universe: ${explain.row.in_universe ? 'ใช่' : 'ไม่'} · ถืออยู่: ${explain.row.held ? 'ใช่ ' + fmtPct(explain.row.weight_now) : 'ไม่'} · decide() ${explain.row.decided ? 'คืนน้ำหนัก' : 'คืน None'}`"></div>
+          <template x-if="tradesDecided(explain.row.date).length"><div id="explain-trades"><div class="lbl">trade ที่เกิดจากการตัดสินใจวันนี้ (execute close วันทำการถัดไป)</div>
+            <template x-for="t in tradesDecided(explain.row.date)"><div style="font-size:12px"><b :style="`color:${kindInfo(t.kind).color}`" x-text="(t.side === 'buy' ? '▲ ' : '▼ ') + tradeLabel(t)"></b>
+              <span x-text="' — ' + kindInfo(t.kind).help + (t.kind === 'drift' && t.ref.length ? ' (เป้าที่เปลี่ยน: ' + t.ref.join(', ') + ')' : '')"></span></div></template></div></template>
           <template x-if="explain.row.notes.length"><div><div class="lbl">เหตุผลจาก condition (ctx.note)</div><template x-for="n in explain.row.notes"><div style="font-size:12px" x-text="'• ' + n"></div></template></div></template>
           <div><div class="lbl">สถานะใน ctx.state ของหุ้นนี้ (เช่น cut / pending)</div><pre class="tb" id="explain-state" x-text="pretty(explain.row.state)"></pre></div>
           <div><div class="lbl">ctx.b ดิบ</div><pre class="tb" id="explain-b" x-text="pretty(explain.row.b)"></pre></div>
@@ -537,7 +547,7 @@
       </div>
       <p class="dim" style="font-size:11.5px" x-show="d && !explainDate">คลิกวันไหนก็ได้บนกราฟเพื่อดูว่าระบบทำ/ไม่ทำอะไรกับหุ้นนี้วันนั้นเพราะอะไร</p>
       <h3 style="margin-top:14px">Trades ของหุ้นนี้</h3>
-      <table class="t"><tbody><template x-for="t in d?.trades || []"><tr @click="focus(t.date)" style="cursor:pointer"><td class="mono" x-text="t.date"></td><td :class="t.side==='buy'?'pos':'neg'" x-text="t.side==='buy'?'▲':'▼'"></td><td class="n" x-text="fmtMoney(t.notional)"></td></tr></template></tbody></table>
+      <table class="t"><tbody><template x-for="t in d?.trades || []"><tr @click="focus(t.date)" style="cursor:pointer"><td class="mono" x-text="t.date"></td><td :class="t.side==='buy'?'pos':'neg'" x-text="t.side==='buy'?'▲':'▼'"></td><td :style="`color:${kindInfo(t.kind).color};font-size:11.5px`" x-text="tradeLabel(t)"></td><td class="n" x-text="fmtMoney(t.notional)"></td></tr></template></tbody></table>
     </div>
   </div>
 </section>

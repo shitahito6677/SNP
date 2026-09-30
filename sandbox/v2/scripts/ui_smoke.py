@@ -83,6 +83,30 @@ def main():
             pg.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
             pg.wait_for_selector("#explain-panel", state="visible", timeout=10000)
 
+            # Q1: ป้าย trade ต้องบอกสาเหตุ — รัน condition สาธิต (ไม่พึ่งข่าวของผู้ใช้) แล้วตรวจชนิด marker บนกราฟ + legend
+            demo = (cfg.V2 / "tests" / "fixtures" / "cause_demo_condition.py").read_text(encoding="utf-8")
+            dj = requests.post(base + "/api/jobs", json={"name": "UI smoke trade causes", "start": "2022-01-03", "end": "2022-06-30",
+                                                         "scope": {"mode": "tickers", "sectors": [], "tickers": ["AAPL", "MSFT", "NVDA", "KR"]},
+                                                         "stages": {"A": {"mode": "off", "version": None}},
+                                                         "condition": {"source": demo}}).json()["id"]
+            for _ in range(120):
+                if requests.get(f"{base}/api/jobs/{dj}").json()["status"] in ("done", "failed"):
+                    break
+                time.sleep(0.5)
+            seen = set()
+            for tk, want in (("AAPL", {"sell_news", "buy_buyback", "buy_rebalance"}), ("MSFT", {"buy_receive", "sell_pullback", "drift"})):
+                pg.goto(f"{base}/#/stock/{tk}?kind=run&id={dj}")
+                pg.wait_for_function("() => STK.chart && STK.chart.options().width > 100 && STK.markers", timeout=20000)
+                pg.wait_for_timeout(800)
+                kinds = set(pg.evaluate("() => STK.markers.filter(m => m.kind).map(m => m.kind)"))
+                assert want <= kinds, (tk, kinds)
+                seen |= kinds
+                legend = pg.inner_text("#trade-legend")
+                assert "SELL ข่าวร้าย" in legend and "SELL → คืนให้" in legend and "BUY รอบปี" in legend and "BUY ← รับเงินจาก" in legend, legend
+            texts = pg.evaluate("() => STK.markers.filter(m => m.kind).map(m => m.text)")
+            assert "SELL → คืนให้ AAPL" in texts and "BUY ← รับเงินจาก AAPL" in texts, texts
+            pg.screenshot(type="jpeg", quality=72, path=str(OUT / "06b_stock_trade_causes.jpg"), full_page=True)
+
             # รันอีกครั้ง (hold_SPY) เพื่อใช้ compare
             job = requests.post(base + "/api/jobs", json={"name": "UI smoke SPY", "condition": {"id": "hold_SPY"}}).json()["id"]
             for _ in range(120):

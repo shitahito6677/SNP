@@ -947,7 +947,7 @@ def dry_run(conf: dict, date=None, history_days: int = 260) -> dict:
 
 
 DECISION_COLS = ["date", "ticker", "in_universe", "held", "weight_now", "target_before", "target_after", "decided", "summary",
-                 "notes", "b_json", "a_json", "c_json", "state_json"]
+                 "notes", "b_json", "a_json", "c_json", "state_json", "tags_json"]
 DECISION_MAX_UNIVERSE = 150  # universe ใหญ่กว่านี้ → บันทึกเฉพาะหุ้นที่ถือ/มีเป้า/มี note/มีข่าว B วันนั้น (ไฟล์ไม่บวม)
 
 
@@ -958,9 +958,10 @@ def _pct(x):
 def _decision_rows(t, universe, units, weights_now, before, w, target, res, a_recs, b_recs, c_recs, sector_of, a_on) -> list:
     """แถวบันทึก "ทำไมวันนี้ทำ/ไม่ทำ" ต่อหุ้น (บันทึกตอนรัน ไม่ต้องคำนวณใหม่ตอนเปิดดู)"""
     notes = res.get("notes") or {}
+    tags = res.get("tags") or {}  # Q1: ctx.note(..., kind=, ref=) → ชนิดของ trade บนกราฟ
     state = res.get("state") if isinstance(res.get("state"), dict) else {}
     uni = set(universe)
-    keys = set(units) | set(before) | set(w or {}) | set(notes)
+    keys = set(units) | set(before) | set(w or {}) | set(notes) | set(tags)
     if len(uni) <= DECISION_MAX_UNIVERSE:
         keys |= uni
     else:
@@ -993,7 +994,8 @@ def _decision_rows(t, universe, units, weights_now, before, w, target, res, a_re
                      "b_json": json.dumps(b_recs.get(tk), ensure_ascii=False, default=str) if tk in b_recs else None,
                      "a_json": json.dumps(a_recs.get(tk), ensure_ascii=False, default=str) if tk in a_recs else None,
                      "c_json": json.dumps(c_recs.get(e), ensure_ascii=False, default=str) if e and e in c_recs else None,
-                     "state_json": json.dumps(st, ensure_ascii=False, default=str) if st else None})
+                     "state_json": json.dumps(st, ensure_ascii=False, default=str) if st else None,
+                     "tags_json": json.dumps(tags.get(tk, []), ensure_ascii=False)})
     return rows
 
 

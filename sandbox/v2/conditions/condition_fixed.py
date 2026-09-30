@@ -25,7 +25,10 @@ DESCRIPTION = (
 #    (หลักฐาน: debug/N0_evidence.md — label 2 → _news=1, label -2 → _news=-1)
 #    -> อ่านตัวเลข "label" / "score" (สัญญา B: -2..+2) ก่อนเสมอ ค่อยถอยไปอ่านข้อความหมวด
 # 5) (N5) เพิ่ม ctx.note(...) ทุกทางแยกของ decide() ให้หน้าหุ้นรายตัวบอกได้ว่าวันนั้นทำ/ไม่ทำเพราะอะไร — ไม่เปลี่ยนน้ำหนัก
-# ไฟล์นี้ = equal_weight_A_v2_v2_v2.py ของผู้ใช้ (backup: sandbox/v2/backups/20260929-142129/) + แก้ข้อ 4–5 เท่านั้น
+# 6) (Q1) ctx.note แนบชนิดของ trade (kind/ref) ให้กราฟแยกป้าย SELL ข่าวร้าย / SELL ดึงเงินคืน / BUY รับเงิน / BUY ซื้อคืน
+#    + note บนหุ้นที่ถูกดึงเงินคืน (เดิมมี note แค่ที่หุ้นที่ซื้อคืน) + note ข่าว +2 ไม่บอกว่า "ไม่ทำอะไร" แล้ว (อาจรับเงินในขั้นที่ 4)
+#    — ไม่เปลี่ยนน้ำหนักที่คืน (test: tests/test_trade_causes.py เทียบกับผลก่อนแก้)
+# ไฟล์นี้ = equal_weight_A_v2_v2_v2.py ของผู้ใช้ (backup: sandbox/v2/backups/20260929-142129/) + แก้ข้อ 4–6 เท่านั้น
 
 # ===== ค่าที่ปรับได้ =====
 SELL_FRACTION = 0.5   # ขายกี่ส่วนเมื่อเจอข่าวร้าย
@@ -154,11 +157,13 @@ def decide(ctx):
         c = _news(ctx, t)
         if c is not None and c <= STRONG_BAD:
             pending.pop(t, None)
-            ctx.note(t, f"ข่าว {c:+d} → ขายครึ่งทันที (เงินพักเป็นเงินสด รอหุ้นข่าว +2)")
+            ctx.note(t, f"ข่าว {c:+d} → ขายครึ่งทันที (เงินพักเป็นเงินสด รอหุ้นข่าว +2)", kind="news_sell")
             _cut(ctx, st, t)
         elif c == BAD and t not in pending:
             ctx.note(t, f"ข่าว -1 → รอยืนยันด้วยราคาหลุดเส้น MA{MA_DAYS} ภายใน {PENDING_DAYS} วันทำการ")
             pending[t] = PENDING_DAYS
+        elif c == STRONG_GOOD:
+            ctx.note(t, "ข่าว +2 → ไม่ขาย · เป็นปลายทางรับเงินที่พักจากการขายครึ่ง (ถ้ามีเงินพักอยู่)")
         elif c is not None:
             ctx.note(t, f"ข่าว {c:+d} → ไม่ทำอะไร (กฎนี้ทำเฉพาะ -2 / -1 / +2)")
         # ข่าวบวก: ไม่ทำอะไร
@@ -171,7 +176,7 @@ def decide(ctx):
         p, ma = _price(ctx, t), _ma(ctx, t, MA_DAYS)
         if p is not None and ma is not None and p < ma:
             pending.pop(t)
-            ctx.note(t, f"ข่าว -1 ยืนยันแล้ว: ราคา {p:.2f} < MA{MA_DAYS} {ma:.2f} → ขายครึ่ง")
+            ctx.note(t, f"ข่าว -1 ยืนยันแล้ว: ราคา {p:.2f} < MA{MA_DAYS} {ma:.2f} → ขายครึ่ง", kind="news_sell")
             _cut(ctx, st, t)
         else:
             pending[t] -= 1
@@ -184,14 +189,14 @@ def decide(ctx):
     #    ปลายทางต้องไม่ใช่หุ้นที่กำลังขายครึ่งค้างอยู่ (แต่ถ้าซื้อคืนเต็มแล้วรับเงินได้ตามปกติ)
     good = [x for x in names if not _is_reduced(cut, x) and _news(ctx, x) == STRONG_GOOD]
     if good:
-        for rec in cut.values():
+        for src, rec in cut.items():
             cash = rec["moved"].pop("_cash", 0.0)
             if cash > 0:
                 each = cash / len(good)
                 for g in good:
                     w[g] = w.get(g, 0.0) + each
                     rec["moved"][g] = rec["moved"].get(g, 0.0) + each
-                    ctx.note(g, f"ข่าว +2 → รับเงินที่พักจากการขายครึ่ง {each:.2%} ของพอร์ต")
+                    ctx.note(g, f"ข่าว +2 → รับเงินที่พักจากการขายครึ่งของ {src} {each:.2%} ของพอร์ต", kind="receive", ref=src)
 
     # 5) หุ้นที่ขายไปลงต่อถึง DIP_PCT และยังอยู่ในรายชื่อ → ดึงเงินกลับมาซื้อคืนเต็มจำนวน
     for t, rec in cut.items():
@@ -202,10 +207,13 @@ def decide(ctx):
             for g, a in rec["moved"].items():
                 if g != "_cash":
                     w[g] = max(0.0, w.get(g, 0.0) - a)
+                    ctx.note(g, f"ถูกดึงเงินคืน {a:.2%} ของพอร์ต ให้ {t} ซื้อคืนเต็ม (ราคา {t} ลง ≥ {DIP_PCT:.0%} จากจุดขาย)", kind="pullback", ref=t)
+            pulled = sorted(g for g in rec["moved"] if g != "_cash")
             w[t] = w.get(t, 0.0) + rec["amt"]
             rec["moved"] = {}
             rec["done"] = True
-            ctx.note(t, f"ราคา {p:.2f} ลง ≥ {DIP_PCT:.0%} จากจุดขาย {rec['price']:.2f} → ดึงเงินกลับมาซื้อคืนเต็มจำนวน")
+            ctx.note(t, f"ราคา {p:.2f} ลง ≥ {DIP_PCT:.0%} จากจุดขาย {rec['price']:.2f} → ดึงเงินกลับมาซื้อคืนเต็มจำนวน"
+                        + (f" (ดึงจาก {', '.join(pulled)})" if pulled else " (จากเงินสดที่พักไว้)"), kind="buyback", ref=pulled)
 
     # น้ำหนักรวมอาจน้อยกว่า 1 = ส่วนที่เหลือถือเป็นเงินสด
     return {t: v for t, v in w.items() if v > 1e-9}
